@@ -22,7 +22,7 @@ import { useState } from "react";
  * @type {Array<{label: string, href: string}>}
  */
 const NAV_LINKS = [
-  { label: "Destinations", href: "/#destinations" },
+  { label: "Destinations", href: "/destinations" },
   { label: "Tours", href: "/#tours" },
   { label: "AI Planner", href: "/#ai" },
   { label: "About", href: "/#about" },
@@ -69,7 +69,7 @@ export default function Navbar() {
       {/* Navigation Links Loop */}
       <div className="nav-links" style={{ display: menuOpen ? "none" : "flex" }}>
         {NAV_LINKS.map(l => (
-          <a key={l.label} href={l.href} className="nav-link">{l.label}</a>
+          <Link key={l.label} href={l.href} className="nav-link">{l.label}</Link>
         ))}
       </div>
 

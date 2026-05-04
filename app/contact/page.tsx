@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
@@ -116,6 +117,7 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </>
   );
 }

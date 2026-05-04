@@ -12,6 +12,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowRight, Map, Shield, Users, Star, Brain, Coins, CloudSun, Smartphone } from "lucide-react";
+import Footer from "@/components/Footer";
 
 // ==========================================
 // Component: Home
@@ -52,7 +53,7 @@ export default function Home() {
           <span style={{ fontSize: "22px", fontWeight: "700", color: "#fff", fontFamily: "Outfit, sans-serif", letterSpacing: "-0.5px" }}>SmartTour</span>
         </Link>
         <nav className="nav-links">
-          <Link href="#destinations" className="nav-link" style={{ color: "#fff" }}>Destinations</Link>
+          <Link href="/destinations" className="nav-link" style={{ color: "#fff" }}>Destinations</Link>
           <Link href="#tours" className="nav-link" style={{ color: "#fff" }}>Tours</Link>
           <Link href="#features" className="nav-link" style={{ color: "#fff" }}>AI Planner</Link>
           <Link href="#about" className="nav-link" style={{ color: "#fff" }}>About</Link>
@@ -294,44 +295,7 @@ export default function Home() {
         </section>
       </main>
 
-      {/* 
-        ================================================================
-        7. Footer
-        ================================================================
-      */}
-      <footer style={{ background:"#fff", padding:"60px 60px 32px", borderTop:"1px solid var(--border)" }}>
-        <div style={{ maxWidth:1200, margin:"0 auto", display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:40, marginBottom:40 }}>
-          <div>
-            <Link href="/" className="nav-logo" style={{ marginBottom:16, textDecoration:"none" }}>
-              <div style={{ width:32, height:32, borderRadius:8, background:"linear-gradient(135deg,#0d9488,#7c3aed)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <svg width="18" height="18" viewBox="0 0 32 32" fill="none"><path d="M16 3L28 28H4L16 3Z" fill="white" opacity="0.9" /><circle cx="16" cy="14" r="3" fill="white" /></svg>
-              </div>
-              <span className="text-gradient">Smart Tour</span>
-            </Link>
-            <p style={{ fontSize:14, lineHeight:1.6, color:"var(--text-secondary)", maxWidth:280 }}>
-              Pioneering the future of travel in Pakistan with artificial intelligence, dynamic safety systems, and trusted tour partners.
-            </p>
-          </div>
-          {/* Footer Link Columns mapping */}
-          {[
-            { heading:"Account",   links:[["Log In","/auth/login"],["Sign Up","/auth/login"],["Destinations","#destinations"]] },
-            { heading:"Company",   links:[["Partner Benefits","#about"],["Contact Sales","/contact"]] },
-            { heading:"Support",   links:[["Contact Us","/contact"],["Privacy Policy","#about"],["Terms of Service","#about"]] },
-          ].map(col=>(
-            <div key={col.heading}>
-              <h4 style={{ color:"var(--text-primary)", marginBottom:18, fontSize:15, fontWeight:700 }}>{col.heading}</h4>
-              <ul style={{ listStyle:"none", padding:0, margin:0, display:"flex", flexDirection:"column", gap:10 }}>
-                {col.links.map(([label,href])=>(
-                  <li key={label}><Link href={href} style={{ color:"var(--text-secondary)", textDecoration:"none", fontSize:14 }}>{label}</Link></li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-        <div style={{ borderTop:"1px solid var(--border)", paddingTop:20, textAlign:"center", fontSize:14, color:"var(--text-muted)" }}>
-          <p>&copy; {new Date().getFullYear()} Smart Tour Platform. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </>
   );
 }
