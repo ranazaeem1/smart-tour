@@ -40,7 +40,7 @@
   --gradient-nav:    linear-gradient(135deg, #0d9488, #7c3aed);
   --gradient-card:   linear-gradient(135deg, rgba(13,148,136,0.06), rgba(124,58,237,0.06));
   --gradient-hero:   linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.65) 100%);
-  --gradient-sidebar:linear-gradient(180deg, #152238 0%, #1a2d4a 100%);
+  --gradient-sidebar: linear-gradient(180deg, rgba(21, 34, 56, 0.95) 0%, rgba(26, 45, 74, 0.98) 100%);
 
   /* Radii */
   --radius-sm:  6px;
@@ -120,9 +120,14 @@ h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; font-weight: 700; color: 
 .card:hover { box-shadow: var(--shadow-lg); border-color: #c9d5e0; }
 
 .card-glass {
-  background: var(--bg-glass); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 24px;
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  border-left: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 }
 
 /* ── Badges ── */
@@ -199,8 +204,46 @@ tr:hover td { background: #f8fafc; }
 .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 /* ── Dashboard Layout ── */
-.dashboard-layout { display: flex; min-height: 100vh; background: var(--bg-primary); }
-.main-content { flex: 1; padding: 28px 32px; min-height: 100vh; overflow-x: hidden; background: var(--bg-primary); }
+.dashboard-layout { 
+  display: flex; 
+  min-height: 100vh; 
+  background: #f8fafc;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-layout::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: -10%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(161, 196, 253, 0.25) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.dashboard-layout::after {
+  content: '';
+  position: absolute;
+  bottom: -10%;
+  left: -5%;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(circle, rgba(255, 154, 158, 0.15) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.main-content { 
+  flex: 1; 
+  padding: 32px 40px; 
+  min-height: 100vh; 
+  position: relative;
+  z-index: 1;
+  overflow-x: hidden; 
+}
 
 /* ── Topbar ── */
 .topbar {
