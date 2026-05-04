@@ -103,7 +103,14 @@ export default function Sidebar({ items, role, userName: propUserName, userIniti
   // JSX Return
   // ==========================================
   return (
-    <aside className="sidebar" style={{ width: w, transition: "width 0.25s ease" }}>
+    <aside className="sidebar" style={{ 
+      width: w, 
+      transition: "width 0.25s ease",
+      background: "rgba(21, 34, 56, 0.85)",
+      backdropFilter: "blur(24px)",
+      WebkitBackdropFilter: "blur(24px)",
+      borderRight: "1px solid rgba(255, 255, 255, 0.1)"
+    }}>
       {/* Logo Section */}
       <Link href="/" className="sidebar-logo" style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden", marginBottom: 28, textDecoration: "none" }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--gradient-main)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
