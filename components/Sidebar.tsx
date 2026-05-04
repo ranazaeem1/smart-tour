@@ -212,15 +212,39 @@ export default function Sidebar({ items, role, userName: propUserName, userIniti
           )}
         </div>
 
-        {/* Logout Action (Always Visible) */}
+        {/* ── Logout Button — prominent red, always visible ── */}
         <button
           onClick={() => signOut()}
-          className="nav-item"
-          style={{ justifyContent: collapsed ? "center" : "flex-start", paddingLeft: collapsed ? 0 : 14, width: "100%", color: "var(--rose)" }}
           title={collapsed ? "Logout" : undefined}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: collapsed ? "center" : "flex-start",
+            gap: 10,
+            width: "100%",
+            padding: collapsed ? "11px 0" : "11px 14px",
+            borderRadius: "var(--radius-md)",
+            border: "1px solid rgba(244, 63, 94, 0.35)",
+            background: "rgba(244, 63, 94, 0.12)",
+            color: "#f87171",
+            fontWeight: 700,
+            fontSize: 14,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = "rgba(244, 63, 94, 0.25)";
+            e.currentTarget.style.borderColor = "rgba(244, 63, 94, 0.6)";
+            e.currentTarget.style.color = "#fff";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = "rgba(244, 63, 94, 0.12)";
+            e.currentTarget.style.borderColor = "rgba(244, 63, 94, 0.35)";
+            e.currentTarget.style.color = "#f87171";
+          }}
         >
           <span style={{ fontSize: 18, flexShrink: 0 }}>🚪</span>
-          {!collapsed && <span style={{ fontSize: 14 }}>Logout</span>}
+          {!collapsed && <span>Logout</span>}
         </button>
 
         {/* Sidebar Collapse Toggle */}

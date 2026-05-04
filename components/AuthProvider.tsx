@@ -141,8 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    // Use window.location.href to perform a hard reload and clear all client-side state
-    window.location.href = "/auth/login";
+    // Hard reload to clear all client-side state and redirect to landing page
+    window.location.href = "/";
   };
 
   // ==========================================
