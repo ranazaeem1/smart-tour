@@ -13,7 +13,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatPKR, getStatusColor } from "@/lib/data";
-import { fetchTours, fetchBookings, fetchReviews, fetchRevenueStats } from "@/lib/db";
+import { fetchTours, fetchBookings, fetchReviews, fetchRevenueStats, fetchCompanyByOwner } from "@/lib/db";
 import { useAuth } from "@/components/AuthProvider";
 
 // ==========================================
@@ -68,17 +68,22 @@ export default function CompanyDashboard() {
     async function loadData() {
       if (profile?.id) {
         setLoading(true);
-        // Parallel fetching of company metrics
-        const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
-          fetchTours({ companyId: profile.id }),
-          fetchBookings({ companyId: profile.id }),
-          fetchReviews(), // FIXME: Ideally filter reviews by companyId
-          fetchRevenueStats() // FIXME: This currently fetches global revenue. Needs company-specific filter.
-        ]);
-        setTours(fetchedTours);
-        setBookings(fetchedBookings);
-        setReviews(fetchedReviews.slice(0, 3));
-        setRevenueStats(fetchedRevenue);
+        // 1. Fetch the actual company ID
+        const companyProfile = await fetchCompanyByOwner(profile.id);
+        
+        if (companyProfile) {
+          // 2. Parallel fetching of company metrics using the correct company ID
+          const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
+            fetchTours({ companyId: companyProfile.id }),
+            fetchBookings({ companyId: companyProfile.id }),
+            fetchReviews(), // FIXME: Ideally filter reviews by companyId
+            fetchRevenueStats() // FIXME: This currently fetches global revenue. Needs company-specific filter.
+          ]);
+          setTours(fetchedTours);
+          setBookings(fetchedBookings);
+          setReviews(fetchedReviews.slice(0, 3));
+          setRevenueStats(fetchedRevenue);
+        }
         setLoading(false);
       }
     }

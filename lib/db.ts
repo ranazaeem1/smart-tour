@@ -71,8 +71,12 @@ export async function fetchTours(options?: {
   let query: any = supabase
     .from('tours')
     .select(`*, companies(name, logo, rating)`)
-    .eq('available', true)
     .order('rating', { ascending: false });
+
+  // Only filter by availability for public/featured listings
+  if (!options?.companyId) {
+    query = query.eq('available', true);
+  }
 
   if (options?.featured) query = query.eq('featured', true);
   if (options?.companyId) query = query.eq('company_id', options.companyId);
@@ -240,6 +244,19 @@ export async function fetchCompanies(status?: 'pending' | 'approved' | 'suspende
     return [];
   }
   return data ?? [];
+}
+
+export async function fetchCompanyByOwner(ownerId: string) {
+  const { data, error } = await supabase
+    .from('companies')
+    .select('*')
+    .eq('owner_id', ownerId)
+    .single();
+  if (error) {
+    console.error('[fetchCompanyByOwner]', error.message);
+    return null;
+  }
+  return data;
 }
 
 export async function updateCompanyStatus(id: string, status: 'pending' | 'approved' | 'suspended') {

@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { createTour } from "@/lib/db";
+import { createTour, fetchCompanyByOwner } from "@/lib/db";
 import { DESTINATIONS } from "@/lib/data";
 
 const INITIAL_HIGHLIGHTS = ["", "", ""];
@@ -32,14 +32,15 @@ export default function AddTourPage() {
       return;
     }
     setSubmitting(true);
-    const companyId = profile?.id;
-    if (!companyId) {
-      alert("Company profile not found.");
+    const companyProfile = await fetchCompanyByOwner(profile.id);
+    if (!companyProfile) {
+      alert("You need a registered company profile to create tours. Please register first.");
       setSubmitting(false);
       return;
     }
+    
     const tour = await createTour({
-      company_id: companyId,
+      company_id: companyProfile.id,
       title: form.title,
       destination: form.destination,
       region: form.region,
