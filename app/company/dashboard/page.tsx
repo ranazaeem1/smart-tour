@@ -130,8 +130,8 @@ export default function CompanyDashboard() {
         borderBottom: "1px solid rgba(255,255,255,0.1)" 
       }}>
         {/* Background Overlays */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.6)", zIndex: 0 }}></div>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(21, 34, 56, 0.9) 0%, rgba(21, 34, 56, 0.4) 100%)", zIndex: 1 }}></div>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.75)", zIndex: 0 }}></div>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 100%)", zIndex: 1 }}></div>
         
         {/* Header Content */}
         <div style={{ position: "relative", zIndex: 2, display: "flex", width: "100%", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
@@ -154,7 +154,7 @@ export default function CompanyDashboard() {
       */}
       <div className="grid-4" style={{ marginBottom: 28 }}>
         {COMPANY_STATS.map(s => (
-          <div key={s.label} className="stat-card">
+          <div key={s.label} className="card-glass" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
             <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
             <div className="stat-label">{s.label}</div>
@@ -168,7 +168,7 @@ export default function CompanyDashboard() {
           Revenue Chart Widget
           ================================================================
         */}
-        <div className="card">
+        <div className="card-glass">
           <div className="section-header">
             <h2 className="section-title">📈 Monthly Revenue</h2>
             <span className="badge badge-teal">2024</span>
@@ -194,7 +194,7 @@ export default function CompanyDashboard() {
           Review Sentiment Widget
           ================================================================
         */}
-        <div className="card">
+        <div className="card-glass">
           <div className="section-header">
             <h2 className="section-title">💬 Review Sentiment</h2>
             <Link href="/company/reviews" className="btn btn-ghost btn-sm">All Reviews</Link>
@@ -260,7 +260,7 @@ export default function CompanyDashboard() {
         My Tours Table
         ================================================================
       */}
-      <div className="card" style={{ marginBottom: 24 }}>
+      <div className="card-glass" style={{ marginBottom: 24 }}>
         <div className="section-header">
           <h2 className="section-title">🏔️ My Tour Packages</h2>
           <Link href="/company/tours" className="btn btn-ghost btn-sm">Manage All</Link>
@@ -302,7 +302,7 @@ export default function CompanyDashboard() {
         Recent Bookings Table
         ================================================================
       */}
-      <div className="card">
+      <div className="card-glass">
         <div className="section-header">
           <h2 className="section-title">📋 Recent Bookings</h2>
           <Link href="/company/bookings" className="btn btn-ghost btn-sm">View All</Link>

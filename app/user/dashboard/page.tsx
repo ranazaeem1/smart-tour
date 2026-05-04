@@ -133,8 +133,8 @@ export default function UserDashboard() {
         borderBottom: "1px solid rgba(255,255,255,0.1)"
       }}>
         {/* Background Image and Overlays */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.6)", zIndex: 0 }}></div>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(21, 34, 56, 0.9) 0%, rgba(21, 34, 56, 0.4) 100%)", zIndex: 1 }}></div>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.75)", zIndex: 0 }}></div>
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 100%)", zIndex: 1 }}></div>
         
         {/* Header Content */}
         <div style={{ position: "relative", zIndex: 2, display: "flex", width: "100%", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
@@ -174,7 +174,7 @@ export default function UserDashboard() {
           { value: bookings.filter(b => b.status === "completed").length.toString(), label: "Tours Completed", color: "var(--gold)", icon: "✅" },
           { value: "4.9★", label: "Avg. Rating Given", color: "var(--emerald)", icon: "⭐" },
         ].map(s => (
-          <div key={s.label} className="stat-card">
+          <div key={s.label} className="card-glass" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
             <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
             <div className="stat-label">{s.label}</div>
@@ -189,7 +189,7 @@ export default function UserDashboard() {
           ================================================================
         */}
         {featuredTour ? (
-          <div className="card" style={{ background: "linear-gradient(135deg,rgba(20,210,190,0.08),rgba(124,58,237,0.08))", border: "1px solid var(--border-active)" }}>
+          <div className="card-glass" style={{ background: "rgba(255, 255, 255, 0.4)", border: "1px solid rgba(13, 148, 136, 0.3)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
                 <span className="badge badge-teal" style={{ marginBottom: 8, display: "inline-flex" }}>🤖 AI Recommendation</span>
@@ -233,7 +233,7 @@ export default function UserDashboard() {
           Quick Itinerary Widget
           ================================================================
         */}
-        <div className="card">
+        <div className="card-glass">
           <div className="section-header">
             <h2 className="section-title">📅 5-Day Hunza Itinerary</h2>
             <Link href="/user/planner" className="btn btn-ghost btn-sm">Edit</Link>
@@ -261,7 +261,7 @@ export default function UserDashboard() {
           Budget Breakdown Widget
           ================================================================
         */}
-        <div className="card">
+        <div className="card-glass">
           <div className="section-header">
             <h2 className="section-title">💰 Budget Breakdown</h2>
             <Link href="/user/budget" className="btn btn-ghost btn-sm">Manage</Link>
@@ -284,7 +284,7 @@ export default function UserDashboard() {
           Safety Zones Widget
           ================================================================
         */}
-        <div className="card">
+        <div className="card-glass">
           <div className="section-header">
             <h2 className="section-title">🛡️ Safety Overview</h2>
             <Link href="/user/safety" className="btn btn-ghost btn-sm">Full Map</Link>
@@ -313,7 +313,7 @@ export default function UserDashboard() {
         Upcoming Bookings Table
         ================================================================
       */}
-      <div className="card">
+      <div className="card-glass">
         <div className="section-header">
           <h2 className="section-title">📋 Upcoming Bookings</h2>
           <Link href="/user/bookings" className="btn btn-ghost btn-sm">View All</Link>
