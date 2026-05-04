@@ -1,3 +1,4 @@
+"use client";
 /**
  * @file Navbar.tsx
  * @description Main navigation bar component for the Smart Tour platform.
