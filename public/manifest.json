@@ -1,0 +1,21 @@
+{
+  "name": "Smart Tour Pakistan",
+  "short_name": "Smart Tour",
+  "description": "AI-powered tour booking platform for northern Pakistan",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080C18",
+  "theme_color": "#14D2BE",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icon-192.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "categories": ["travel", "lifestyle"],
+  "lang": "en-PK",
+  "shortcuts": [
+    { "name": "Plan a Trip", "url": "/user/planner", "description": "Start planning your next trip" },
+    { "name": "Browse Tours", "url": "/user/tours", "description": "Browse available tours" },
+    { "name": "My Bookings", "url": "/user/bookings", "description": "View your bookings" }
+  ]
+}
