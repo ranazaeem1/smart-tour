@@ -66,24 +66,29 @@ export default function UserDashboard() {
    */
   useEffect(() => {
     async function load() {
-      setLoading(true);
-      // Execute database queries in parallel
-      const [booksData, toursData, zonesData] = await Promise.all([
-        profile ? fetchBookings({ userId: profile.id }) : fetchBookings(),
-        fetchTours({ featured: true }),
-        fetchSafetyZones(),
-      ]);
-
-      // Filter out completed bookings for the "upcoming" preview section
-      setBookings(booksData.filter((b: { status: string }) => b.status !== "completed").slice(0, 3) as typeof bookings);
-      // Select the first featured tour as the AI recommendation
-      if (toursData.length > 0) setFeaturedTour(toursData[0] as typeof featuredTour);
-      // Slice top 6 safety zones to avoid overwhelming the UI widget
-      setSafetyZones(zonesData.slice(0, 6) as typeof safetyZones);
-      setLoading(false);
+      if (!authLoading && !profile) {
+        setLoading(false);
+        return;
+      }
+      
+      if (profile?.id) {
+        setLoading(true);
+        try {
+          const [booksData, toursData, zonesData] = await Promise.all([
+            fetchBookings({ userId: profile.id }),
+            fetchTours({ featured: true }),
+            fetchSafetyZones(),
+          ]);
+          setBookings(booksData.filter((b: { status: string }) => b.status !== "completed").slice(0, 3) as typeof bookings);
+          if (toursData.length > 0) setFeaturedTour(toursData[0] as typeof featuredTour);
+          setSafetyZones(zonesData.slice(0, 6) as typeof safetyZones);
+        } catch (err) {
+          console.error("UserDashboard load error:", err);
+        } finally {
+          setLoading(false);
+        }
+      }
     }
-    
-    // Only load data after auth state has been resolved
     if (!authLoading) load();
   }, [authLoading, profile]);
 

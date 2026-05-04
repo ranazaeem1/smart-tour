@@ -37,7 +37,8 @@ export async function upsertProfile(profile: {
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('profiles') as any)
-    .upsert({ ...profile, updated_at: new Date().toISOString() })
+    .update({ ...profile, updated_at: new Date().toISOString() })
+    .eq('id', profile.id)
     .select()
     .single();
   if (error) {

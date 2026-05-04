@@ -66,29 +66,36 @@ export default function CompanyDashboard() {
    */
   useEffect(() => {
     async function loadData() {
+      if (!authLoading && !profile) {
+        setLoading(false);
+        return;
+      }
+
       if (profile?.id) {
         setLoading(true);
-        // 1. Fetch the actual company ID
-        const companyProfile = await fetchCompanyByOwner(profile.id);
-        
-        if (companyProfile) {
-          // 2. Parallel fetching of company metrics using the correct company ID
-          const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
-            fetchTours({ companyId: companyProfile.id }),
-            fetchBookings({ companyId: companyProfile.id }),
-            fetchReviews(), // FIXME: Ideally filter reviews by companyId
-            fetchRevenueStats() // FIXME: This currently fetches global revenue. Needs company-specific filter.
-          ]);
-          setTours(fetchedTours);
-          setBookings(fetchedBookings);
-          setReviews(fetchedReviews.slice(0, 3));
-          setRevenueStats(fetchedRevenue);
+        try {
+          const companyProfile = await fetchCompanyByOwner(profile.id);
+          if (companyProfile) {
+            const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
+              fetchTours({ companyId: companyProfile.id }),
+              fetchBookings({ companyId: companyProfile.id }),
+              fetchReviews(),
+              fetchRevenueStats()
+            ]);
+            setTours(fetchedTours);
+            setBookings(fetchedBookings);
+            setReviews(fetchedReviews.slice(0, 3));
+            setRevenueStats(fetchedRevenue);
+          }
+        } catch (err) {
+          console.error("Dashboard load error:", err);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
     }
     loadData();
-  }, [profile]);
+  }, [profile, authLoading]);
 
   // ==========================================
   // Computed Properties
