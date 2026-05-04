@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchTours, createBooking } from "@/lib/db";
 import { TOURS, formatPKR } from "@/lib/data";

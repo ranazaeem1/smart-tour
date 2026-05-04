@@ -32,6 +32,11 @@ export default function AddTourPage() {
       return;
     }
     setSubmitting(true);
+    if (!profile) {
+      alert("You must be logged in to create a tour.");
+      setSubmitting(false);
+      return;
+    }
     const companyProfile = await fetchCompanyByOwner(profile.id);
     if (!companyProfile) {
       alert("You need a registered company profile to create tours. Please register first.");

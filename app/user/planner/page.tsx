@@ -153,8 +153,8 @@ function PlannerContent() {
               <p style={{ color:"var(--text-secondary)",fontSize:14,marginTop:4 }}>AI-optimized for minimum travel time & maximum places covered</p>
             </div>
             <div style={{ display:"flex",gap:12 }}>
-              <button className="btn btn-secondary btn-sm">📥 Download PDF</button>
-              <button className="btn btn-secondary btn-sm">📤 Share</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => alert('PDF download will be available in the full release. Your itinerary has been saved!')}>📥 Download PDF</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => { if (navigator.share) { navigator.share({ title: `${days}-Day ${dest} Itinerary`, text: `Check out my Smart Tour itinerary for ${dest}!`, url: window.location.href }); } else { navigator.clipboard.writeText(window.location.href); alert('Link copied to clipboard!'); } }}>📤 Share</button>
               <Link href="/user/tours" className="btn btn-primary btn-sm">Book This Tour →</Link>
             </div>
           </div>

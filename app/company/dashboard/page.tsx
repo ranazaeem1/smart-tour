@@ -41,7 +41,7 @@ export default function CompanyDashboard() {
   // ==========================================
   // Hooks & Context
   // ==========================================
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   
   // ==========================================
   // State Management

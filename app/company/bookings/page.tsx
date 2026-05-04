@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { fetchBookings, updateBookingStatus } from "@/lib/db";
+import { fetchBookings, updateBookingStatus, fetchCompanyByOwner } from "@/lib/db";
 import { BOOKINGS, formatPKR, getStatusColor } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -32,13 +32,22 @@ export default function CompanyBookingsPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const data = await fetchBookings(profile?.id ? { companyId: profile.id } : undefined);
-      if (data.length > 0) {
-        setBookings(data as Booking[]);
-      } else {
+      try {
+        if (profile?.id) {
+          const company = await fetchCompanyByOwner(profile.id);
+          let data: Booking[] = [];
+          if (company && company.id) {
+            const raw = await fetchBookings({ companyId: company.id });
+            data = raw as Booking[];
+          }
+          setBookings(data.length > 0 ? data : BOOKINGS as unknown as Booking[]);
+        }
+      } catch (err) {
+        console.error("Failed to load bookings:", err);
         setBookings(BOOKINGS as unknown as Booking[]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, [profile]);

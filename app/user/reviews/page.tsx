@@ -85,7 +85,7 @@ export default function UserReviewsPage() {
               </div>
               <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, margin: 0 }}>&quot;{r.comment}&quot;</p>
               <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
-                <button className="btn btn-secondary btn-sm">✏️ Edit</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => alert('Edit feature coming soon. Thank you for your patience!')}>✏️ Edit</button>
                 <button
                   className="btn btn-danger btn-sm"
                   onClick={() => handleDelete(r.id)}

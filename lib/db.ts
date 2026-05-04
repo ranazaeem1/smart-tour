@@ -37,13 +37,24 @@ export async function upsertProfile(profile: {
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('profiles') as any)
-    .update({ ...profile, updated_at: new Date().toISOString() })
-    .eq('id', profile.id)
+    .upsert(
+      { ...profile, updated_at: new Date().toISOString() },
+      { onConflict: 'id', ignoreDuplicates: false }
+    )
     .select()
     .single();
   if (error) {
-    console.error('[upsertProfile]', error.message);
-    return null;
+    // If upsert fails (e.g. RLS on insert for existing user), try plain update
+    const { data: updated, error: updateError } = await (supabase.from('profiles') as any)
+      .update({ ...profile, updated_at: new Date().toISOString() })
+      .eq('id', profile.id)
+      .select()
+      .single();
+    if (updateError) {
+      console.error('[upsertProfile]', updateError.message);
+      return null;
+    }
+    return updated;
   }
   return data;
 }
@@ -247,9 +258,9 @@ export async function fetchCompanies(status?: 'pending' | 'approved' | 'suspende
   return data ?? [];
 }
 
-export async function fetchCompanyByOwner(ownerId: string) {
-  const { data, error } = await supabase
-    .from('companies')
+export async function fetchCompanyByOwner(ownerId: string): Promise<{ id: string; name: string; owner_id: string; [key: string]: unknown } | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from('companies') as any)
     .select('*')
     .eq('owner_id', ownerId)
     .single();

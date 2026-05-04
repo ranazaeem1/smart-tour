@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchTours, updateTour } from "@/lib/db";
+import { fetchTours, updateTour, fetchCompanyByOwner } from "@/lib/db";
 import { TOURS, formatPKR } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -25,13 +25,24 @@ export default function CompanyToursPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const data = await fetchTours(profile?.id ? { companyId: profile.id } : undefined);
-      if (data.length > 0) {
-        setTours(data as Tour[]);
-      } else {
+      try {
+        if (profile?.id) {
+          const company = await fetchCompanyByOwner(profile.id);
+          let data: Tour[] = [];
+          if (company && company.id) {
+            const raw = await fetchTours({ companyId: company.id });
+            data = raw as Tour[];
+          }
+          setTours(data.length > 0 ? data : []);
+        } else {
+          setTours([]);
+        }
+      } catch (err) {
+        console.error("Failed to load tours:", err);
         setTours([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, [profile]);
@@ -137,7 +148,7 @@ export default function CompanyToursPage() {
                     >
                       {updatingId === tour.id ? "..." : tour.available ? "⏸️ Deactivate" : "▶️ Activate"}
                     </button>
-                    <Link href="/company/tours/new" className="btn btn-secondary btn-sm">✏️ Edit</Link>
+                    <Link href="/company/tours/new" className="btn btn-secondary btn-sm">✏️ Edit/Add</Link>
                     <Link href="/company/bookings" className="btn btn-secondary btn-sm">📋 Bookings</Link>
                   </div>
                 </div>
