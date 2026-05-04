@@ -56,7 +56,7 @@ export default function Home() {
           <Link href="/destinations" className="nav-link" style={{ color: "#fff" }}>Destinations</Link>
           <Link href="#tours" className="nav-link" style={{ color: "#fff" }}>Tours</Link>
           <Link href="#features" className="nav-link" style={{ color: "#fff" }}>AI Planner</Link>
-          <Link href="#about" className="nav-link" style={{ color: "#fff" }}>About</Link>
+          <Link href="/about" className="nav-link" style={{ color: "#fff" }}>About</Link>
         </nav>
         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
           <Link href="/auth/login" className="nav-link" style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>Login</Link>

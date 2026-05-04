@@ -25,7 +25,7 @@ const NAV_LINKS = [
   { label: "Destinations", href: "/destinations" },
   { label: "Tours", href: "/#tours" },
   { label: "AI Planner", href: "/#ai" },
-  { label: "About", href: "/#about" },
+  { label: "About", href: "/about" },
   { label: "Contact Us", href: "/contact" },
 ];
 

@@ -61,9 +61,9 @@ export default function Footer() {
             heading: "Company",
             links: [
               { label: "Partner Portal", href: "/auth/login" },
-              { label: "Partner Benefits", href: "/#about" },
+              { label: "Partner Benefits", href: "/about" },
               { label: "Contact Sales", href: "/contact" },
-              { label: "About Us", href: "/#about" },
+              { label: "About Us", href: "/about" },
             ],
           },
           {
