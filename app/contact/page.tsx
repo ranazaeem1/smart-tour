@@ -60,7 +60,7 @@ export default function ContactPage() {
                 <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
                   Are you a tour operator looking to expand your reach? Join our trusted network of travel partners.
                 </p>
-                <a href="/auth/register?role=company" className="btn btn-secondary btn-sm" style={{ width: "fit-content" }}>Register Company</a>
+                <a href="/auth/login" className="btn btn-secondary btn-sm" style={{ width: "fit-content" }}>Join as Partner</a>
               </div>
             </div>
 

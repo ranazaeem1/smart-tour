@@ -58,8 +58,8 @@ export default function Home() {
           <Link href="#about" className="nav-link" style={{ color: "#fff" }}>About</Link>
         </nav>
         <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-          <Link href="/auth/login?role=company" className="nav-link" style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>For Companies</Link>
-          <Link href="/auth/register?role=user" className="btn" style={{ padding: "8px 24px", fontSize: "14px", background: "transparent", border: "1px solid rgba(255,255,255,0.5)", color: "#fff", borderRadius: "999px", transition: "all 0.3s" }}>Get Started</Link>
+          <Link href="/auth/login" className="nav-link" style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>Login</Link>
+          <Link href="/auth/login" className="btn" style={{ padding: "8px 24px", fontSize: "14px", background: "transparent", border: "1px solid rgba(255,255,255,0.5)", color: "#fff", borderRadius: "999px", transition: "all 0.3s" }}>Get Started</Link>
         </div>
       </header>
 
@@ -141,7 +141,7 @@ export default function Home() {
                 </label>
                 <input type="text" onFocus={(e) => e.target.type = "date"} placeholder="Add dates" className="input" style={{ background: "transparent", border: "none", padding: "0", borderRadius: "0", color: "#fff", width: "100%", fontSize: "16px", fontWeight: "600" }} />
               </div>
-              <Link href="/auth/register?role=user" className="btn btn-primary" style={{ padding: "0 40px", height: "54px", borderRadius: "999px", display: "flex", alignItems: "center", gap: "10px", fontWeight: "700", fontSize: "15px", background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", border: "none", color: "#111", textTransform: "uppercase", letterSpacing: "1px" }}>
+              <Link href="/auth/login" className="btn btn-primary" style={{ padding: "0 40px", height: "54px", borderRadius: "999px", display: "flex", alignItems: "center", gap: "10px", fontWeight: "700", fontSize: "15px", background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", border: "none", color: "#111", textTransform: "uppercase", letterSpacing: "1px" }}>
                 Explore Now
               </Link>
             </div>
@@ -198,7 +198,7 @@ export default function Home() {
               <h2 style={{ fontSize:34, fontWeight:800, color:"var(--text-primary)" }}>
                 Top <span className="text-gradient">Tour Packages</span>
               </h2>
-              <Link href="/auth/login?role=user" style={{ color:"var(--text-secondary)", display:"flex", alignItems:"center", gap:8, textDecoration:"none", fontWeight:500, fontSize:14 }}>
+              <Link href="/auth/login" style={{ color:"var(--text-secondary)", display:"flex", alignItems:"center", gap:8, textDecoration:"none", fontWeight:500, fontSize:14 }}>
                 View All Tours <ArrowRight size={16} />
               </Link>
             </div>
@@ -231,7 +231,7 @@ export default function Home() {
                       <div style={{ color:"var(--navy)", fontSize:20, fontWeight:900 }}>{t.price}</div>
                       <div style={{ color:"var(--text-muted)", fontSize:12 }}>per person • {t.dur}</div>
                     </div>
-                    <Link href="/auth/login?role=user" className="btn btn-primary btn-sm">Book Now</Link>
+                    <Link href="/auth/login" className="btn btn-primary btn-sm">Book Now</Link>
                   </div>
                 </div>
               ))}
@@ -286,11 +286,8 @@ export default function Home() {
               Join thousands of travelers who trust Smart Tour for their northern Pakistan adventures.
             </p>
             <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
-              <Link href="/auth/register?role=user" className="btn btn-primary btn-lg">
+              <Link href="/auth/login" className="btn btn-primary btn-lg">
                 <Brain size={18} /> Start Planning Free
-              </Link>
-              <Link href="/auth/register?role=company" className="btn" style={{ borderRadius:32, padding:"14px 32px", fontSize:16, border:"1.5px solid rgba(255,255,255,0.3)", color:"#fff", background:"rgba(255,255,255,0.08)" }}>
-                <Map size={18} /> List Your Tours
               </Link>
             </div>
           </div>
@@ -317,8 +314,8 @@ export default function Home() {
           </div>
           {/* Footer Link Columns mapping */}
           {[
-            { heading:"Travelers", links:[["Log In","/auth/login?role=user"],["Sign Up","/auth/register?role=user"],["Destinations","#destinations"]] },
-            { heading:"Partners",  links:[["Company Portal","/auth/login?role=company"],["Register Company","/auth/register?role=company"],["Partner Benefits","#about"]] },
+            { heading:"Account",   links:[["Log In","/auth/login"],["Sign Up","/auth/login"],["Destinations","#destinations"]] },
+            { heading:"Company",   links:[["Partner Benefits","#about"],["Contact Sales","/contact"]] },
             { heading:"Support",   links:[["Contact Us","/contact"],["Privacy Policy","#about"],["Terms of Service","#about"]] },
           ].map(col=>(
             <div key={col.heading}>

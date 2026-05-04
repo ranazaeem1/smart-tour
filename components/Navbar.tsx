@@ -75,10 +75,10 @@ export default function Navbar() {
 
       {/* Call to Action Buttons */}
       <div className="nav-actions">
-        <Link href="/auth/login?role=company" className="btn btn-secondary btn-sm">
-          For Companies
+        <Link href="/auth/login" className="nav-link" style={{ fontSize: 14, fontWeight: 500 }}>
+          Login
         </Link>
-        <Link href="/auth/login?role=user" className="btn btn-primary btn-sm">
+        <Link href="/auth/login" className="btn btn-primary btn-sm">
           Get Started
         </Link>
       </div>

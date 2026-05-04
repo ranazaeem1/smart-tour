@@ -173,8 +173,8 @@ function AuthForm() {
           </h2>
           <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.8)", marginBottom: 24, fontWeight: 500 }}>
             {mode === "login"
-              ? `Sign in as a ${roleParam === 'company' ? 'Company Partner' : 'User'} 👤`
-              : `Join Smart Tour as a ${roleParam === 'company' ? 'Company Partner' : 'User'} 👤`}
+              ? "Sign in to your account to continue your journey 👤"
+              : "Create an account to start your adventure with us 👤"}
           </p>
 
           {/* Feedback Messages */}
