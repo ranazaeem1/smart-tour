@@ -23,13 +23,13 @@ export default function BudgetTracker() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalBudget, setTotalBudget] = useState(100000);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [newExpense, setNewExpense] = useState({
     category: "Food",
     amount: "",
     description: "",
   });
 
-  // Mock initial data
   useEffect(() => {
     setExpenses([
       { id: "1", category: "Transport", amount: 15000, description: "Fuel & Jeep Rental", date: "2024-04-20" },
@@ -38,21 +38,53 @@ export default function BudgetTracker() {
     ]);
   }, []);
 
-  const handleAddExpense = (e: React.FormEvent) => {
+  const handleAddOrEditExpense = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newExpense.amount) return;
 
-    const expense: Expense = {
-      id: Math.random().toString(36).substr(2, 9),
-      category: newExpense.category,
-      amount: parseFloat(newExpense.amount),
-      description: newExpense.description,
-      date: new Date().toISOString().split("T")[0],
-    };
+    if (editingExpenseId) {
+      setExpenses(prev =>
+        prev.map(exp =>
+          exp.id === editingExpenseId
+            ? {
+                ...exp,
+                category: newExpense.category,
+                amount: parseFloat(newExpense.amount),
+                description: newExpense.description,
+              }
+            : exp
+        )
+      );
+    } else {
+      const expense: Expense = {
+        id: Math.random().toString(36).substr(2, 9),
+        category: newExpense.category,
+        amount: parseFloat(newExpense.amount),
+        description: newExpense.description,
+        date: new Date().toISOString().split("T")[0],
+      };
+      setExpenses([expense, ...expenses]);
+    }
 
-    setExpenses([expense, ...expenses]);
     setNewExpense({ category: "Food", amount: "", description: "" });
+    setEditingExpenseId(null);
     setShowAddForm(false);
+  };
+
+  const handleEditClick = (exp: Expense) => {
+    setNewExpense({
+      category: exp.category,
+      amount: exp.amount.toString(),
+      description: exp.description,
+    });
+    setEditingExpenseId(exp.id);
+    setShowAddForm(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to delete this expense?")) {
+      setExpenses(prev => prev.filter(exp => exp.id !== id));
+    }
   };
 
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -83,7 +115,11 @@ export default function BudgetTracker() {
               style={{ background: "none", border: "none", color: "var(--teal)", fontWeight: 800, width: 80, fontSize: 14, outline: "none" }}
             />
           </div>
-          <button className="btn btn-primary" onClick={() => setShowAddForm(true)}>+ Add Expense</button>
+          <button className="btn btn-primary" onClick={() => {
+            setNewExpense({ category: "Food", amount: "", description: "" });
+            setEditingExpenseId(null);
+            setShowAddForm(true);
+          }}>+ Add Expense</button>
         </div>
       </div>
 
@@ -121,7 +157,6 @@ export default function BudgetTracker() {
       </div>
 
       <div className="grid-2">
-        {/* Expense List */}
         <div className="card">
           <h2 className="section-title" style={{ marginBottom: 20 }}>📋 Recent Expenses</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -133,7 +168,7 @@ export default function BudgetTracker() {
             {expenses.map(exp => {
               const cat = CATEGORIES.find(c => c.name === exp.category);
               return (
-                <div key={exp.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+                <div key={exp.id} className="group" style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: `${cat?.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
                     {cat?.icon}
                   </div>
@@ -142,13 +177,29 @@ export default function BudgetTracker() {
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{exp.category} · {exp.date}</div>
                   </div>
                   <div style={{ fontWeight: 800, color: "var(--text-primary)" }}>{formatPKR(exp.amount)}</div>
+                  
+                  <div className="flex gap-2 ml-4">
+                    <button 
+                      onClick={() => handleEditClick(exp)}
+                      className="text-white/40 hover:text-blue-400 p-1 rounded-md transition-colors"
+                      title="Edit"
+                    >
+                      ✏️
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(exp.id)}
+                      className="text-white/40 hover:text-red-400 p-1 rounded-md transition-colors"
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Category Breakdown */}
         <div className="card">
           <h2 className="section-title" style={{ marginBottom: 20 }}>📊 Spending by Category</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -177,13 +228,14 @@ export default function BudgetTracker() {
         </div>
       </div>
 
-      {/* Add Expense Modal */}
       {showAddForm && (
         <div className="modal-backdrop" onClick={() => setShowAddForm(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
             <button className="modal-close" onClick={() => setShowAddForm(false)}>✕</button>
-            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>Add New Expense</h2>
-            <form onSubmit={handleAddExpense} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>
+              {editingExpenseId ? "Edit Expense" : "Add New Expense"}
+            </h2>
+            <form onSubmit={handleAddOrEditExpense} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div className="input-group">
                 <label className="input-label">Category</label>
                 <select className="input" value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})}>
@@ -200,7 +252,9 @@ export default function BudgetTracker() {
               </div>
               <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
                 <button type="button" className="btn btn-secondary" style={{ flex: 1, justifyContent: "center" }} onClick={() => setShowAddForm(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }}>Save Expense</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }}>
+                  {editingExpenseId ? "Save Changes" : "Save Expense"}
+                </button>
               </div>
             </form>
           </div>

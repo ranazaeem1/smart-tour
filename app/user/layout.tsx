@@ -22,8 +22,17 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   return (
     <RequireAuth role="user">
       <div className="dashboard-layout">
+        {/* Mobile Menu Toggle */}
+        <button 
+          className="btn btn-secondary btn-icon mobile-only" 
+          style={{ position: "fixed", top: 20, right: 20, zIndex: 1000, boxShadow: "var(--shadow-lg)" }}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? "☰" : "✕"}
+        </button>
+
         <Sidebar items={USER_NAV} role="user" onCollapseChange={setCollapsed} />
-        <main className="main-content" style={{ marginLeft: sidebarWidth }}>
+        <main className="main-content" style={{ paddingLeft: sidebarWidth }}>
           {children}
         </main>
         <Chatbot />

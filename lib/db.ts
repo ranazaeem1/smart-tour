@@ -20,9 +20,9 @@ export async function fetchProfile(userId: string) {
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
   if (error) {
-    console.error('[fetchProfile]', error.message);
+    console.error('[fetchProfile] Error fetching profile:', error.message);
     return null;
   }
   return data;
@@ -42,22 +42,28 @@ export async function upsertProfile(profile: {
       { onConflict: 'id', ignoreDuplicates: false }
     )
     .select()
-    .single();
+    .maybeSingle();
+
   if (error) {
+    console.error('[upsertProfile] Initial upsert failed:', error.message);
+    
     // If upsert fails (e.g. RLS on insert for existing user), try plain update
     const { data: updated, error: updateError } = await (supabase.from('profiles') as any)
       .update({ ...profile, updated_at: new Date().toISOString() })
       .eq('id', profile.id)
       .select()
-      .single();
+      .maybeSingle();
+
     if (updateError) {
-      console.error('[upsertProfile]', updateError.message);
+      console.error('[upsertProfile] Fallback update failed:', updateError.message);
       return null;
     }
     return updated;
   }
+  
   return data;
 }
+
 
 export async function fetchAllUsers() {
   const { data, error } = await supabase
@@ -108,9 +114,9 @@ export async function fetchTourById(id: string) {
     .from('tours')
     .select(`*, companies(name, logo, rating, city, email, phone)`)
     .eq('id', id)
-    .single();
+    .maybeSingle();
   if (error) {
-    console.error('[fetchTourById]', error.message);
+    console.error('[fetchTourById] Error fetching tour:', error.message);
     return null;
   }
   return data;
@@ -263,9 +269,9 @@ export async function fetchCompanyByOwner(ownerId: string): Promise<{ id: string
   const { data, error } = await (supabase.from('companies') as any)
     .select('*')
     .eq('owner_id', ownerId)
-    .single();
+    .maybeSingle();
   if (error) {
-    console.error('[fetchCompanyByOwner]', error.message);
+    console.error('[fetchCompanyByOwner] Error fetching company:', error.message);
     return null;
   }
   return data;

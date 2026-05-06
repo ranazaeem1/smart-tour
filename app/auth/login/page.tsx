@@ -33,7 +33,7 @@ function AuthForm() {
   const searchParams = useSearchParams();
   // Extract role query param to determine if registering as user or company
   const roleParam = searchParams.get("role") || "user";
-  
+
   // State Management
   const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
@@ -102,18 +102,27 @@ function AuthForm() {
         if (signInError) throw signInError;
 
         if (data.user) {
-          // Fetch the user's role to determine correct post-login redirect
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", data.user.id)
-            .single();
+          // 1. Fetch the user's role with a timeout fallback
+          let userRole = "user";
+          try {
+            const { data: profile, error: profileErr } = await supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", data.user.id)
+              .maybeSingle();
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const userRole = (profile as any)?.role || "user";
-          
-          // Role-based redirection
-          // TODO: Export these route strings to a central constant file for better maintainability
+            if (!profileErr && profile) {
+              userRole = (profile as any).role || "user";
+            } else {
+              // Fallback to metadata role if profile fetch fails
+              userRole = data.user.user_metadata?.role || "user";
+            }
+          } catch (e) {
+            console.error("Profile fetch error during login:", e);
+            userRole = data.user.user_metadata?.role || "user";
+          }
+
+          // 2. Role-based redirection
           if (userRole === "admin") router.push("/admin/dashboard");
           else if (userRole === "company") router.push("/company/dashboard");
           else router.push("/user/dashboard");
@@ -151,16 +160,16 @@ function AuthForm() {
         </div>
 
         {/* Main Card */}
-        <div style={{ 
-          padding: 40, 
-          background: "rgba(255, 255, 255, 0.1)", 
-          backdropFilter: "blur(32px) saturate(150%)", 
-          WebkitBackdropFilter: "blur(32px) saturate(150%)", 
-          border: "1px solid rgba(255, 255, 255, 0.2)", 
+        <div style={{
+          padding: 40,
+          background: "rgba(255, 255, 255, 0.1)",
+          backdropFilter: "blur(32px) saturate(150%)",
+          WebkitBackdropFilter: "blur(32px) saturate(150%)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
           borderTop: "1px solid rgba(255, 255, 255, 0.6)",
           borderLeft: "1px solid rgba(255, 255, 255, 0.6)",
-          borderRadius: "var(--radius-xl)", 
-          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)" 
+          borderRadius: "var(--radius-xl)",
+          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)"
         }}>
           {/* Tabs: Login / Register switcher */}
           <div style={{ display: "flex", gap: 4, marginBottom: 28, background: "rgba(255, 255, 255, 0.1)", padding: 4, borderRadius: "var(--radius-full)", border: "1px solid rgba(255, 255, 255, 0.2)" }}>

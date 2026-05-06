@@ -22,8 +22,17 @@ export default function CompanyLayout({ children }: { children: React.ReactNode 
   return (
     <RequireAuth role="company">
       <div className="dashboard-layout">
+        {/* Mobile Menu Toggle */}
+        <button 
+          className="btn btn-secondary btn-icon mobile-only" 
+          style={{ position: "fixed", top: 20, right: 20, zIndex: 1000, boxShadow: "var(--shadow-lg)" }}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? "☰" : "✕"}
+        </button>
+
         <Sidebar items={COMPANY_NAV} role="company" onCollapseChange={setCollapsed} />
-        <main className="main-content" style={{ marginLeft: sidebarWidth }}>
+        <main className="main-content" style={{ paddingLeft: sidebarWidth }}>
           {children}
         </main>
         <Chatbot />

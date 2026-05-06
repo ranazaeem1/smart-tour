@@ -132,8 +132,8 @@ export default function UserDashboard() {
       */}
       <div className="topbar" style={{ 
         position: "relative", 
-        margin: "-28px -32px 28px", 
-        padding: "32px", 
+        margin: "-32px -40px 32px", 
+        padding: "40px", 
         overflow: "hidden",
         borderBottom: "1px solid rgba(255,255,255,0.1)"
       }}>

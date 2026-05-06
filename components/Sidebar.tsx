@@ -103,7 +103,7 @@ export default function Sidebar({ items, role, userName: propUserName, userIniti
   // JSX Return
   // ==========================================
   return (
-    <aside className="sidebar" style={{ 
+    <aside className={`sidebar ${!collapsed ? 'active' : ''}`} style={{ 
       width: w, 
       transition: "width 0.25s ease",
       background: "rgba(21, 34, 56, 0.85)",
@@ -169,48 +169,7 @@ export default function Sidebar({ items, role, userName: propUserName, userIniti
           </div>
         )}
 
-        {/* Settings Dropdown Wrapper */}
-        <div style={{ position: "relative" }}>
-          <button
-            onClick={() => { if (!collapsed) setSettingsOpen(o => !o); }}
-            className="nav-item"
-            style={{ justifyContent: collapsed ? "center" : "flex-start", paddingLeft: collapsed ? 0 : 14, width: "100%" }}
-            title={collapsed ? "Settings" : undefined}
-          >
-            <span style={{ fontSize: 18, flexShrink: 0 }}>⚙️</span>
-            {!collapsed && (
-              <>
-                <span style={{ fontSize: 14, flex: 1, textAlign: "left" }}>Settings</span>
-                <span style={{ fontSize: 12, color: "var(--text-muted)", marginRight: 4 }}>{settingsOpen ? "▲" : "▼"}</span>
-              </>
-            )}
-          </button>
 
-          {/* Settings Dropdown Items - Expandable Context Menu */}
-          {!collapsed && settingsOpen && (
-            <div style={{
-              marginTop: 4,
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-md)",
-              overflow: "hidden",
-            }}>
-              {/* Register as Company — only show for user role */}
-              {/* TODO: Move settings menu to a separate component to keep Sidebar clean */}
-              {(displayRole === "user" || role === "user") && (
-                <Link
-                  href="/user/register-company"
-                  className="nav-item"
-                  style={{ paddingLeft: 14, borderRadius: 0, fontSize: 13 }}
-                  onClick={() => setSettingsOpen(false)}
-                >
-                  <span style={{ fontSize: 16, flexShrink: 0 }}>🏢</span>
-                  <span style={{ fontSize: 13 }}>Register as Company</span>
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* ── Logout Button — prominent red, always visible ── */}
         <button

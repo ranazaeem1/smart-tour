@@ -2,25 +2,29 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { fetchBookings, updateBookingStatus } from "@/lib/db";
+import { fetchBookings } from "@/lib/db";
 import { formatPKR, getStatusColor } from "@/lib/data";
+import { CancelBookingButton } from "@/components/user/CancelBookingButton";
+import { StartChatButton } from "@/components/shared/StartChatButton";
+import { ReviewModal } from "@/components/user/ReviewModal";
 
 interface Booking {
   id: string;
-  travel_date?: string;
-  date?: string;
-  group_size?: number;
-  groupSize?: number;
-  total_price?: number;
-  totalPrice?: number;
+  tour_id: string;
+  user_id: string;
+  company_id: string;
+  travel_date: string;
+  group_size: number;
+  total_price: number;
   status: string;
-  payment_status?: string;
-  paymentStatus?: string;
-  notes?: string | null;
-  tours?: { title: string; destination: string; image_url?: string | null } | null;
-  tourTitle?: string;
-  destination?: string;
-  companyName?: string;
+  payment_status: string;
+  tours?: {
+    title: string;
+    destination: string;
+    image_url?: string | null;
+    company_id?: string;
+    companies?: { name: string }
+  } | null;
 }
 
 export default function BookingsPage() {
@@ -28,38 +32,26 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
-  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [reviewBooking, setReviewBooking] = useState<{ id: string; tourId: string } | null>(null);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      if (profile) {
-        const data = await fetchBookings({ userId: profile.id });
-        setBookings(data as Booking[]);
-      } else {
-        setBookings([]);
+      try {
+        if (profile) {
+          const data = await fetchBookings({ userId: profile.id });
+          setBookings(data as unknown as Booking[]);
+        }
+      } catch (err) {
+        console.error("Failed to load bookings:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, [profile]);
 
-  const getTitle = (b: Booking) => b.tours?.title || (b as unknown as { tourTitle?: string }).tourTitle || "—";
-  const getDest = (b: Booking) => b.tours?.destination || (b as unknown as { destination?: string }).destination || "—";
-  const getDate = (b: Booking) => b.travel_date || (b as unknown as { date?: string }).date || "—";
-  const getGroup = (b: Booking) => b.group_size || (b as unknown as { groupSize?: number }).groupSize || 0;
-  const getPrice = (b: Booking) => b.total_price || (b as unknown as { totalPrice?: number }).totalPrice || 0;
-  const getPayment = (b: Booking) => b.payment_status || (b as unknown as { paymentStatus?: string }).paymentStatus || "pending";
-
   const filtered = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
-
-  const handleCancel = async (id: string) => {
-    if (!confirm("Cancel this booking?")) return;
-    setCancelId(id);
-    await updateBookingStatus(id, "cancelled");
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: "cancelled" } : b));
-    setCancelId(null);
-  };
 
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
@@ -67,99 +59,173 @@ export default function BookingsPage() {
     </div>
   );
 
-  const stats = [
-    { label: "Total Bookings", value: bookings.length, color: "var(--teal)", icon: "📋" },
-    { label: "Confirmed", value: bookings.filter(b => b.status === "confirmed").length, color: "var(--emerald)", icon: "✅" },
-    { label: "Pending", value: bookings.filter(b => b.status === "pending").length, color: "var(--gold)", icon: "⏳" },
-    { label: "Completed", value: bookings.filter(b => b.status === "completed").length, color: "var(--purple-light)", icon: "🏁" },
-  ];
+  const getCompanyName = (b: Booking) => b.tours?.companies?.name || "Tour Company";
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade" style={{ padding: "0 20px 60px" }}>
+      {/* Premium Stats Header */}
+      <div style={{ 
+        display: "flex", justifyContent: "space-between", alignItems: "center", 
+        marginBottom: 40, marginTop: 10, padding: "0 10px" 
+      }}>
         <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>My Travel</div>
-          <h1 className="topbar-title">📋 My Bookings</h1>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 6, fontWeight: 500, letterSpacing: 1, textTransform: "uppercase" }}>My Journey</p>
+          <h1 className="topbar-title" style={{ fontSize: 36, fontWeight: 900, margin: 0 }}>My Bookings</h1>
         </div>
-        <div className="topbar-actions">
-          <span className="badge badge-teal">{bookings.length} Bookings</span>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid-4" style={{ marginBottom: 24 }}>
-        {stats.map(s => (
-          <div key={s.label} className="stat-card">
-            <div style={{ fontSize: 22 }}>{s.icon}</div>
-            <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+        <div style={{ display: "flex", gap: 24 }}>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Total trips</p>
+            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--text-primary)", margin: 0 }}>{bookings.length}</p>
           </div>
-        ))}
+          <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.1)", alignSelf: "center" }} />
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Confirmed</p>
+            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--accent)", margin: 0 }}>
+              {bookings.filter(b => b.status === 'confirmed').length}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="tabs" style={{ marginBottom: 24, width: "fit-content" }}>
+      {/* Filter Navigation */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 40, padding: 4, borderRadius: 16, background: "rgba(255,255,255,0.03)", width: "fit-content" }}>
         {["all", "confirmed", "pending", "completed", "cancelled"].map(f => (
-          <button key={f} className={`tab-btn ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-            {f.charAt(0).toUpperCase() + f.slice(1)}
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            style={{
+              padding: "10px 20px", borderRadius: 12, border: "none", fontSize: 13, fontWeight: 600,
+              cursor: "pointer", transition: "all 0.3s", textTransform: "capitalize",
+              background: filter === f ? "rgba(255,255,255,0.1)" : "transparent",
+              color: filter === f ? "#fff" : "var(--text-secondary)",
+              boxShadow: filter === f ? "0 4px 12px rgba(0,0,0,0.2)" : "none"
+            }}
+          >
+            {f}
           </button>
         ))}
       </div>
 
       {filtered.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-          <h3 style={{ marginBottom: 8 }}>No {filter !== "all" ? filter : ""} bookings found</h3>
-          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>
-            {filter === "all" ? "Start exploring tours to make your first booking!" : `No ${filter} bookings at the moment.`}
+        <div className="glass-card" style={{ textAlign: 'center', padding: '100px 40px', borderRadius: 32 }}>
+          <div style={{ fontSize: 72, marginBottom: 24 }}>🧭</div>
+          <h2 style={{ fontSize: 28, marginBottom: 16 }}>No bookings found</h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 32, maxWidth: 460, margin: '0 auto 32px', lineHeight: 1.6 }}>
+            {filter === 'all' 
+              ? "You haven't planned any adventures yet. Explore our curated tours to start your journey."
+              : `You don't have any ${filter} bookings at the moment.`}
           </p>
+          <Link href="/user/tours" className="btn btn-primary" style={{ padding: "14px 32px" }}>Explore Destinations</Link>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {filtered.map(b => (
-            <div key={b.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg-secondary)", flexWrap: "wrap", gap: 12 }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: "var(--gradient-main)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏔️</div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{getTitle(b)}</div>
-                    <div style={{ fontSize: 13, color: "var(--text-muted)" }}>📍 {getDest(b)}</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <span className={`badge ${getStatusColor(b.status)}`}>{b.status}</span>
-                  <span className={`badge ${getStatusColor(getPayment(b))}`}>{getPayment(b)}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+          {filtered.map((booking) => (
+            <div key={booking.id} className="glass-card" style={{ 
+              padding: 0, overflow: "hidden", borderRadius: 32, 
+              border: "1px solid rgba(255,255,255,0.08)",
+              display: "flex", minHeight: 280, position: "relative"
+            }}>
+              {/* IMAGE SECTION (Fixed Side) */}
+              <div style={{ width: 380, minWidth: 380, position: "relative", overflow: "hidden" }}>
+                <img 
+                  src={booking.tours?.image_url || "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80"} 
+                  alt={booking.tours?.title}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(13,17,23,0), rgba(13,17,23,0.4))" }} />
+                {/* Destination Badge */}
+                <div style={{ 
+                  position: "absolute", top: 20, left: 20,
+                  padding: "8px 16px", borderRadius: 14, fontSize: 11, fontWeight: 800,
+                  textTransform: "uppercase", letterSpacing: 1.5,
+                  background: "rgba(0,0,0,0.8)", color: "#fff",
+                  backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.2)"
+                }}>
+                  {booking.tours?.destination || "Adventure"}
                 </div>
               </div>
-              <div style={{ padding: "16px 20px", display: "flex", gap: 32, flexWrap: "wrap", alignItems: "center" }}>
-                {[
-                  { label: "Travel Date", value: getDate(b) },
-                  { label: "Group Size", value: `${getGroup(b)} people` },
-                  { label: "Total Paid", value: formatPKR(getPrice(b)) },
-                  { label: "Booking ID", value: `#${b.id.substring(0, 6).toUpperCase()}` },
-                ].map(r => (
-                  <div key={r.label}>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 2 }}>{r.label}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>{r.value}</div>
+
+              {/* INFO SECTION */}
+              <div style={{ flex: 1, padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <h3 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: "#fff" }}>{booking.tours?.title}</h3>
+                    <span className={`badge ${getStatusColor(booking.status)}`} style={{ padding: "6px 14px", borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+                      {booking.status}
+                    </span>
                   </div>
-                ))}
-                <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <button className="btn btn-secondary btn-sm" onClick={() => alert("Invoice download coming soon!")}>📄 Invoice</button>
-                  {b.status === "completed" && <Link href="/user/reviews" className="btn btn-secondary btn-sm">⭐ Review</Link>}
-                  {b.status === "pending" && (
-                    <button
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleCancel(b.id)}
-                      disabled={cancelId === b.id}
-                    >
-                      {cancelId === b.id ? "Cancelling..." : "❌ Cancel"}
-                    </button>
-                  )}
+                  
+                  <div style={{ display: "flex", gap: 48, marginTop: 24 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 20 }}>📅</span>
+                      <div>
+                        <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, margin: 0 }}>Date</p>
+                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{new Date(booking.travel_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 20 }}>👥</span>
+                      <div>
+                        <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, margin: 0 }}>Travelers</p>
+                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{booking.group_size} Person</p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 20 }}>🛡️</span>
+                      <div>
+                        <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, margin: 0 }}>Payment</p>
+                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: booking.payment_status === 'paid' ? 'var(--emerald)' : 'var(--gold)' }}>
+                          {booking.payment_status}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div>
+                    <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Total Paid</p>
+                    <p style={{ fontSize: 26, fontWeight: 900, color: "var(--accent)", margin: 0 }}>{formatPKR(booking.total_price)}</p>
+                  </div>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    {profile && (booking.company_id || booking.tours?.company_id) && (
+                      <StartChatButton
+                        bookingId={booking.id}
+                        userId={profile.id}
+                        companyId={booking.company_id || booking.tours?.company_id || ""}
+                        otherPartyName={getCompanyName(booking)}
+                        currentRole="user"
+                      />
+                    )}
+                    
+                    {(booking.status === "completed" || booking.status === "confirmed") && (
+                      <button 
+                        onClick={() => setReviewBooking({ id: booking.id, tourId: booking.tour_id })} 
+                        className="btn btn-ghost" 
+                        style={{ color: "var(--accent)", fontWeight: 700, border: "1px solid rgba(161,196,253,0.2)" }}
+                      >
+                        ⭐ Review
+                      </button>
+                    )}
+                    
+                    {booking.status === "pending" && (
+                      <CancelBookingButton bookingId={booking.id} />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {reviewBooking && (
+        <ReviewModal 
+          bookingId={reviewBooking.id} 
+          tourId={reviewBooking.tourId} 
+          onClose={() => setReviewBooking(null)} 
+        />
       )}
     </div>
   );

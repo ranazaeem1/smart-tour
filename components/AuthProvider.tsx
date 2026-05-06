@@ -78,23 +78,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * @param {User} authUser - The authenticated user object from Supabase Auth
    */
   const loadProfile = async (authUser: User) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, email, full_name, phone, role, avatar_url")
-      .eq("id", authUser.id)
-      .single();
-      
-    if (data) {
-      setProfile(data as AuthContextType["profile"]);
-    } else {
-      // Fallback if DB migration hasn't run or row missing
-      // FIXME: Ideally, missing profiles should be automatically created via Supabase Triggers
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email, full_name, phone, role, avatar_url")
+        .eq("id", authUser.id)
+        .maybeSingle(); // Use maybeSingle to avoid throwing on missing row
+        
+      if (data) {
+        setProfile(data as AuthContextType["profile"]);
+      } else {
+        // Fallback if row missing
+        setProfile({
+          id: authUser.id,
+          email: authUser.email || "",
+          full_name: authUser.user_metadata?.full_name || "Traveler",
+          phone: authUser.user_metadata?.phone || null,
+          role: authUser.user_metadata?.role || "user",
+          avatar_url: null
+        });
+      }
+    } catch (err) {
+      console.error("[loadProfile] Error:", err);
+      // Ensure we don't hang even on error
       setProfile({
         id: authUser.id,
         email: authUser.email || "",
         full_name: authUser.user_metadata?.full_name || "Traveler",
         phone: authUser.user_metadata?.phone || null,
-        role: authUser.user_metadata?.role || "user",
+        role: "user",
         avatar_url: null
       });
     }
@@ -106,14 +118,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     async function initAuth() {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await loadProfile(session.user);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error && error.message.includes("Refresh Token Not Found")) {
+          console.warn("Stale session detected, clearing...");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await loadProfile(session.user);
+        }
+      } catch (err) {
+        console.error("Auth initialization failed:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     
     initAuth();

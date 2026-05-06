@@ -42,6 +42,8 @@ export default function Home() {
         right: 0, 
         zIndex: 100, 
         background: "transparent", 
+        backdropFilter: "none",
+        WebkitBackdropFilter: "none",
         border: "none", 
         boxShadow: "none",
         padding: "14px 60px"

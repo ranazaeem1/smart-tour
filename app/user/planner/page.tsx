@@ -161,23 +161,23 @@ function PlannerContent() {
 
           <div className="grid-2" style={{ gap:24 }}>
             <div>
-              {ITINERARY_5DAY.map(day=>(
+              {ITINERARY_5DAY.slice(0, days).map(day=>(
                 <div key={day.day} className="card" style={{ marginBottom:16 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12 }}>
                     <div style={{ display:"flex",alignItems:"center",gap:12 }}>
                       <div style={{ width:40,height:40,borderRadius:"50%",background:"var(--gradient-main)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16,flexShrink:0 }}>{day.day}</div>
                       <div>
-                        <div style={{ fontWeight:700,fontSize:16 }}>{day.title}</div>
+                        <div style={{ fontWeight:700,fontSize:16 }}>{day.title.replace("Hunza", dest)}</div>
                         <div style={{ fontSize:12,color:"var(--text-muted)" }}>🕐 Travel: {day.travelTime}</div>
                       </div>
                     </div>
                     <span className="weather-chip">{day.weatherIcon} {day.weather}</span>
                   </div>
                   <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginBottom:10 }}>
-                    {day.places.map(p=><span key={p} className="tag">📍 {p}</span>)}
+                    {day.places.map(p=><span key={p} className="tag">📍 {p.replace("Hunza", dest.split(" ")[0])}</span>)}
                   </div>
                   <div style={{ fontSize:13,color:"var(--text-secondary)" }}>
-                    🏨 {day.accommodation} &nbsp;·&nbsp; 🍽️ {day.meals.join(", ")}
+                    🏨 {day.accommodation.replace("Hunza", dest.split(" ")[0])} &nbsp;·&nbsp; 🍽️ {day.meals.join(", ")}
                   </div>
                 </div>
               ))}
