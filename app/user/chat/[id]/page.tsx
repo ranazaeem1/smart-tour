@@ -25,7 +25,7 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
         .single();
 
       if (!error && data) {
-        setOtherPartyName((data.companies as any)?.name || "Tour Company");
+        setOtherPartyName((data as any).companies?.name || "Tour Company");
       }
       setLoading(false);
     }
@@ -41,17 +41,6 @@ export default function UserChatPage({ params }: { params: Promise<{ id: string 
 
   return (
     <div style={{ height: "calc(100vh - 100px)", position: "relative", margin: "-20px" }}>
-      {/* Back Button Overlay */}
-      <div style={{ position: "absolute", top: 20, left: 20, zIndex: 10 }}>
-        <Link href="/user/bookings" className="btn btn-ghost" style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}>
-          ← Back to Bookings
-        </Link>
-      </div>
-
-      {/* 
-        We use the existing ChatWindow but pass a prop or 
-        let it know it's in "Page Mode" so it fills the parent.
-      */}
       <ChatWindow 
         conversationId={conversationId}
         currentRole="user"

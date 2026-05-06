@@ -32,21 +32,36 @@ export function StartChatButton({
         return;
       }
 
+      console.log("[Chat] Searching for existing conversation for booking:", bookingId);
       let { data: existing, error: existingError } = await (supabase.from('conversations') as any)
         .select('id')
         .eq('booking_id', bookingId)
         .maybeSingle();
 
+      if (existingError) {
+        console.error("[Chat] Search error:", existingError);
+        throw existingError;
+      }
+
       if (!existing) {
-        const { data: created, error } = await (supabase.from('conversations') as any)
-          .insert([{ booking_id: bookingId, user_id: userId, company_id: companyId }])
+        console.log("[Chat] No existing conversation. Creating new one...");
+        const { data: created, error: createErr } = await (supabase.from('conversations') as any)
+          .insert([{ 
+            booking_id: bookingId, 
+            user_id: userId, 
+            company_id: companyId 
+          }])
           .select('id')
           .single();
 
-        if (error) throw error;
+        if (createErr) {
+          console.error("[Chat] Creation error:", createErr);
+          throw createErr;
+        }
         existing = created;
       }
 
+      console.log("[Chat] Success! Redirecting to conversation:", existing!.id);
       router.push(`/${currentRole}/chat/${existing!.id}`);
     } catch (err: any) {
       console.error('[Chat Error]', err?.message || JSON.stringify(err));

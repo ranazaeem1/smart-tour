@@ -25,7 +25,7 @@ export default function CompanyChatPage({ params }: { params: Promise<{ id: stri
         .single();
 
       if (!error && data) {
-        setOtherPartyName((data.profiles as any)?.full_name || "Traveler");
+        setOtherPartyName((data as any).profiles?.full_name || "Traveler");
       }
       setLoading(false);
     }
@@ -41,13 +41,6 @@ export default function CompanyChatPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div style={{ height: "calc(100vh - 100px)", position: "relative", margin: "-20px" }}>
-      {/* Back Button Overlay */}
-      <div style={{ position: "absolute", top: 20, left: 20, zIndex: 10 }}>
-        <Link href="/company/dashboard" className="btn btn-ghost" style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(8px)" }}>
-          ← Back to Dashboard
-        </Link>
-      </div>
-
       <ChatWindow 
         conversationId={conversationId}
         currentRole="company"

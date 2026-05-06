@@ -151,7 +151,23 @@ export function ChatWindow({
     <div style={wrapperStyle}>
       <div style={containerStyle}>
         {/* Chat Header */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+        <div style={{ 
+          padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", 
+          display: "flex", alignItems: "center", gap: 14, flexShrink: 0,
+          background: "#0D1117", zIndex: 5 
+        }}>
+          {isPage && (
+            <button 
+              onClick={() => window.history.back()}
+              style={{ 
+                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", 
+                color: "#fff", padding: "8px 12px", borderRadius: 10, fontSize: 12, cursor: "pointer",
+                marginRight: 8
+              }}
+            >
+              ← Back
+            </button>
+          )}
           <div style={{ width: 44, height: 44, borderRadius: 14, background: "linear-gradient(135deg, #3b82f6, #8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#fff" }}>
             {otherPartyName?.[0]?.toUpperCase()}
           </div>

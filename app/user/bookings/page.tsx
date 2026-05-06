@@ -28,28 +28,47 @@ interface Booking {
 }
 
 export default function BookingsPage() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [reviewBooking, setReviewBooking] = useState<{ id: string; tourId: string } | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    
     async function load() {
-      setLoading(true);
+      // Safety timeout: stop loading after 8 seconds no matter what
+      const timer = setTimeout(() => {
+        if (mounted) setLoading(false);
+      }, 8000);
+
       try {
-        if (profile) {
+        if (profile?.id) {
+          console.log("[Bookings] Fetching for user:", profile.id);
           const data = await fetchBookings({ userId: profile.id });
-          setBookings(data as unknown as Booking[]);
+          if (mounted) setBookings(data as unknown as Booking[]);
+        } else {
+          console.log("[Bookings] Waiting for profile...");
         }
       } catch (err) {
-        console.error("Failed to load bookings:", err);
+        console.error("[Bookings] Load failed:", err);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          clearTimeout(timer);
+        }
       }
     }
-    load();
-  }, [profile]);
+
+    if (!profile && !authLoading) {
+      setLoading(false); // Stop if definitely no user
+    } else {
+      load();
+    }
+
+    return () => { mounted = false; };
+  }, [profile, authLoading]);
 
   const filtered = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
 
