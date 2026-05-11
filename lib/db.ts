@@ -262,16 +262,18 @@ export async function updateBookingStatus(id: string, status: 'pending' | 'confi
 export async function fetchReviews(options?: {
   tourId?: string;
   userId?: string;
+  companyId?: string;
 }) {
   return withRetry(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase
       .from('reviews')
-      .select(`*, tours(title, destination), profiles(full_name, avatar_url)`)
+      .select(`*, tours!inner(title, destination, company_id), profiles(full_name, avatar_url)`)
       .order('created_at', { ascending: false });
 
     if (options?.tourId) query = query.eq('tour_id', options.tourId);
     if (options?.userId) query = query.eq('user_id', options.userId);
+    if (options?.companyId) query = query.eq('tours.company_id', options.companyId);
 
     const { data, error } = await query;
     if (error) {
@@ -387,10 +389,16 @@ export async function dismissSafetyAlert(id: string) {
 
 // ---- Analytics / Revenue ----
 
-export async function fetchRevenueStats() {
-  const { data: bookings, error } = await supabase
+export async function fetchRevenueStats(companyId?: string) {
+  let query = supabase
     .from('bookings')
     .select('total_price, created_at');
+
+  if (companyId) {
+    query = query.eq('company_id', companyId);
+  }
+
+  const { data: bookings, error } = await query;
 
   if (error || !bookings || bookings.length === 0) return [];
 
