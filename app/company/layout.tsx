@@ -11,7 +11,6 @@ const COMPANY_NAV = [
   { icon: "💰", label: "Revenue", href: "/company/revenue" },
   { icon: "⭐", label: "Reviews", href: "/company/reviews" },
   { icon: "👥", label: "Customers", href: "/company/customers" },
-  { icon: "➕", label: "Add Tour", href: "/company/tours/new" },
   { icon: "⚙️", label: "Settings", href: "/company/settings" },
 ];
 

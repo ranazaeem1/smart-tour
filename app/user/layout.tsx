@@ -12,7 +12,6 @@ const USER_NAV = [
   { icon: "📋", label: "My Bookings", href: "/user/bookings" },
   { icon: "⭐", label: "My Reviews", href: "/user/reviews" },
   { icon: "🛡️", label: "Safety Map", href: "/user/safety" },
-  { icon: "🏢", label: "Register Company", href: "/user/register-company" },
 ];
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
