@@ -1,305 +1,228 @@
 "use client";
 import { useEffect, useState } from "react";
-import { fetchBookings, updateBookingStatus, fetchCompanyByOwner } from "@/lib/db";
-import { BOOKINGS, formatPKR, getStatusColor } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
+import { supabase } from "@/lib/supabase";
+import { formatPKR, getStatusColor } from "@/lib/data";
 import { StartChatButton } from "@/components/shared/StartChatButton";
+import Link from "next/link";
 
-interface Booking {
+interface CompanyBooking {
   id: string;
   tour_id: string;
   user_id: string;
-  company_id: string;
-  travel_date?: string;
-  date?: string;
-  group_size?: number;
-  groupSize?: number;
-  total_price?: number;
-  totalPrice?: number;
+  travel_date: string;
+  group_size: number;
+  total_price: number;
   status: string;
-  payment_status?: string;
-  paymentStatus?: string;
-  user_phone?: string;
+  payment_status: string;
+  profiles?: { full_name: string; phone: string } | null;
   tours?: { title: string; destination: string } | null;
-  tourTitle?: string;
-  profiles?: { full_name: string | null; phone?: string | null; email?: string | null } | null;
-  userName?: string;
 }
 
 export default function CompanyBookingsPage() {
-  const { profile } = useAuth();
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const { profile, loading: authLoading } = useAuth();
+  const [bookings, setBookings] = useState<CompanyBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  async function load() {
+    if (!profile?.id) return;
+    setLoading(true);
+    try {
+      const targetId = profile.company_id || profile.id;
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          profiles:user_id (full_name, phone),
+          tours:tour_id (title, destination)
+        `)
+        .eq('company_id', targetId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setBookings(data || []);
+    } catch (err) {
+      console.error("Failed to load company bookings:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        if (profile?.id) {
-          const company = await fetchCompanyByOwner(profile.id);
-          let data: Booking[] = [];
-          if (company?.id) {
-            setCompanyId(company.id);
-            const raw = await fetchBookings({ companyId: company.id });
-            data = raw as unknown as Booking[];
-          }
-          setBookings(data.length > 0 ? data : (BOOKINGS as unknown as Booking[]));
-        }
-      } catch (err) {
-        console.error("[CompanyBookings] Load error:", err);
-        setError("Failed to load bookings. Showing sample data.");
-        setBookings(BOOKINGS as unknown as Booking[]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [profile]);
+    if (!authLoading) load();
+  }, [profile, authLoading]);
 
-  // Helper getters
-  const getTitle = (b: Booking) => b.tours?.title || b.tourTitle || "—";
-  const getDate = (b: Booking) => b.travel_date || b.date || "—";
-  const getGroup = (b: Booking) => b.group_size || b.groupSize || 0;
-  const getPrice = (b: Booking) => b.total_price || b.totalPrice || 0;
-  const getPayment = (b: Booking) => b.payment_status || b.paymentStatus || "pending";
-  const getName = (b: Booking) => b.profiles?.full_name || b.userName || "—";
-  const getPhone = (b: Booking) => b.user_phone || b.profiles?.phone || null;
-  const getEmail = (b: Booking) => b.profiles?.email || null;
-
-  const handleConfirm = async (id: string) => {
-    setUpdatingId(id);
+  const handleUpdateStatus = async (id: string, status: string) => {
     try {
-      await updateBookingStatus(id, "confirmed");
-      setBookings(prev =>
-        prev.map(b => b.id === id ? { ...b, status: "confirmed", payment_status: "paid" } : b)
-      );
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status })
+        .eq('id', id);
+      
+      if (error) throw error;
+      // Refresh list
+      load();
     } catch (err) {
-      console.error("[handleConfirm]", err);
-      alert("Failed to confirm booking. Please try again.");
-    } finally {
-      setUpdatingId(null);
+      console.error("Status update error:", err);
+      alert("Failed to update booking status.");
     }
   };
 
-  const handleCancel = async (id: string) => {
-    if (!confirm("Cancel this booking?")) return;
-    setUpdatingId(id);
-    try {
-      await updateBookingStatus(id, "cancelled");
-      setBookings(prev =>
-        prev.map(b => b.id === id ? { ...b, status: "cancelled" } : b)
-      );
-    } catch (err) {
-      console.error("[handleCancel]", err);
-      alert("Failed to cancel booking. Please try again.");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
+  const filtered = bookings.filter(b => {
+    const matchesFilter = filter === "all" ? true : b.status === filter;
+    const matchesSearch = search === "" ? true : 
+      b.profiles?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      b.tours?.title?.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
-  const filtered = bookings
-    .filter(b => {
-      if (filter === "all") return b.status !== "cancelled";
-      if (filter === "cancelled") return b.status === "cancelled";
-      return b.status === filter;
-    })
-    .filter(b => {
-      if (!search) return true;
-      return (
-        getName(b).toLowerCase().includes(search.toLowerCase()) ||
-        getTitle(b).toLowerCase().includes(search.toLowerCase()) ||
-        (getPhone(b) || "").includes(search)
-      );
-    });
-
-  const activeBookingsCount = bookings.filter(b => b.status !== 'cancelled').length;
-  const cancelledBookingsCount = bookings.filter(b => b.status === 'cancelled').length;
-
-  const stats = [
-    { label: "Active", value: activeBookingsCount, color: "var(--teal)", icon: "📋" },
-    { label: "Confirmed", value: bookings.filter(b => b.status === "confirmed").length, color: "var(--emerald)", icon: "✅" },
-    { label: "Pending", value: bookings.filter(b => b.status === "pending").length, color: "var(--gold)", icon: "⏳" },
-    { label: "Cancelled", value: cancelledBookingsCount, color: "var(--rose)", icon: "❌" },
-  ];
-
-  if (loading) return (
-    <div className="flex items-center justify-center h-[60vh]">
+  if (loading || authLoading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
       <span className="loading-spinner" />
     </div>
   );
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade" style={{ padding: "0 20px 60px" }}>
+      {/* Dashboard Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40 }}>
         <div>
-          <div className="text-[13px] text-white/50 mb-1">Company Panel</div>
-          <h1 className="text-2xl font-bold text-white">📋 Bookings Management</h1>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 6, fontWeight: 500, letterSpacing: 1, textTransform: "uppercase" }}>Operations</p>
+          <h1 className="topbar-title" style={{ fontSize: 36, fontWeight: 900, margin: 0 }}>Bookings Management</h1>
         </div>
-        <div className="topbar-actions">
-          <span className="badge badge-teal">{bookings.length} Total Bookings</span>
-        </div>
-      </div>
-
-      {error && (
-        <div className="alert alert-warning mb-5">
-          ⚠️ {error}
-        </div>
-      )}
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        {stats.map(s => (
-          <div key={s.label} className="bg-white/5 border border-white/10 p-4 rounded-xl">
-            <div className="text-2xl mb-1">{s.icon}</div>
-            <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-xs text-white/50">{s.label}</div>
+        <div style={{ display: "flex", gap: 32 }}>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Pending Action</p>
+            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--gold)", margin: 0 }}>
+              {bookings.filter(b => b.status === 'pending').length}
+            </p>
           </div>
-        ))}
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Active Trips</p>
+            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--emerald)", margin: 0 }}>
+              {bookings.filter(b => b.status === 'confirmed').length}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Search + Filter */}
-      <div className="flex flex-col md:flex-row gap-4 mb-5 items-start md:items-end">
-        <div className="w-full md:w-auto flex-1">
-          <label className="block text-xs text-white/50 mb-1">🔍 Search by customer, tour, or phone</label>
-          <input
-            className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-blue-500"
-            placeholder="Name, tour, or phone number..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2 flex-wrap">
+      {/* Control Bar */}
+      <div style={{ 
+        display: "flex", justifyContent: "space-between", alignItems: "center", 
+        marginBottom: 32, gap: 20, flexWrap: "wrap" 
+      }}>
+        <div style={{ display: "flex", gap: 8, padding: 4, borderRadius: 16, background: "rgba(255,255,255,0.03)", width: "fit-content" }}>
           {["all", "confirmed", "pending", "completed", "cancelled"].map(f => (
             <button
               key={f}
-              className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-all ${filter === f ? "bg-gradient-to-r from-blue-500 to-violet-500 text-white" : "bg-white/[0.06] border border-white/10 text-white/50 hover:text-white"}`}
               onClick={() => setFilter(f)}
+              style={{
+                padding: "8px 16px", borderRadius: 12, border: "none", fontSize: 12, fontWeight: 600,
+                cursor: "pointer", transition: "all 0.3s", textTransform: "capitalize",
+                background: filter === f ? "rgba(255,255,255,0.1)" : "transparent",
+                color: filter === f ? "#fff" : "var(--text-secondary)"
+              }}
             >
-              {f === 'all' ? 'Active' : f}
-              {f === 'cancelled' && <span className="ml-2 text-xs opacity-70">({cancelledBookingsCount})</span>}
+              {f}
             </button>
           ))}
         </div>
+
+        <div style={{ position: "relative", flex: 1, maxWidth: 400 }}>
+          <input 
+            type="text" 
+            placeholder="Search by customer or tour..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%", padding: "12px 20px", borderRadius: 16,
+              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+              color: "#fff", fontSize: 14, outline: "none"
+            }}
+          />
+        </div>
       </div>
 
-      {/* Mobile view */}
-      <div className="sm:hidden space-y-3">
+      {/* Bookings List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {filtered.length === 0 ? (
-          <div className="text-center py-10 text-white/50 bg-white/5 rounded-xl border border-white/10">
-            📭 No bookings found
+          <div className="glass-card" style={{ textAlign: "center", padding: 80, borderRadius: 24 }}>
+            <p style={{ color: "var(--text-secondary)" }}>No bookings found matching your criteria.</p>
           </div>
         ) : (
-          filtered.map(b => (
-            <div key={b.id} className="bg-white/5 border border-white/10 p-4 rounded-xl flex flex-col gap-3">
-              <div className="flex justify-between">
-                <div>
-                  <div className="font-bold text-white">{getName(b)}</div>
-                  {getPhone(b) && (
-                    <a href={`tel:${getPhone(b)}`} className="text-blue-400 text-xs font-mono block mt-1">📞 {getPhone(b)}</a>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div className={`text-xs px-2 py-1 rounded-md inline-block ${b.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400' : b.status === 'cancelled' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{b.status}</div>
-                </div>
+          filtered.map(booking => (
+            <div key={booking.id} className="glass-card" style={{ 
+              padding: "24px 32px", borderRadius: 24, border: "1px solid rgba(255,255,255,0.05)",
+              display: "flex", alignItems: "center", gap: 40
+            }}>
+              {/* Status & ID */}
+              <div style={{ width: 120 }}>
+                <span className={`badge ${getStatusColor(booking.status)}`} style={{ fontSize: 10, display: "block", textAlign: "center", marginBottom: 8 }}>
+                  {booking.status}
+                </span>
+                <p style={{ fontSize: 10, color: "var(--text-secondary)", textAlign: "center", fontFamily: "monospace" }}>#{booking.id.slice(0,8)}</p>
               </div>
-              <div className="text-sm text-white/70">
-                <div>{getTitle(b)}</div>
-                <div className="text-xs text-white/50">{getDate(b)} • {getGroup(b)} pax</div>
+
+              {/* Customer Info */}
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 4 }}>Customer</p>
+                <h4 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{booking.profiles?.full_name}</h4>
+                <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>{booking.profiles?.phone || "No phone provided"}</p>
               </div>
-              <div className="flex justify-between items-center border-t border-white/10 pt-3">
-                <div className="font-bold text-teal-400">{formatPKR(getPrice(b))}</div>
-                <div className="flex gap-2">
-                  {companyId && (
-                    <StartChatButton bookingId={b.id} userId={b.user_id} companyId={companyId} otherPartyName={getName(b)} currentRole="company" />
-                  )}
-                </div>
+
+              {/* Tour Details */}
+              <div style={{ flex: 1.5 }}>
+                <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 4 }}>Trip Details</p>
+                <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{booking.tours?.title}</h4>
+                <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+                  {new Date(booking.travel_date).toLocaleDateString()} • {booking.group_size} Person
+                </p>
+              </div>
+
+              {/* Financials */}
+              <div style={{ width: 150, textAlign: "right" }}>
+                <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 4 }}>Revenue</p>
+                <p style={{ fontSize: 18, fontWeight: 900, color: "var(--accent)", margin: 0 }}>{formatPKR(booking.total_price)}</p>
+                <p style={{ fontSize: 11, color: booking.payment_status === 'paid' ? 'var(--emerald)' : 'var(--gold)', fontWeight: 600, marginTop: 2 }}>
+                  {booking.payment_status.toUpperCase()}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                {booking.status === 'pending' && (
+                  <>
+                    <button 
+                      className="btn btn-primary btn-sm" 
+                      style={{ background: "var(--emerald)", border: "none" }}
+                      onClick={() => handleUpdateStatus(booking.id, 'confirmed')}
+                    >
+                      Confirm
+                    </button>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      style={{ color: "var(--rose)" }}
+                      onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
+                {profile && (
+                  <StartChatButton 
+                    bookingId={booking.id}
+                    userId={booking.user_id}
+                    companyId={profile.id}
+                    otherPartyName={booking.profiles?.full_name || "Traveler"}
+                    currentRole="company"
+                  />
+                )}
               </div>
             </div>
           ))
         )}
-      </div>
-
-      {/* Desktop view */}
-      <div className="hidden sm:block overflow-x-auto bg-white/5 border border-white/10 rounded-xl">
-        <table className="w-full text-left text-sm text-white/80">
-          <thead className="bg-white/5 border-b border-white/10 text-white/50 uppercase text-xs">
-            <tr>
-              <th className="px-4 py-3">Booking ID</th>
-              <th className="px-4 py-3">Customer</th>
-              <th className="px-4 py-3">📞 Phone</th>
-              <th className="px-4 py-3">Tour</th>
-              <th className="px-4 py-3">Date & Group</th>
-              <th className="px-4 py-3">Amount</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="text-center py-10 text-white/50">
-                  📭 No bookings found
-                </td>
-              </tr>
-            ) : (
-              filtered.map(b => (
-                <tr key={b.id} className="hover:bg-white/[0.02]">
-                  <td className="px-4 py-3 font-mono text-teal-400 text-xs">
-                    #{b.id.substring(0, 6).toUpperCase()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-white">{getName(b)}</div>
-                    {getEmail(b) && <div className="text-xs text-white/50">{getEmail(b)}</div>}
-                  </td>
-                  <td className="px-4 py-3">
-                    {getPhone(b) ? (
-                      <a href={`tel:${getPhone(b)}`} className="text-blue-400 font-mono text-xs hover:text-blue-300">
-                        {getPhone(b)}
-                      </a>
-                    ) : (
-                      <span className="text-white/30 text-xs italic">No phone</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-white/70 text-xs">{getTitle(b)}</td>
-                  <td className="px-4 py-3 text-white/70 text-xs">
-                    {getDate(b)} <br />
-                    <span className="text-white/50">{getGroup(b)} pax</span>
-                  </td>
-                  <td className="px-4 py-3 font-bold text-teal-400">{formatPKR(getPrice(b))}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-1">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold text-center ${b.status === 'confirmed' ? 'bg-emerald-500/20 text-emerald-400' : b.status === 'cancelled' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{b.status}</span>
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] uppercase font-bold text-center ${getPayment(b) === 'paid' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>{getPayment(b)}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2 flex-wrap items-center">
-                      {companyId && (
-                        <StartChatButton bookingId={b.id} userId={b.user_id} companyId={companyId} otherPartyName={getName(b)} currentRole="company" />
-                      )}
-                      {b.status === "pending" && (
-                        <>
-                          <button className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs hover:bg-emerald-500/20 border border-emerald-500/20" onClick={() => handleConfirm(b.id)} disabled={updatingId === b.id}>
-                            {updatingId === b.id ? "..." : "✅ Confirm"}
-                          </button>
-                          <button className="px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs hover:bg-red-500/20 border border-red-500/20" onClick={() => handleCancel(b.id)} disabled={updatingId === b.id}>
-                            {updatingId === b.id ? "..." : "❌ Cancel"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
       </div>
     </div>
   );

@@ -82,7 +82,7 @@ export interface Company {
   phone: string;
   city: string;
   verified: boolean;
-  status: "pending" | "approved" | "suspended";
+  status: "pending" | "approved" | "suspended" | "rejected";
   rating: number;
   totalTours: number;
   totalBookings: number;
@@ -255,7 +255,7 @@ export function getStatusColor(status: string): string {
   const map: Record<string, string> = {
     confirmed: "badge-emerald", pending: "badge-gold",
     completed: "badge-teal", cancelled: "badge-rose",
-    approved: "badge-emerald", suspended: "badge-rose",
+    approved: "badge-emerald", suspended: "badge-rose", rejected: "badge-rose",
     paid: "badge-emerald", refunded: "badge-purple",
     positive: "badge-emerald", neutral: "badge-gold", negative: "badge-rose",
   };

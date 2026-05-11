@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * @file page.tsx
  * @description User Dashboard. Serves as the primary authenticated entry point for travelers.
@@ -9,12 +11,17 @@
 // ==========================================
 // Imports
 // ==========================================
-"use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { fetchBookings, fetchTours, fetchSafetyZones } from "@/lib/db";
-import { formatPKR, ITINERARY_5DAY, BUDGET_BREAKDOWN } from "@/lib/data";
+import { 
+  fetchTours, 
+  fetchBookings, 
+  fetchSafetyZones, 
+  fetchUserExpenses 
+} from "@/lib/db";
+import { formatPKR } from "@/lib/data";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 
 // ==========================================
 // Component: UserDashboard
@@ -53,6 +60,8 @@ export default function UserDashboard() {
   const [safetyZones, setSafetyZones] = useState<{
     area: string; score: number; status: string;
   }[]>([]);
+  const [expenses, setExpenses] = useState<{ category: string, amount: number }[]>([]);
+  const [totalBudget, setTotalBudget] = useState(100000);
 
   const [loading, setLoading] = useState(true);
 
@@ -64,8 +73,13 @@ export default function UserDashboard() {
    * Initializes dashboard data by fetching user bookings, featured tours, 
    * and safety zones concurrently to minimize load time.
    */
+  const isFirstLoad = useRef(true);
+
   useEffect(() => {
     async function load() {
+      // Prevent double-firing in Strict Mode
+      if (!isFirstLoad.current) return;
+      
       if (!authLoading && !profile) {
         setLoading(false);
         return;
@@ -74,16 +88,35 @@ export default function UserDashboard() {
       if (profile?.id) {
         setLoading(true);
         try {
+          // 1. Session Warmup: Fire one request first to ensure the auth lock is acquired 
+          // and the token is refreshed before hitting the DB with parallel calls.
+          await fetchSafetyZones().catch(() => []); 
+
+          // 2. Data Fetching: Now that the session is "warm", fire parallel requests.
           const [booksData, toursData, zonesData] = await Promise.all([
             fetchBookings({ userId: profile.id }),
             fetchTours({ featured: true }),
             fetchSafetyZones(),
           ]);
+
           setBookings(booksData.filter((b: { status: string }) => b.status !== "completed").slice(0, 3) as typeof bookings);
           if (toursData.length > 0) setFeaturedTour(toursData[0] as typeof featuredTour);
           setSafetyZones(zonesData.slice(0, 6) as typeof safetyZones);
-        } catch (err) {
-          console.error("UserDashboard load error:", err);
+
+          // 3. Sequential load for user-specific data to prevent lock contention
+          const expensesData = await fetchUserExpenses(profile.id);
+          setExpenses(expensesData as any[]);
+          
+          if ((profile as any).total_budget) {
+            setTotalBudget((profile as any).total_budget);
+          }
+          
+          isFirstLoad.current = false;
+        } catch (err: any) {
+          // Ignore AbortErrors that are already being handled by retries in db.ts
+          if (err.name !== 'AbortError') {
+            console.error("UserDashboard load error:", err);
+          }
         } finally {
           setLoading(false);
         }
@@ -154,11 +187,7 @@ export default function UserDashboard() {
             <Link href="/user/planner" className="btn btn-primary" style={{ background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", color: "#111", border: "none" }}>+ Plan New Trip</Link>
             
             {/* Notification Bell */}
-            {/* FIXME: Implement real notification system instead of alert */}
-            <div style={{ position: "relative" }}>
-              <button className="btn btn-secondary btn-icon" onClick={() => alert('No new notifications')} style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)" }}>🔔</button>
-              <span className="notif-dot" />
-            </div>
+            <NotificationBell role="user" userId={profile?.id} />
             
             {/* User Avatar */}
             <div className="avatar" style={{ background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", color: "#111", border: "none", textShadow: "none" }}>{initials || "U"}</div>
@@ -174,10 +203,9 @@ export default function UserDashboard() {
       <div className="grid-4" style={{ marginBottom: 28 }}>
         {[
           { value: upcoming.length.toString(), label: "Upcoming Trips", color: "var(--teal)", icon: "🗺️" },
-          // Convert total spent to K notation for readability
-          { value: `PKR ${Math.round(bookings.reduce((s, b) => s + b.total_price, 0) / 1000)}K`, label: "Total Spent", color: "var(--purple-light)", icon: "💰" },
+          { value: formatPKR(expenses.reduce((s, e) => s + e.amount, 0)), label: "Total Spent", color: "var(--purple-light)", icon: "💰" },
           { value: bookings.filter(b => b.status === "completed").length.toString(), label: "Tours Completed", color: "var(--gold)", icon: "✅" },
-          { value: "4.9★", label: "Avg. Rating Given", color: "var(--emerald)", icon: "⭐" },
+          { value: bookings.length.toString(), label: "Total Bookings", color: "var(--emerald)", icon: "📋" },
         ].map(s => (
           <div key={s.label} className="card-glass" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ fontSize: 24 }}>{s.icon}</div>
@@ -240,22 +268,27 @@ export default function UserDashboard() {
         */}
         <div className="card-glass">
           <div className="section-header">
-            <h2 className="section-title">📅 5-Day Hunza Itinerary</h2>
-            <Link href="/user/planner" className="btn btn-ghost btn-sm">Edit</Link>
+            <h2 className="section-title">📊 Quick Stats</h2>
+            <Link href="/user/budget" className="btn btn-ghost btn-sm">Manage Budget</Link>
           </div>
-          <div className="timeline">
-            {ITINERARY_5DAY.slice(0, 4).map(day => (
-              <div key={day.day} className="timeline-item">
-                <div className="timeline-dot" />
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>Day {day.day}: {day.title}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{day.places.slice(0, 2).join(" · ")}</div>
-                  </div>
-                  <span className="weather-chip">{day.weatherIcon} {day.weather.split(" ")[0]}</span>
-                </div>
-              </div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>Confirmed Bookings</span>
+              <span style={{ fontWeight: 700, color: "var(--emerald)" }}>{bookings.filter(b => b.status === 'confirmed').length}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>Pending Bookings</span>
+              <span style={{ fontWeight: 700, color: "var(--gold)" }}>{bookings.filter(b => b.status === 'pending').length}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>Completed Tours</span>
+              <span style={{ fontWeight: 700, color: "var(--teal)" }}>{bookings.filter(b => b.status === 'completed').length}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+              <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>Total Spent</span>
+              <span style={{ fontWeight: 700, color: "var(--purple-light)" }}>{formatPKR(expenses.reduce((s, e) => s + e.amount, 0))}</span>
+            </div>
+            <Link href="/user/tours" className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 8 }}>Browse All Tours →</Link>
           </div>
         </div>
       </div>
@@ -271,17 +304,30 @@ export default function UserDashboard() {
             <h2 className="section-title">💰 Budget Breakdown</h2>
             <Link href="/user/budget" className="btn btn-ghost btn-sm">Manage</Link>
           </div>
-          {BUDGET_BREAKDOWN.map(item => (
-            <div key={item.name} style={{ marginBottom: 14 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
-                <span style={{ color: "var(--text-secondary)" }}>{item.name}</span>
-                <span style={{ fontWeight: 600, color: item.color }}>{item.value}% · {formatPKR(item.amount)}</span>
-              </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${item.value}%`, background: item.color }} />
-              </div>
+          {expenses.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "20px 0", color: "var(--text-muted)", fontSize: 13 }}>
+              No expenses logged yet. <Link href="/user/budget" style={{ color: "var(--teal)" }}>Track budget →</Link>
             </div>
-          ))}
+          ) : (
+            ["Transport", "Accommodation", "Food", "Activities"].map(catName => {
+              const amount = expenses.filter(e => e.category === catName).reduce((sum, e) => sum + e.amount, 0);
+              const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+              const percent = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
+              const color = catName === "Transport" ? "#14D2BE" : catName === "Accommodation" ? "#7C3AED" : catName === "Food" ? "#F59E0B" : "#10B981";
+              
+              return (
+                <div key={catName} style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+                    <span style={{ color: "var(--text-secondary)" }}>{catName}</span>
+                    <span style={{ fontWeight: 600, color }}>{percent}% · {formatPKR(amount)}</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${percent}%`, background: color }} />
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* 
@@ -318,7 +364,7 @@ export default function UserDashboard() {
         Upcoming Bookings Table
         ================================================================
       */}
-      <div className="card-glass">
+      <div className="card-glass" style={{ marginBottom: 28 }}>
         <div className="section-header">
           <h2 className="section-title">📋 Upcoming Bookings</h2>
           <Link href="/user/bookings" className="btn btn-ghost btn-sm">View All</Link>
@@ -352,6 +398,40 @@ export default function UserDashboard() {
             </table>
           </div>
         )}
+      </div>
+
+      {/* 
+        ================================================================
+        Register Company CTA Card
+        ================================================================
+      */}
+      <div className="card-glass" style={{ 
+        background: "linear-gradient(135deg, rgba(13, 148, 136, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)", 
+        border: "1px solid rgba(255,255,255,0.2)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "32px 40px",
+        flexWrap: "wrap",
+        gap: "24px"
+      }}>
+        <div style={{ flex: 1, minWidth: "300px" }}>
+          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: "#fff" }}>Do you own a Tour Company? 🏔️</h2>
+          <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 15, lineHeight: 1.6 }}>
+            Join our platform as a verified partner. Create tours, manage bookings, and reach thousands of travelers across Pakistan.
+          </p>
+        </div>
+        <Link href="/user/register-company" className="btn btn-primary" style={{ 
+          padding: "16px 32px", 
+          fontSize: 16, 
+          fontWeight: 700,
+          background: "var(--gradient-main)",
+          border: "none",
+          color: "#fff",
+          boxShadow: "0 10px 20px rgba(0,0,0,0.2)"
+        }}>
+          Register Your Company →
+        </Link>
       </div>
     </div>
   );

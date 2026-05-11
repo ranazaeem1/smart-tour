@@ -55,8 +55,8 @@ export default function AdminCompaniesPage() {
   const handleReject = async (id: string) => {
     if (!confirm("Reject this company application?")) return;
     setActionId(id);
-    const updated = await updateCompanyStatus(id, "suspended");
-    if (updated) setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: "suspended" } : c));
+    const updated = await updateCompanyStatus(id, "rejected");
+    if (updated) setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: "rejected" } : c));
     setActionId(null);
   };
 
@@ -90,7 +90,7 @@ export default function AdminCompaniesPage() {
           { label: "Total Companies", value: companies.length, color: "var(--teal)", icon: "🏢" },
           { label: "Approved", value: companies.filter(c => c.status === "approved").length, color: "var(--emerald)", icon: "✅" },
           { label: "Pending", value: pendingCount, color: "var(--gold)", icon: "⏳" },
-          { label: "Suspended", value: companies.filter(c => c.status === "suspended").length, color: "var(--rose)", icon: "🚫" },
+          { label: "Suspended", value: companies.filter(c => (c.status === "suspended" || c.status === "rejected")).length, color: "var(--rose)", icon: "🚫" },
         ].map(s => (
           <div key={s.label} className="stat-card">
             <div style={{ fontSize: 22 }}>{s.icon}</div>
@@ -110,7 +110,7 @@ export default function AdminCompaniesPage() {
 
       {/* Filter tabs */}
       <div className="tabs" style={{ marginBottom: 20, width: "fit-content" }}>
-        {["all", "approved", "pending", "suspended"].map(f => (
+        {["all", "approved", "pending", "suspended", "rejected"].map(f => (
           <button key={f} className={`tab-btn ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
             {f.charAt(0).toUpperCase() + f.slice(1)}
             {f === "pending" && pendingCount > 0 && (
@@ -162,7 +162,6 @@ export default function AdminCompaniesPage() {
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button className="btn btn-secondary btn-sm">View Details</button>
                   {c.status === "pending" && <>
                     <button
                       className="btn btn-sm"
@@ -179,7 +178,7 @@ export default function AdminCompaniesPage() {
                       {actionId === c.id ? "..." : "🚫 Suspend"}
                     </button>
                   )}
-                  {c.status === "suspended" && (
+                  {(c.status === "suspended" || c.status === "rejected") && (
                     <button
                       className="btn btn-sm"
                       style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", border: "1px solid rgba(16,185,129,0.3)" }}

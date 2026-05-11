@@ -1,26 +1,30 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { DESTINATIONS, SAFETY_ZONES, formatPKR } from "@/lib/data";
 
-const GROUP_MEMBERS = [
-  { name:"Ali Hassan", email:"ali@email.com", status:"accepted", budget:45000 },
-  { name:"Sara Khan", email:"sara@email.com", status:"accepted", budget:50000 },
-  { name:"Umar Farooq", email:"umar@email.com", status:"pending", budget:40000 },
-  { name:"Fatima Malik", email:"fatima@email.com", status:"pending", budget:55000 },
-];
+function GroupTravelContent() {
+  const params = useSearchParams();
+  const initialDest = params.get("dest") || "Hunza Valley";
+  const initialBudget = Number(params.get("budget")) || 45000;
 
-export default function GroupTravelPage() {
-  const [dest, setDest] = useState("Hunza Valley");
+  const [dest, setDest] = useState(initialDest);
   const [email, setEmail] = useState("");
-  const [members, setMembers] = useState(GROUP_MEMBERS);
+  // Start with just the planner (you) instead of dummy data
+  const [members, setMembers] = useState([
+    { name: "You (Planner)", email: "me@example.com", status: "accepted", budget: initialBudget }
+  ]);
 
   const avgBudget = Math.round(members.reduce((s,m)=>s+m.budget,0)/members.length);
   const totalBudget = members.reduce((s,m)=>s+m.budget,0);
   const accepted = members.filter(m=>m.status==="accepted").length;
 
   const addMember = () => {
-    if (!email.trim()) return;
-    setMembers(p=>[...p,{ name:email.split("@")[0], email, status:"pending", budget:45000 }]);
+    if (!email.trim() || !email.includes("@")) return;
+    setMembers(p => [
+      ...p,
+      { name: email.split("@")[0], email, status: "pending", budget: 45000 }
+    ]);
     setEmail("");
   };
 
@@ -60,23 +64,39 @@ export default function GroupTravelPage() {
             </div>
           </div>
 
-          {/* Invite Members */}
+          {/* Group Composition */}
           <div className="card">
-            <h2 style={{ fontSize:18,fontWeight:700,marginBottom:16 }}>➕ Invite Members</h2>
-            <div style={{ display:"flex",gap:10 }}>
-              <input className="input" placeholder="friend@email.com" value={email} onChange={e=>setEmail(e.target.value)}
-                onKeyDown={e=>e.key==="Enter"&&addMember()} style={{ flex:1 }}/>
-              <button onClick={addMember} className="btn btn-primary btn-sm">Invite</button>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <h2 style={{ fontSize:18,fontWeight:700,margin:0 }}>👥 Group Composition</h2>
+              <button 
+                onClick={() => {
+                  const newGuestNum = members.length + 1;
+                  setMembers(p => [...p, { name: `Traveler ${newGuestNum}`, status: "accepted", budget: 45000 }]);
+                }} 
+                className="btn btn-primary btn-sm"
+              >
+                + Add traveler
+              </button>
             </div>
-            <div style={{ marginTop:16,display:"flex",flexDirection:"column",gap:10 }}>
+            
+            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
               {members.map((m,i)=>(
                 <div key={i} style={{ display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:"var(--bg-secondary)",borderRadius:"var(--radius-md)",border:"1px solid var(--border)" }}>
                   <div className="avatar" style={{ width:34,height:34,fontSize:12,flexShrink:0 }}>{m.name.charAt(0).toUpperCase()}</div>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontSize:14,fontWeight:600 }}>{m.name}</div>
-                    <div style={{ fontSize:12,color:"var(--text-muted)" }}>{m.email} · Budget: {formatPKR(m.budget)}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div style={{ fontSize:14,fontWeight:600 }}>{m.name}</div>
+                      {i !== 0 && (
+                        <button 
+                          onClick={() => setMembers(p => p.filter((_, idx) => idx !== i))}
+                          style={{ background:"none", border:"none", color:"var(--rose)", fontSize:11, cursor:"pointer", fontWeight:600 }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ fontSize:12,color:"var(--text-secondary)" }}>Individual Budget: {formatPKR(m.budget)}</div>
                   </div>
-                  <span className={`badge ${m.status==="accepted"?"badge-emerald":"badge-gold"}`}>{m.status}</span>
                 </div>
               ))}
             </div>
@@ -139,5 +159,13 @@ export default function GroupTravelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GroupTravelPage() {
+  return (
+    <Suspense fallback={<div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"50vh" }}><span className="loading-spinner"/></div>}>
+      <GroupTravelContent />
+    </Suspense>
   );
 }

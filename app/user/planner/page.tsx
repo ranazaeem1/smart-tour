@@ -6,6 +6,31 @@ import { DESTINATIONS, ITINERARY_5DAY, BUDGET_BREAKDOWN, SAFETY_ZONES, formatPKR
 
 const INTERESTS = ["Trekking","Photography","Culture","Wildlife","Camping","History","Family","Winter Sports","Lakes","Food"];
 
+// Dynamic generator for a generic itinerary based on destination
+function generateDynamicItinerary(dest: string, days: number) {
+  const baseName = dest.split(" ")[0];
+  const genericDays = [
+    { title: `Arrival in ${baseName}`, places: [`${baseName} City Center`, `Local Markets`], travelTime: "1-2h", accommodation: `${baseName} Grand Hotel`, meals: ["Dinner"], weather: "Sunny 22°C", weatherIcon: "☀️" },
+    { title: `${baseName} Valley Highlights`, places: [`${baseName} Viewpoint`, `Historical Fort`, `Old Town`], travelTime: "3h drive", accommodation: `${baseName} Grand Hotel`, meals: ["Breakfast", "Dinner"], weather: "Partly Cloudy 18°C", weatherIcon: "⛅" },
+    { title: `Nature & Lakes of ${baseName}`, places: [`${baseName} Main Lake`, `Mountain Pass`, `Scenic Valley`], travelTime: "4h total", accommodation: `${baseName} Grand Hotel`, meals: ["Breakfast", "Lunch", "Dinner"], weather: "Clear 20°C", weatherIcon: "☀️" },
+    { title: `Adventure in ${baseName}`, places: [`High Altitude Basecamp`, `Glacier View`, `Alpine Meadows`], travelTime: "5h drive", accommodation: `${baseName} Resort`, meals: ["Breakfast", "Lunch"], weather: "Cool 12°C", weatherIcon: "🌤️" },
+    { title: `Farewell from ${baseName}`, places: [`Souvenir Shopping`, `Departure`], travelTime: "2h", accommodation: "—", meals: ["Breakfast"], weather: "Sunny 24°C", weatherIcon: "☀️" },
+  ];
+  
+  // Extend or slice based on days (repeating middle days if > 5)
+  const result = [];
+  for (let i=0; i<days; i++) {
+    if (i === days - 1) {
+      result.push({ day: i+1, ...genericDays[4] }); // Always end with departure
+    } else if (i < 4) {
+      result.push({ day: i+1, ...genericDays[i] });
+    } else {
+      result.push({ day: i+1, ...genericDays[1] }); // Repeat day 2 logic for extra days
+    }
+  }
+  return result;
+}
+
 function PlannerContent() {
   const params = useSearchParams();
   const [step, setStep] = useState(1);
@@ -16,6 +41,8 @@ function PlannerContent() {
   const [interests, setInterests] = useState<string[]>(["Trekking","Photography"]);
   const [generated, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  const dynamicItinerary = generateDynamicItinerary(dest, days);
 
   const toggleInterest = (i: string) => setInterests(p => p.includes(i) ? p.filter(x=>x!==i) : [...p,i]);
 
@@ -153,7 +180,28 @@ function PlannerContent() {
               <p style={{ color:"var(--text-secondary)",fontSize:14,marginTop:4 }}>AI-optimized for minimum travel time & maximum places covered</p>
             </div>
             <div style={{ display:"flex",gap:12 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => alert('PDF download will be available in the full release. Your itinerary has been saved!')}>📥 Download PDF</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => {
+                const lines = [
+                  `SmartTour — ${days}-Day ${dest} Itinerary`,
+                  `Group: ${group} people | Budget: ${formatPKR(budget)}/person | Total: ${formatPKR(budget * group)}`,
+                  '',
+                  ...dynamicItinerary.map(day => [
+                    `Day ${day.day}: ${day.title}`,
+                    `  Places: ${day.places.join(', ')}`,
+                    `  Accommodation: ${day.accommodation}`,
+                    `  Meals: ${day.meals.join(', ')}`,
+                    `  Weather: ${day.weather}`,
+                    ''
+                  ].join('\n'))
+                ].join('\n');
+                const blob = new Blob([lines], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `smarttour-${dest.replace(/\s+/g, '-').toLowerCase()}-itinerary.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}>📥 Download</button>
               <button className="btn btn-secondary btn-sm" onClick={() => { if (navigator.share) { navigator.share({ title: `${days}-Day ${dest} Itinerary`, text: `Check out my Smart Tour itinerary for ${dest}!`, url: window.location.href }); } else { navigator.clipboard.writeText(window.location.href); alert('Link copied to clipboard!'); } }}>📤 Share</button>
               <Link href="/user/tours" className="btn btn-primary btn-sm">Book This Tour →</Link>
             </div>
@@ -161,23 +209,23 @@ function PlannerContent() {
 
           <div className="grid-2" style={{ gap:24 }}>
             <div>
-              {ITINERARY_5DAY.slice(0, days).map(day=>(
+              {dynamicItinerary.map(day=>(
                 <div key={day.day} className="card" style={{ marginBottom:16 }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12 }}>
                     <div style={{ display:"flex",alignItems:"center",gap:12 }}>
                       <div style={{ width:40,height:40,borderRadius:"50%",background:"var(--gradient-main)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16,flexShrink:0 }}>{day.day}</div>
                       <div>
-                        <div style={{ fontWeight:700,fontSize:16 }}>{day.title.replace("Hunza", dest)}</div>
+                        <div style={{ fontWeight:700,fontSize:16 }}>{day.title}</div>
                         <div style={{ fontSize:12,color:"var(--text-muted)" }}>🕐 Travel: {day.travelTime}</div>
                       </div>
                     </div>
                     <span className="weather-chip">{day.weatherIcon} {day.weather}</span>
                   </div>
                   <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginBottom:10 }}>
-                    {day.places.map(p=><span key={p} className="tag">📍 {p.replace("Hunza", dest.split(" ")[0])}</span>)}
+                    {day.places.map(p=><span key={p} className="tag">📍 {p}</span>)}
                   </div>
                   <div style={{ fontSize:13,color:"var(--text-secondary)" }}>
-                    🏨 {day.accommodation.replace("Hunza", dest.split(" ")[0])} &nbsp;·&nbsp; 🍽️ {day.meals.join(", ")}
+                    🏨 {day.accommodation} &nbsp;·&nbsp; 🍽️ {day.meals.join(", ")}
                   </div>
                 </div>
               ))}

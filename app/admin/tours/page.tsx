@@ -32,7 +32,7 @@ export default function AdminToursPage() {
         <div className="table-container">
           <table>
             <thead>
-              <tr><th>Tour</th><th>Company</th><th>Destination</th><th>Price</th><th>Duration</th><th>Rating</th><th>Safety</th><th>Status</th><th>Actions</th></tr>
+              <tr><th>Tour</th><th>Company</th><th>Destination</th><th>Price</th><th>Duration</th><th>Rating</th><th>Safety</th><th>Status</th></tr>
             </thead>
             <tbody>
               {filtered.map(t=>(
@@ -49,12 +49,6 @@ export default function AdminToursPage() {
                     </span>
                   </td>
                   <td><span className={`badge ${t.available?"badge-emerald":"badge-rose"}`}>{t.available?"Active":"Inactive"}</span></td>
-                  <td>
-                    <div style={{ display:"flex",gap:6 }}>
-                      <button className="btn btn-secondary btn-sm">View</button>
-                      <button className="btn btn-danger btn-sm">Remove</button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>

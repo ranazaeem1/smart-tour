@@ -163,7 +163,6 @@ export default function AdminBookingsPage() {
                           {updatingId === b.id ? "..." : "✅ Confirm"}
                         </button>
                       )}
-                      <button className="btn btn-secondary btn-sm">View</button>
                     </div>
                   </td>
                 </tr>

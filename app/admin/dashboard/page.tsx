@@ -15,18 +15,13 @@ import { useState as useStateFilter } from "react";
 import Link from "next/link";
 import { fetchCompanies, fetchBookings, fetchReviews, fetchRevenueStats, fetchPlatformStats, updateCompanyStatus } from "@/lib/db";
 import { formatPKR, getStatusColor } from "@/lib/data";
+import { NotificationBell } from "@/components/shared/NotificationBell";
+import { useAuth } from "@/components/AuthProvider";
 
 // ==========================================
 // Constants & Mock Data
 // ==========================================
 
-// TODO: Replace mock alerts with live database/websocket alerts
-const ALERTS = [
-  { type: "warning", msg: "3 new company registration requests pending approval", time: "2h ago" },
-  { type: "danger", msg: "Safety alert: Heavy snowfall reported on Babusar Top road", time: "5h ago" },
-  { type: "info", msg: "Platform revenue hit PKR 50M milestone this month!", time: "1d ago" },
-  { type: "success", msg: "System performance optimal. All services running.", time: "2d ago" },
-];
 
 // ==========================================
 // Component: AdminDashboard
@@ -39,6 +34,7 @@ const ALERTS = [
  * @returns {JSX.Element} The rendered admin dashboard
  */
 export default function AdminDashboard() {
+  const { profile } = useAuth();
   // ==========================================
   // State Management
   // ==========================================
@@ -87,7 +83,12 @@ export default function AdminDashboard() {
     async function load() {
       try {
         setLoading(true);
-        // Parallel data fetching for performance optimization
+        
+        // 1. Session Warmup: Fire one request first to ensure the auth lock is acquired 
+        // and the token is refreshed before hitting the DB with parallel calls.
+        await fetchPlatformStats().catch(() => null); 
+
+        // 2. Parallel data fetching for performance optimization
         const [companiesData, bookingsData, reviewsData, revenueData, statsData] = await Promise.all([
           fetchCompanies().catch(() => []),
           fetchBookings().catch(() => []),
@@ -152,12 +153,12 @@ export default function AdminDashboard() {
   // Determine max revenue for dynamic chart scaling
   const maxRev = Math.max(...monthlyRevenue.map(m => m.revenue), 1);
 
-  // Administrative headline statistics
+  const pendingCount = companies.filter(c => c.status === "pending").length;
   const ADMIN_STATS = [
-    { value: stats.totalUsers.toLocaleString(), label: "Total Users", color: "var(--teal)", icon: "👥", change: "+12%" },
-    { value: stats.totalCompanies.toString(), label: "Tour Companies", color: "var(--purple-light)", icon: "🏢", change: `${companies.filter(c => c.status === "pending").length} pending` },
-    { value: formatPKR(stats.platformRevenue), label: "Platform Revenue", color: "var(--gold)", icon: "💰", change: "+18%" },
-    { value: stats.activeTours.toString(), label: "Active Tours", color: "var(--emerald)", icon: "🏔️", change: "+34" },
+    { value: stats.totalUsers.toLocaleString(), label: "Total Users", color: "var(--teal)", icon: "👥", change: `${stats.totalUsers} registered` },
+    { value: stats.totalCompanies.toString(), label: "Tour Companies", color: "var(--purple-light)", icon: "🏢", change: `${pendingCount} pending` },
+    { value: formatPKR(stats.platformRevenue), label: "Platform Revenue", color: "var(--gold)", icon: "💰", change: "Live total" },
+    { value: stats.activeTours.toString(), label: "Active Tours", color: "var(--emerald)", icon: "🏔️", change: "Approved only" },
   ];
 
   // ==========================================
@@ -187,11 +188,10 @@ export default function AdminDashboard() {
         </div>
         <div className="topbar-actions">
           <span className="badge badge-gold">🔐 Super Admin</span>
-          <div style={{ position: "relative" }}>
-            <button className="btn btn-secondary btn-icon">🔔</button>
-            <span className="notif-dot" />
+          <NotificationBell role="admin" userId={profile?.id} />
+          <div className="avatar" style={{ background: "var(--gold)", color: "#000" }}>
+            {profile?.full_name?.substring(0, 2).toUpperCase() || "AD"}
           </div>
-          <div className="avatar" style={{ background: "var(--gold)", color: "#000" }}>AD</div>
         </div>
       </div>
 
@@ -246,15 +246,24 @@ export default function AdminDashboard() {
         <div className="card">
           <div className="section-header">
             <h2 className="section-title">⚠️ System Alerts</h2>
-            <span className="badge badge-rose">{ALERTS.length} Active</span>
+            <span className="badge badge-teal">{pendingCount > 0 ? `${pendingCount} Pending` : 'All Clear'}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {ALERTS.map((a, i) => (
-              <div key={i} className={`alert alert-${a.type}`} style={{ fontSize: 13 }}>
-                <div style={{ flex: 1 }}>{a.msg}</div>
-                <div style={{ fontSize: 11, opacity: 0.7, whiteSpace: "nowrap" }}>{a.time}</div>
+            {pendingCount > 0 && (
+              <div className="alert alert-warning" style={{ fontSize: 13 }}>
+                <div style={{ flex: 1 }}>⏳ {pendingCount} company registration{pendingCount > 1 ? 's' : ''} pending approval</div>
               </div>
-            ))}
+            )}
+            {bookings.filter(b => b.status === 'pending').length > 0 && (
+              <div className="alert alert-info" style={{ fontSize: 13 }}>
+                <div style={{ flex: 1 }}>📋 {bookings.filter(b => b.status === 'pending').length} bookings awaiting confirmation</div>
+              </div>
+            )}
+            {pendingCount === 0 && bookings.filter(b => b.status === 'pending').length === 0 && (
+              <div className="alert alert-success" style={{ fontSize: 13 }}>
+                <div style={{ flex: 1 }}>✅ All systems operational. No pending actions.</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -324,7 +333,6 @@ export default function AdminDashboard() {
                           >✅ Approve</button>
                           <button className="btn btn-danger btn-sm" onClick={() => handleSuspend(c.id)} disabled={approvingId === c.id}>❌</button>
                         </>}
-                        {c.status === "approved" && <button className="btn btn-secondary btn-sm">View</button>}
                         {c.status === "suspended" && (
                           <button className="btn btn-sm" style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)" }} onClick={() => handleApprove(c.id)}>Restore</button>
                         )}

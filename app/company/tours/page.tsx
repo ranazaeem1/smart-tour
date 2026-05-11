@@ -148,7 +148,7 @@ export default function CompanyToursPage() {
                     >
                       {updatingId === tour.id ? "..." : tour.available ? "⏸️ Deactivate" : "▶️ Activate"}
                     </button>
-                    <Link href="/company/tours/new" className="btn btn-secondary btn-sm">✏️ Edit/Add</Link>
+                    <Link href={`/company/tours/new?edit=${tour.id}`} className="btn btn-secondary btn-sm">✏️ Edit</Link>
                     <Link href="/company/bookings" className="btn btn-secondary btn-sm">📋 Bookings</Link>
                   </div>
                 </div>

@@ -260,7 +260,6 @@ export default function Home() {
                 { icon:<Shield size={20} color="#dc2626"/>, bg:"rgba(220,38,38,0.1)", title:"Safety & Risk Prediction", desc:"Real-time safety scores for every route and destination across northern Pakistan." },
                 { icon:<Coins size={20} color="#d97706"/>, bg:"rgba(217,119,6,0.1)", title:"Budget Breakdown", desc:"Visual breakdown of your travel costs — accommodation, food, transport & activities." },
                 { icon:<CloudSun size={20} color="#0891b2"/>, bg:"rgba(8,145,178,0.1)", title:"Weather Intelligence", desc:"Weather-aware itinerary planning so you never get caught in a mountain storm." },
-                { icon:<Users size={20} color="#7c3aed"/>, bg:"rgba(124,58,237,0.1)", title:"Group Travel Planning", desc:"Coordinate with friends and family — split costs, sync dates, manage preferences." },
                 { icon:<Smartphone size={20} color="#059669"/>, bg:"rgba(5,150,105,0.1)", title:"Offline Smart Mode", desc:"Download your itinerary and use the app fully offline in areas with no signal." },
               ].map(f=>(
                 <div key={f.title} className="card" style={{ padding:"28px 22px", textAlign:"left" }}>

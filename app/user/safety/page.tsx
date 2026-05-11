@@ -1,17 +1,22 @@
 "use client";
-import { useState } from "react";
-import { SAFETY_ZONES } from "@/lib/data";
+import { useEffect, useState } from "react";
+import { fetchSafetyZones, fetchSafetyAlerts } from "@/lib/db";
+import { formatPKR } from "@/lib/data";
 
-// ==========================================
-// Constants
-// ==========================================
+interface SafetyZone {
+  area: string;
+  score: number;
+  status: string;
+  color: string;
+}
 
-const RISK_AREAS = [
-  { area: "Khunjerab Pass", risk: "High Altitude Risk", icon: "⛰️", level: "warning", desc: "Altitude sickness possible above 4,693m. Acclimatize properly." },
-  { area: "Babusar Top", risk: "Road Closure Risk", icon: "🛣️", level: "warning", desc: "Road may close due to heavy snowfall Nov–May. Check before travel." },
-  { area: "Gilgit City", risk: "Minor Security Alert", icon: "🏙️", level: "info", desc: "Exercise normal caution. Avoid night travel outside city." },
-  { area: "All Northern Areas", risk: "Weather Volatility", icon: "🌩️", level: "info", desc: "Mountain weather can change rapidly. Always check forecast." },
-];
+interface SafetyAlert {
+  id: string;
+  area: string;
+  type: string;
+  severity: 'low' | 'medium' | 'high';
+  description: string;
+}
 
 // GeolocationPositionError codes
 const GEO_ERROR_MESSAGES: Record<number, string> = {
@@ -30,6 +35,24 @@ export default function SafetyPage() {
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationSource, setLocationSource] = useState<"gps" | "fallback">("gps");
   const [geoError, setGeoError] = useState<string | null>(null);
+
+  const [zones, setZones] = useState<SafetyZone[]>([]);
+  const [alerts, setAlerts] = useState<SafetyAlert[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const [z, a] = await Promise.all([
+        fetchSafetyZones(),
+        fetchSafetyAlerts()
+      ]);
+      setZones(z as SafetyZone[]);
+      setAlerts(a as SafetyAlert[]);
+      setLoading(false);
+    }
+    load();
+  }, []);
 
   const handleSOS = () => {
     setSosLoading(true);
@@ -276,17 +299,17 @@ export default function SafetyPage() {
         <div className="card">
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>📊 Safety Scores by Destination</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {SAFETY_ZONES.map(zone => (
+            {zones.map(zone => (
               <div key={zone.area}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 14 }}>
                   <span style={{ fontWeight: 600 }}>{zone.area}</span>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ fontWeight: 800, color: zone.color }}>{zone.score}/100</span>
-                    <span className="badge" style={{ fontSize: 10, background: `${zone.color}20`, color: zone.color, border: `1px solid ${zone.color}40`, padding: "2px 8px" }}>{zone.status}</span>
+                    <span style={{ fontWeight: 800, color: zone.color || "var(--teal)" }}>{zone.score}/100</span>
+                    <span className="badge" style={{ fontSize: 10, background: `${zone.color || "var(--teal)"}20`, color: zone.color || "var(--teal)", border: `1px solid ${zone.color || "var(--teal)"}40`, padding: "2px 8px" }}>{zone.status}</span>
                   </div>
                 </div>
                 <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${zone.score}%`, background: zone.color }} />
+                  <div className="progress-fill" style={{ width: `${zone.score}%`, background: zone.color || "var(--teal)" }} />
                 </div>
               </div>
             ))}
@@ -297,15 +320,21 @@ export default function SafetyPage() {
         <div className="card">
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>⚠️ Active Risk Alerts</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {RISK_AREAS.map(r => (
-              <div key={r.area} className={`alert alert-${r.level}`} style={{ flexDirection: "column", gap: 6 }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "center", fontWeight: 700, fontSize: 14 }}>
-                  <span style={{ fontSize: 20 }}>{r.icon}</span>
-                  <span>{r.area}: {r.risk}</span>
-                </div>
-                <div style={{ fontSize: 13, opacity: 0.85 }}>{r.desc}</div>
+            {alerts.length === 0 ? (
+              <div className="alert alert-success" style={{ fontSize: 13 }}>
+                ✅ No active critical risks reported in your regions.
               </div>
-            ))}
+            ) : (
+              alerts.map(r => (
+                <div key={r.id} className={`alert alert-${r.severity === 'high' ? 'danger' : r.severity === 'medium' ? 'warning' : 'info'}`} style={{ flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center", fontWeight: 700, fontSize: 14 }}>
+                    <span style={{ fontSize: 20 }}>⚠️</span>
+                    <span>{r.area}: {r.type}</span>
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.85 }}>{r.description}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -61,13 +61,11 @@ export default function RequireAuth({ role, children }: RequireAuthProps) {
     // 3. Prevent race conditions: wait until the profile data is fetched
     if (!profile) return;
     
-    // 4. Admin override: Admins bypass role restrictions
-    // TODO: Consider implementing a more robust granular permissions system in the future
-    if (profile.role === "admin") return;
-    
-    // 5. Role mismatch handler: redirect authenticated user to their appropriate dashboard
+    // 4. Strict Role Isolation: Redirect users to their correct panel if they try to access others
     if (profile.role !== role) {
-      if (profile.role === "company") {
+      if (profile.role === "admin") {
+        router.replace("/admin/dashboard");
+      } else if (profile.role === "company") {
         router.replace("/company/dashboard");
       } else {
         router.replace("/user/dashboard");
@@ -99,7 +97,7 @@ export default function RequireAuth({ role, children }: RequireAuthProps) {
   
   // Render nothing if user is unauthorized to prevent flash of protected content
   if (!user) return null;
-  if (profile && profile.role !== role && profile.role !== "admin") return null;
+  if (profile && profile.role !== role) return null;
 
   // Render the protected content for authorized users
   return <>{children}</>;

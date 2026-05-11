@@ -1,6 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import { formatPKR } from "@/lib/data";
+import { useAuth } from "@/components/AuthProvider";
+import { 
+  fetchUserExpenses, 
+  createUserExpense, 
+  deleteUserExpense, 
+  updateUserExpense, 
+  updateProfileBudget 
+} from "@/lib/db";
 
 interface Expense {
   id: string;
@@ -20,8 +28,10 @@ const CATEGORIES = [
 ];
 
 export default function BudgetTracker() {
+  const { profile } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalBudget, setTotalBudget] = useState(100000);
+  const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [newExpense, setNewExpense] = useState({
@@ -31,39 +41,58 @@ export default function BudgetTracker() {
   });
 
   useEffect(() => {
-    setExpenses([
-      { id: "1", category: "Transport", amount: 15000, description: "Fuel & Jeep Rental", date: "2024-04-20" },
-      { id: "2", category: "Accommodation", amount: 25000, description: "Hunza Serena Hotel", date: "2024-04-21" },
-      { id: "3", category: "Food", amount: 5000, description: "Cafe de Hunza", date: "2024-04-22" },
-    ]);
-  }, []);
+    async function load() {
+      if (!profile) return;
+      setLoading(true);
+      try {
+        const data = await fetchUserExpenses(profile.id);
+        setExpenses(data as Expense[]);
+        
+        // Use budget from profile if available
+        if ((profile as any).total_budget) {
+          setTotalBudget((profile as any).total_budget);
+        }
+      } catch (err) {
+        console.error("Failed to load expenses:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [profile]);
 
-  const handleAddOrEditExpense = (e: React.FormEvent) => {
+  const handleUpdateBudget = async (val: number) => {
+    setTotalBudget(val);
+    if (profile) {
+      await updateProfileBudget(profile.id, val);
+    }
+  };
+
+  const handleAddOrEditExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newExpense.amount) return;
+    if (!newExpense.amount || !profile) return;
 
     if (editingExpenseId) {
-      setExpenses(prev =>
-        prev.map(exp =>
-          exp.id === editingExpenseId
-            ? {
-                ...exp,
-                category: newExpense.category,
-                amount: parseFloat(newExpense.amount),
-                description: newExpense.description,
-              }
-            : exp
-        )
-      );
-    } else {
-      const expense: Expense = {
-        id: Math.random().toString(36).substr(2, 9),
+      const updates = {
         category: newExpense.category,
         amount: parseFloat(newExpense.amount),
         description: newExpense.description,
-        date: new Date().toISOString().split("T")[0],
       };
-      setExpenses([expense, ...expenses]);
+      const updated = await updateUserExpense(editingExpenseId, profile.id, updates);
+      if (updated) {
+        setExpenses(prev => prev.map(exp => exp.id === editingExpenseId ? { ...exp, ...updates } : exp));
+      }
+    } else {
+      const expense = {
+        user_id: profile.id,
+        category: newExpense.category,
+        amount: parseFloat(newExpense.amount),
+        description: newExpense.description,
+      };
+      const created = await createUserExpense(expense);
+      if (created) {
+        setExpenses([created as Expense, ...expenses]);
+      }
     }
 
     setNewExpense({ category: "Food", amount: "", description: "" });
@@ -81,9 +110,13 @@ export default function BudgetTracker() {
     setShowAddForm(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!profile) return;
     if (confirm("Are you sure you want to delete this expense?")) {
-      setExpenses(prev => prev.filter(exp => exp.id !== id));
+      const ok = await deleteUserExpense(id, profile.id);
+      if (ok) {
+        setExpenses(prev => prev.filter(exp => exp.id !== id));
+      }
     }
   };
 
@@ -111,7 +144,7 @@ export default function BudgetTracker() {
             <input 
               type="number" 
               value={totalBudget} 
-              onChange={e => setTotalBudget(Number(e.target.value))}
+              onChange={e => handleUpdateBudget(Number(e.target.value))}
               style={{ background: "none", border: "none", color: "var(--teal)", fontWeight: 800, width: 80, fontSize: 14, outline: "none" }}
             />
           </div>

@@ -15,17 +15,12 @@ import { useEffect, useState } from "react";
 import { formatPKR, getStatusColor } from "@/lib/data";
 import { fetchTours, fetchBookings, fetchReviews, fetchRevenueStats, fetchCompanyByOwner } from "@/lib/db";
 import { useAuth } from "@/components/AuthProvider";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 
 // ==========================================
 // Constants & Mock Data
 // ==========================================
 
-// TODO: Replace with dynamic sentiment data derived from actual company reviews
-const SENTIMENT_DATA = [
-  { label: "Positive", value: 78, color: "var(--emerald)" },
-  { label: "Neutral", value: 15, color: "var(--gold)" },
-  { label: "Negative", value: 7, color: "var(--rose)" },
-];
 
 // ==========================================
 // Component: CompanyDashboard
@@ -42,12 +37,12 @@ export default function CompanyDashboard() {
   // Hooks & Context
   // ==========================================
   const { profile, loading: authLoading } = useAuth();
-  
+
   // ==========================================
   // State Management
   // ==========================================
   const [loading, setLoading] = useState(true);
-  
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [tours, setTours] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -56,7 +51,7 @@ export default function CompanyDashboard() {
   const [reviews, setReviews] = useState<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [revenueStats, setRevenueStats] = useState<any[]>([]);
-  
+
   // ==========================================
   // Effects
   // ==========================================
@@ -114,11 +109,23 @@ export default function CompanyDashboard() {
   ];
 
   const maxRevenue = revenueStats.length ? Math.max(...revenueStats.map(m => m.revenue)) : 1;
-  
+
   // Provide fallback name if profile details are missing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const companyName = profile?.full_name || (profile as any)?.company_name || "Company Profile";
   const initials = companyName.substring(0, 2).toUpperCase();
+
+  // Compute real sentiment breakdown from actual reviews
+  const totalReviews = reviews.length;
+  const posCount = reviews.filter((r: any) => r.sentiment === 'positive').length;
+  const neutralCount = reviews.filter((r: any) => r.sentiment === 'neutral').length;
+  const negCount = reviews.filter((r: any) => r.sentiment === 'negative').length;
+  const SENTIMENT_DATA = [
+    { label: 'Positive', value: totalReviews ? Math.round((posCount / totalReviews) * 100) : 0, color: 'var(--emerald)' },
+    { label: 'Neutral', value: totalReviews ? Math.round((neutralCount / totalReviews) * 100) : 0, color: 'var(--gold)' },
+    { label: 'Negative', value: totalReviews ? Math.round((negCount / totalReviews) * 100) : 0, color: 'var(--rose)' },
+  ];
+  const positivePercent = SENTIMENT_DATA[0].value;
 
   // ==========================================
   // JSX Return
@@ -134,17 +141,17 @@ export default function CompanyDashboard() {
         Header Section
         ================================================================
       */}
-      <div className="topbar" style={{ 
-        position: "relative", 
-        margin: "-32px -40px 32px", 
-        padding: "40px", 
+      <div className="topbar" style={{
+        position: "relative",
+        margin: "-28px -32px 28px",
+        padding: "32px",
         overflow: "hidden",
-        borderBottom: "1px solid rgba(255,255,255,0.1)" 
+        borderBottom: "1px solid rgba(255,255,255,0.1)"
       }}>
         {/* Background Overlays */}
         <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.75)", zIndex: 0 }}></div>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 100%)", zIndex: 1 }}></div>
-        
+
         {/* Header Content */}
         <div style={{ position: "relative", zIndex: 2, display: "flex", width: "100%", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
           <div>
@@ -154,6 +161,7 @@ export default function CompanyDashboard() {
           <div className="topbar-actions">
             <span className="badge badge-emerald" style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.5)" }}>✅ Verified</span>
             <Link href="/company/tours/new" className="btn btn-primary" style={{ background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", color: "#111", border: "none" }}>+ Add New Tour</Link>
+            <NotificationBell role="company" userId={profile?.id} companyId={(profile as any)?.company_id} />
             <div className="avatar" style={{ background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", color: "#111", border: "none", textShadow: "none" }}>{initials}</div>
           </div>
         </div>
@@ -191,8 +199,10 @@ export default function CompanyDashboard() {
               <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                 {/* Dynamic bar graph representing revenue relative to the maximum month */}
                 <div
-                  style={{ width: "100%", borderRadius: "4px 4px 0 0", background: "var(--gradient-main)", opacity: 0.85,
-                    height: `${(m.revenue / maxRevenue) * 140}px`, transition: "height 0.5s ease", minHeight: 4 }}
+                  style={{
+                    width: "100%", borderRadius: "4px 4px 0 0", background: "var(--gradient-main)", opacity: 0.85,
+                    height: `${(m.revenue / maxRevenue) * 140}px`, transition: "height 0.5s ease", minHeight: 4
+                  }}
                   title={formatPKR(m.revenue)}
                 />
                 <div style={{ fontSize: 9, color: "var(--text-muted)", transform: "rotate(-45deg)" }}>{m.month}</div>
@@ -211,7 +221,7 @@ export default function CompanyDashboard() {
             <h2 className="section-title">💬 Review Sentiment</h2>
             <Link href="/company/reviews" className="btn btn-ghost btn-sm">All Reviews</Link>
           </div>
-          
+
           <div style={{ display: "flex", alignItems: "center", gap: 32, marginBottom: 24 }}>
             {/* SVG Donut Chart */}
             <div style={{ position: "relative", width: 120, height: 120, flexShrink: 0 }}>
@@ -225,18 +235,18 @@ export default function CompanyDashboard() {
                     const el = (
                       <circle key={s.label} cx="60" cy="60" r="45" fill="none" stroke={s.color} strokeWidth="18"
                         strokeDasharray={`${dashLen} ${circumference - dashLen}`}
-                        strokeDashoffset={-offset} transform="rotate(-90 60 60)" opacity="0.85"/>
+                        strokeDashoffset={-offset} transform="rotate(-90 60 60)" opacity="0.85" />
                     );
                     offset += dashLen;
                     return el;
                   });
                 })()}
                 {/* Center Chart Labels */}
-                <text x="60" y="55" textAnchor="middle" fontSize="18" fontWeight="800" fill="var(--teal)">78%</text>
+                <text x="60" y="55" textAnchor="middle" fontSize="18" fontWeight="800" fill="var(--teal)">{positivePercent}%</text>
                 <text x="60" y="72" textAnchor="middle" fontSize="9" fill="var(--text-muted)">Positive</text>
               </svg>
             </div>
-            
+
             {/* Legend / Detailed Breakdown */}
             <div style={{ flex: 1 }}>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -246,12 +256,12 @@ export default function CompanyDashboard() {
                     <span style={{ color: "var(--text-secondary)" }}>{s.label}</span>
                     <span style={{ fontWeight: 700, color: s.color }}>{s.value}%</span>
                   </div>
-                  <div className="progress-bar"><div className="progress-fill" style={{ width: `${s.value}%`, background: s.color }}/></div>
+                  <div className="progress-bar"><div className="progress-fill" style={{ width: `${s.value}%`, background: s.color }} /></div>
                 </div>
               ))}
             </div>
           </div>
-          
+
           {/* Recent Reviews Snapshot */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {reviews.map(r => (
@@ -293,7 +303,7 @@ export default function CompanyDashboard() {
                   <td><span style={{ color: "var(--emerald)", fontWeight: 700 }}>{t.safety_score || t.safetyScore || 85}%</span></td>
                   <td><span className={`badge ${t.available ? "badge-emerald" : "badge-rose"}`}>{t.available ? "Active" : "Inactive"}</span></td>
                   <td style={{ display: "flex", gap: 6 }}>
-                    <Link href={`/company/tours/new?id=${t.id}`} className="btn btn-secondary btn-sm">✏️</Link>
+                    <Link href={`/company/tours/new?edit=${t.id}`} className="btn btn-secondary btn-sm">✏️</Link>
                   </td>
                 </tr>
               ))}

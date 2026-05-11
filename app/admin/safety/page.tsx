@@ -176,7 +176,6 @@ export default function AdminSafetyPage() {
                   </div>
                   <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.6 }}>{a.description}</p>
                   <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                    <button className="btn btn-secondary btn-sm">✏️ Edit</button>
                     <button
                       className="btn btn-danger btn-sm"
                       onClick={() => handleDismiss(a.id)}

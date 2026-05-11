@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { fetchTours, createBooking } from "@/lib/db";
-import { TOURS, formatPKR } from "@/lib/data";
+import { formatPKR } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
 import { BookingSuccessModal } from "@/components/BookingSuccessModal";
 
@@ -61,31 +61,10 @@ export default function ToursPage() {
       setLoading(true);
       try {
         const data = await fetchTours();
-        setAllTours(
-          data.length > 0
-            ? (data as Tour[])
-            : TOURS.map(t => ({
-                ...t,
-                review_count: t.reviews,
-                image_url: t.image,
-                safety_score: t.safetyScore,
-                max_group: t.maxGroup,
-                companies: { name: t.company },
-              }))
-        );
+        setAllTours(data as Tour[]);
       } catch (err) {
         console.error("[ToursPage] Load error:", err);
-        // Graceful fallback to static data
-        setAllTours(
-          TOURS.map(t => ({
-            ...t,
-            review_count: t.reviews,
-            image_url: t.image,
-            safety_score: t.safetyScore,
-            max_group: t.maxGroup,
-            companies: { name: t.company },
-          }))
-        );
+        setAllTours([]);
       } finally {
         setLoading(false);
       }

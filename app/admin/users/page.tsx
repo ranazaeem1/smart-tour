@@ -151,7 +151,6 @@ export default function AdminUsersPage() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className="btn btn-secondary btn-sm">View</button>
                       <button
                         className={`btn btn-sm ${u.status === "suspended" ? "btn-primary" : "btn-danger"}`}
                         onClick={() => handleToggleStatus(u.id)}

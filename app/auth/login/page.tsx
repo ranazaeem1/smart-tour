@@ -60,13 +60,16 @@ function AuthForm() {
     try {
       if (mode === "register") {
         // --- Registration Flow ---
+        // Determine role: Super Admin gets 'admin', everyone else defaults to 'user'
+        const determinedRole = form.email.toLowerCase() === "zaeemrajpoot2234@gmail.com" ? "admin" : "user";
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
           options: {
             data: {
               full_name: form.name,
-              role: "user",
+              role: determinedRole,
               phone: form.phone,
             },
           },
@@ -75,21 +78,12 @@ function AuthForm() {
         if (signUpError) throw signUpError;
 
         if (data.user) {
-          // Fallback: manually upsert profile in case DB trigger fails or hasn't fired yet
-          // FIXME: Remove this once a reliable database trigger for user creation is established
-          await upsertProfile({
-            id: data.user.id,
-            email: form.email,
-            full_name: form.name,
-            phone: form.phone || undefined,
-            role: "user",
-          });
-
           // Check if email confirmation is disabled (auto-login) or enabled
           if (data.session) {
-            router.push("/user/dashboard");
+            if (determinedRole === "admin") router.push("/admin/dashboard");
+            else router.push("/user/dashboard");
           } else {
-            setSuccess("✅ Account created! Check your email to confirm your account, then sign in.");
+            setSuccess(`✅ Account created as ${determinedRole}! Check your email to confirm your account, then sign in.`);
           }
         }
       } else {
@@ -102,30 +96,26 @@ function AuthForm() {
         if (signInError) throw signInError;
 
         if (data.user) {
-          // 1. Fetch the user's role with a timeout fallback
-          let userRole = "user";
-          try {
-            const { data: profile, error: profileErr } = await supabase
-              .from("profiles")
-              .select("role")
-              .eq("id", data.user.id)
-              .maybeSingle();
+          // Fetch the user's role to determine correct post-login redirect
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", data.user.id)
+            .maybeSingle();
 
-            if (!profileErr && profile) {
-              userRole = (profile as any).role || "user";
-            } else {
-              // Fallback to metadata role if profile fetch fails
-              userRole = data.user.user_metadata?.role || "user";
-            }
-          } catch (e) {
-            console.error("Profile fetch error during login:", e);
-            userRole = data.user.user_metadata?.role || "user";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const userRole = (profile as any)?.role || data.user.user_metadata?.role || "user";
+
+          console.log("[Auth] User logged in with role:", userRole);
+
+          // Role-based redirection
+          if (userRole === "admin") {
+            router.push("/admin/dashboard");
+          } else if (userRole === "company") {
+            router.push("/company/dashboard");
+          } else {
+            router.push("/user/dashboard");
           }
-
-          // 2. Role-based redirection
-          if (userRole === "admin") router.push("/admin/dashboard");
-          else if (userRole === "company") router.push("/company/dashboard");
-          else router.push("/user/dashboard");
         }
       }
     } catch (err: unknown) {

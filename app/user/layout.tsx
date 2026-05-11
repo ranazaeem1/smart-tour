@@ -10,9 +10,9 @@ const USER_NAV = [
   { icon: "🗺️", label: "AI Planner", href: "/user/planner" },
   { icon: "🏔️", label: "Browse Tours", href: "/user/tours" },
   { icon: "📋", label: "My Bookings", href: "/user/bookings" },
-  { icon: "👥", label: "Group Travel", href: "/user/group" },
   { icon: "⭐", label: "My Reviews", href: "/user/reviews" },
   { icon: "🛡️", label: "Safety Map", href: "/user/safety" },
+  { icon: "🏢", label: "Register Company", href: "/user/register-company" },
 ];
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {

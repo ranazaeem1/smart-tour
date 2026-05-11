@@ -54,7 +54,7 @@ const roleColors: Record<string, string> = {
 const roleLabels: Record<string, string> = {
   user: "Traveler",
   company: "Tour Company",
-  admin: "Traveler", // Hidden label
+  admin: "Administrator",
 };
 
 // ==========================================

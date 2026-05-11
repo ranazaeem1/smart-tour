@@ -3,7 +3,6 @@ import { use, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { ChatWindow } from "@/components/shared/ChatWindow";
-import Link from "next/link";
 
 export default function CompanyChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: conversationId } = use(params);

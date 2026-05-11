@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/AuthProvider";
+import { createReview } from "@/lib/db";
 
 interface ReviewModalProps {
   bookingId: string;
@@ -9,116 +10,116 @@ interface ReviewModalProps {
 }
 
 export function ReviewModal({ bookingId, tourId, onClose }: ReviewModalProps) {
+  const { profile } = useAuth();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
-  const [hoverRating, setHoverRating] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!profile) return;
+    
     setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+    setError(null);
 
-      const { error } = await (supabase.from('reviews') as any).insert([{
-        booking_id: bookingId,
+    try {
+      // Determine sentiment based on rating
+      const sentiment = rating >= 4 ? "positive" : rating <= 2 ? "negative" : "neutral";
+
+      const review = await createReview({
         tour_id: tourId,
-        user_id: user.id,
+        user_id: profile.id,
+        booking_id: bookingId,
         rating,
         comment,
-        sentiment: rating >= 4 ? 'positive' : rating === 3 ? 'neutral' : 'negative'
-      }]);
+        sentiment,
+      });
 
-      if (error) throw error;
-      alert("Review submitted successfully!");
-      onClose();
+      if (review) {
+        onClose();
+        alert("Thank you for your review!");
+      } else {
+        throw new Error("Failed to submit review.");
+      }
     } catch (err: any) {
-      alert(err.message || "Failed to submit review");
+      setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div style={{
-      position: "fixed", inset: 0, zIndex: 1000,
+      position: "fixed", inset: 0, zIndex: 9999,
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)"
+      background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)"
     }}>
-      <div className="glass-card animate-fade-in" style={{
-        width: "100%", maxWidth: 480, padding: 40, borderRadius: 28,
-        border: "1px solid rgba(255,255,255,0.2)", position: "relative",
-        boxShadow: "0 24px 80px rgba(0,0,0,0.5)"
+      <div className="glass-card" style={{ 
+        width: "100%", maxWidth: 500, padding: 40, borderRadius: 24, 
+        border: "1px solid rgba(255,255,255,0.1)",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.4)"
       }}>
-        <button 
-          onClick={onClose}
-          style={{ position: "absolute", top: 24, right: 24, background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 20 }}
-        >✕</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>Leave a Review</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", fontSize: 20, cursor: "pointer" }}>✕</button>
+        </div>
 
-        <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>Share Experience</h2>
-        <p style={{ color: "var(--text-secondary)", marginBottom: 32, fontSize: 14 }}>How was your journey? Your feedback helps us improve.</p>
+        {error && (
+          <div className="alert alert-danger" style={{ marginBottom: 20 }}>
+            ⚠️ {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 32, textAlign: "center" }}>
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Your Rating</p>
-            <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
-              {[1, 2, 3, 4, 5].map((star) => (
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 12, textTransform: "uppercase" }}>
+              How was your experience?
+            </label>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              {[1, 2, 3, 4, 5].map(num => (
                 <button
-                  key={star}
+                  key={num}
                   type="button"
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  onClick={() => setRating(star)}
+                  onClick={() => setRating(num)}
                   style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    fontSize: 32, transition: "transform 0.2s",
-                    transform: (hoverRating || rating) >= star ? "scale(1.2)" : "scale(1)",
-                    color: (hoverRating || rating) >= star ? "#fbbf24" : "rgba(255,255,255,0.1)"
+                    fontSize: 28, background: "none", border: "none", cursor: "pointer",
+                    transition: "transform 0.2s", transform: rating >= num ? "scale(1.1)" : "scale(1)",
+                    opacity: rating >= num ? 1 : 0.3,
+                    filter: rating >= num ? "grayscale(0)" : "grayscale(1)"
                   }}
                 >
-                  ★
+                  ⭐
                 </button>
               ))}
             </div>
-            <p style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: "var(--accent)" }}>
-              {rating === 5 ? "Exceptional!" : rating === 4 ? "Great Experience" : rating === 3 ? "Good" : rating === 2 ? "Could be better" : "Poor"}
+            <p style={{ textAlign: "center", marginTop: 10, fontSize: 14, fontWeight: 700, color: "var(--gold)" }}>
+              {rating === 5 ? "Amazing! 😍" : rating === 4 ? "Great! 😊" : rating === 3 ? "Good 😐" : rating === 2 ? "Bad ☹️" : "Terrible 😡"}
             </p>
           </div>
 
-          <div style={{ marginBottom: 32 }}>
-            <label style={{ display: "block", fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 8 }}>Review Details</label>
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 8, textTransform: "uppercase" }}>
+              Your Feedback
+            </label>
             <textarea
               required
+              rows={4}
+              placeholder="Tell us about the tour, guide, and destinations..."
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Tell us about the tour, the guide, and the destinations..."
+              onChange={e => setComment(e.target.value)}
               style={{
-                width: "100%", height: 140, padding: 16, borderRadius: 16,
-                background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                color: "#fff", fontSize: 15, lineHeight: 1.6, resize: "none", outline: "none",
-                transition: "border-color 0.3s"
+                width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 12, padding: 14, color: "#fff", fontSize: 14, lineHeight: 1.6, outline: "none"
               }}
-              onFocus={(e) => e.target.style.borderColor = "var(--accent)"}
-              onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.1)"}
             />
           </div>
 
           <div style={{ display: "flex", gap: 12 }}>
-            <button 
-              type="button" 
-              onClick={onClose}
-              className="btn btn-secondary"
-              style={{ flex: 1, padding: "14px", borderRadius: 14 }}
-            >
+            <button type="button" className="btn btn-secondary" onClick={onClose} style={{ flex: 1, justifyContent: "center" }}>
               Cancel
             </button>
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="btn btn-primary"
-              style={{ flex: 2, padding: "14px", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-            >
+            <button type="submit" className="btn btn-primary" style={{ flex: 2, justifyContent: "center" }} disabled={loading}>
               {loading ? <span className="loading-spinner" /> : "Submit Review →"}
             </button>
           </div>
