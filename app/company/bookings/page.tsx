@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
+import { fetchCompanyByOwner } from "@/lib/db";
 import { formatPKR, getStatusColor } from "@/lib/data";
 import { StartChatButton } from "@/components/shared/StartChatButton";
 import Link from "next/link";
@@ -31,14 +32,8 @@ export default function CompanyBookingsPage() {
     setLoading(true);
     try {
       // 1. First get the company ID linked to this owner
-      const { data: company, error: companyError } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('owner_id', profile.id)
-        .maybeSingle();
+      const company = await fetchCompanyByOwner(profile.id);
 
-      if (companyError) throw companyError;
-      
       if (!company) {
         console.warn("No company found for this owner");
         setBookings([]);
