@@ -3,6 +3,7 @@ import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
+import { fetchCompanyByOwner } from "@/lib/db";
 
 function ChatRedirect() {
   const router = useRouter();
@@ -22,12 +23,22 @@ function ChatRedirect() {
         return;
       }
 
-      // Try to find an existing conversation
+      // 1. Get the actual company ID linked to this owner
+      const company = await fetchCompanyByOwner(profile.id);
+      if (!company) {
+        console.error("No company found for this owner");
+        router.push("/company/dashboard");
+        return;
+      }
+      
+      const companyId = company.id;
+
+      // 2. Try to find an existing conversation
       const { data: existing, error: findError } = await supabase
         .from("conversations")
         .select("id")
         .eq("user_id", userId)
-        .eq("company_id", profile.id) // Assuming company profile id is used
+        .eq("company_id", companyId)
         .maybeSingle();
 
       if (existing) {
@@ -35,11 +46,11 @@ function ChatRedirect() {
         return;
       }
 
-      // Create new
+      // 3. Create new
       const { data: newConv, error: createError } = await (supabase.from("conversations") as any)
         .insert({
           user_id: userId,
-          company_id: profile.id,
+          company_id: companyId,
           last_message: "Chat started",
           last_message_at: new Date().toISOString()
         })
