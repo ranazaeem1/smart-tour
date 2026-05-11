@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
-import { fetchCompanyByOwner } from "@/lib/db";
+import { fetchCompanyByOwner, updateBookingStatus } from "@/lib/db";
 import { formatPKR, getStatusColor } from "@/lib/data";
 import { StartChatButton } from "@/components/shared/StartChatButton";
 import Link from "next/link";
@@ -69,12 +69,9 @@ export default function CompanyBookingsPage() {
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status })
-        .eq('id', id);
+      const result = await updateBookingStatus(id, status as any);
       
-      if (error) throw error;
+      if (!result) throw new Error("Update failed");
       // Refresh list
       load();
     } catch (err) {
