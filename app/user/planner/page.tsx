@@ -37,10 +37,11 @@ function PlannerContent() {
   const params = useSearchParams();
   const { profile } = useAuth();
   const [step, setStep] = useState(1);
-  const [dest, setDest] = useState(params.get("dest") || "Hunza Valley");
+  const [dest, setDest] = useState(params.get("dest") || "");
   const [budget, setBudget] = useState(Number(params.get("budget")) || 45000);
-  const [days, setDays] = useState(5);
-  const [group, setGroup] = useState(2);
+  const [days, setDays] = useState<string | number>(params.get("days") || "");
+  const [group, setGroup] = useState<string | number>(params.get("group") || "");
+  const [startDate, setStartDate] = useState("");
   const [interests, setInterests] = useState<string[]>(["Trekking","Photography"]);
   const [generated, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,11 +51,15 @@ function PlannerContent() {
   const [searchingTours, setSearchingTours] = useState(false);
   const [showRecommendation, setShowRecommendation] = useState(false);
 
-  const dynamicItinerary = generateDynamicItinerary(dest, days);
+  const dynamicItinerary = dest && days ? generateDynamicItinerary(dest, Number(days)) : [];
 
   const toggleInterest = (i: string) => setInterests(p => p.includes(i) ? p.filter(x=>x!==i) : [...p,i]);
 
   const generate = () => {
+    if (!dest || !days || !group || !startDate) {
+      alert("Please fill in all trip preferences first!");
+      return;
+    }
     setLoading(true);
     setTimeout(() => { setLoading(false); setGenerated(true); setStep(3); }, 2000);
   };
@@ -77,8 +82,10 @@ function PlannerContent() {
     }
   };
 
-  const totalCost = budget * group;
-  const safetyInfo = SAFETY_ZONES.find(z => dest.includes(z.area.split(" ")[0])) || SAFETY_ZONES[0];
+  const totalCost = budget * Number(group || 0);
+  const safetyInfo = dest ? (SAFETY_ZONES.find(z => dest.includes(z.area.split(" ")[0])) || SAFETY_ZONES[0]) : null;
+
+  const isFormValid = dest && days && group && startDate;
 
   return (
     <div className="animate-fade">
@@ -165,7 +172,8 @@ function PlannerContent() {
                 <div className="input-group">
                   <label className="input-label">Destination</label>
                   <select className="input" value={dest} onChange={e=>setDest(e.target.value)}>
-                    {DESTINATIONS.map(d=><option key={d}>{d}</option>)}
+                    <option value="" disabled>Select Destination</option>
+                    {DESTINATIONS.map(d=><option key={d} value={d}>{d}</option>)}
                   </select>
                 </div>
                 <div className="input-group">
@@ -179,16 +187,16 @@ function PlannerContent() {
                 <div className="grid-2" style={{ gap:12 }}>
                   <div className="input-group">
                     <label className="input-label">Duration (Days)</label>
-                    <input className="input" type="number" min={1} max={30} value={days} onChange={e=>setDays(Number(e.target.value))}/>
+                    <input className="input" type="number" min={1} max={30} value={days} onChange={e=>setDays(e.target.value)} placeholder="e.g. 5"/>
                   </div>
                   <div className="input-group">
                     <label className="input-label">Group Size</label>
-                    <input className="input" type="number" min={1} max={50} value={group} onChange={e=>setGroup(Number(e.target.value))}/>
+                    <input className="input" type="number" min={1} max={50} value={group} onChange={e=>setGroup(e.target.value)} placeholder="e.g. 2"/>
                   </div>
                 </div>
                 <div className="input-group">
                   <label className="input-label">Start Date</label>
-                  <input className="input" type="date" defaultValue="2024-06-15"/>
+                  <input className="input" type="date" value={startDate} onChange={e=>setStartDate(e.target.value)}/>
                 </div>
               </div>
             </div>
@@ -213,9 +221,10 @@ function PlannerContent() {
               <h2 style={{ fontSize:18,fontWeight:700,marginBottom:16 }}>📊 Trip Summary</h2>
               <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
                 {[
-                  { label:"Destination", value:dest },
-                  { label:"Duration", value:`${days} days` },
-                  { label:"Group Size", value:`${group} people` },
+                  { label:"Destination", value:dest || "—" },
+                  { label:"Duration", value:days ? `${days} days` : "—" },
+                  { label:"Group Size", value:group ? `${group} people` : "—" },
+                  { label:"Start Date", value:startDate || "—" },
                   { label:"Per Person", value:formatPKR(budget) },
                   { label:"Total Cost", value:formatPKR(totalCost) },
                 ].map(r=>(
@@ -234,24 +243,38 @@ function PlannerContent() {
             {/* Safety */}
             <div className="card">
               <h2 style={{ fontSize:18,fontWeight:700,marginBottom:16 }}>🛡️ Safety Analysis</h2>
-              <div style={{ display:"flex",alignItems:"center",gap:20,marginBottom:16 }}>
-                <div className="safety-ring">
-                  <div style={{ fontSize:22,fontWeight:800,color:"var(--emerald)" }}>{safetyInfo.score}</div>
-                  <div style={{ fontSize:10,color:"var(--text-muted)" }}>/ 100</div>
-                </div>
-                <div>
-                  <div style={{ fontSize:18,fontWeight:700,color:"var(--emerald)"}}>{safetyInfo.status}</div>
-                  <div style={{ fontSize:13,color:"var(--text-secondary)",marginTop:4 }}>{dest} is currently safe for tourists</div>
-                </div>
-              </div>
-              <div className="alert alert-success" style={{ fontSize:13 }}>
-                ✅ All routes to {dest} are currently accessible and safe.
-              </div>
+              {safetyInfo ? (
+                <>
+                  <div style={{ display:"flex",alignItems:"center",gap:20,marginBottom:16 }}>
+                    <div className="safety-ring">
+                      <div style={{ fontSize:22,fontWeight:800,color:"var(--emerald)" }}>{safetyInfo.score}</div>
+                      <div style={{ fontSize:10,color:"var(--text-muted)" }}>/ 100</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:18,fontWeight:700,color:"var(--emerald)"}}>{safetyInfo.status}</div>
+                      <div style={{ fontSize:13,color:"var(--text-secondary)",marginTop:4 }}>{dest} is currently safe for tourists</div>
+                    </div>
+                  </div>
+                  <div className="alert alert-success" style={{ fontSize:13 }}>
+                    ✅ All routes to {dest} are currently accessible and safe.
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize:14,color:"var(--text-muted)",textAlign:"center",padding:"20px 0" }}>Select a destination to view safety analysis</p>
+              )}
             </div>
 
-            <button onClick={generate} className="btn btn-primary btn-lg" style={{ width:"100%",justifyContent:"center" }} disabled={loading}>
+            <button 
+              onClick={generate} 
+              className={`btn btn-primary btn-lg ${!isFormValid ? 'opacity-50' : ''}`} 
+              style={{ width:"100%",justifyContent:"center" }} 
+              disabled={loading || !isFormValid}
+            >
               {loading ? <><span className="loading-spinner"/> Generating AI Itinerary...</> : "🤖 Generate Smart Itinerary →"}
             </button>
+            {!isFormValid && (
+              <p style={{ fontSize:11,color:"var(--coral)",textAlign:"center",marginTop:8 }}>* Please fill all fields to generate your itinerary</p>
+            )}
           </div>
         </div>
       )}
@@ -268,7 +291,7 @@ function PlannerContent() {
               <button className="btn btn-secondary btn-sm" onClick={() => {
                 const lines = [
                   `SmartTour — ${days}-Day ${dest} Itinerary`,
-                  `Group: ${group} people | Budget: ${formatPKR(budget)}/person | Total: ${formatPKR(budget * group)}`,
+                  `Group: ${group} people | Budget: ${formatPKR(budget)}/person | Total: ${formatPKR(budget * Number(group))}`,
                   '',
                   ...dynamicItinerary.map(day => [
                     `Day ${day.day}: ${day.title}`,
@@ -348,7 +371,7 @@ function PlannerContent() {
                 <div style={{ display:"flex",flexDirection:"column",gap:8,fontSize:14 }}>
                   <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:"var(--text-secondary)" }}>Group Size</span><span>{group} people</span></div>
                   <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:"var(--text-secondary)" }}>Per Person</span><span className="text-gradient" style={{ fontWeight:700 }}>{formatPKR(budget)}</span></div>
-                  <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:"var(--text-secondary)" }}>Grand Total</span><span style={{ color:"var(--teal)",fontWeight:800 }}>{formatPKR(budget*group)}</span></div>
+                  <div style={{ display:"flex",justifyContent:"space-between" }}><span style={{ color:"var(--text-secondary)" }}>Grand Total</span><span style={{ color:"var(--teal)",fontWeight:800 }}>{formatPKR(budget*Number(group))}</span></div>
                 </div>
               </div>
             </div>
@@ -366,7 +389,7 @@ function PlannerContent() {
               { label:"Budget per Person", value:formatPKR(budget), icon:"💰" },
               { label:"Duration", value:`${days} days`, icon:"📅" },
               { label:"Group Size", value:`${group} people`, icon:"👥" },
-              { label:"Total Cost", value:formatPKR(budget*group), icon:"💵" },
+              { label:"Total Cost", value:formatPKR(budget*Number(group)), icon:"💵" },
               { label:"Interests", value:interests.join(", "), icon:"🎯" },
             ].map(r=>(
               <div key={r.label} style={{ display:"flex",gap:12,padding:"12px 16px",background:"var(--bg-secondary)",borderRadius:"var(--radius-md)",alignItems:"center" }}>
