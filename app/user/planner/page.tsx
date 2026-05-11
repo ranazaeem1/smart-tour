@@ -3,6 +3,8 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DESTINATIONS, ITINERARY_5DAY, BUDGET_BREAKDOWN, SAFETY_ZONES, formatPKR } from "@/lib/data";
+import { useAuth } from "@/components/AuthProvider";
+import { fetchTours } from "@/lib/db";
 
 const INTERESTS = ["Trekking","Photography","Culture","Wildlife","Camping","History","Family","Winter Sports","Lakes","Food"];
 
@@ -33,6 +35,7 @@ function generateDynamicItinerary(dest: string, days: number) {
 
 function PlannerContent() {
   const params = useSearchParams();
+  const { profile } = useAuth();
   const [step, setStep] = useState(1);
   const [dest, setDest] = useState(params.get("dest") || "Hunza Valley");
   const [budget, setBudget] = useState(Number(params.get("budget")) || 45000);
@@ -42,6 +45,11 @@ function PlannerContent() {
   const [generated, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // Recommendation state
+  const [matchingTours, setMatchingTours] = useState<any[] | null>(null);
+  const [searchingTours, setSearchingTours] = useState(false);
+  const [showRecommendation, setShowRecommendation] = useState(false);
+
   const dynamicItinerary = generateDynamicItinerary(dest, days);
 
   const toggleInterest = (i: string) => setInterests(p => p.includes(i) ? p.filter(x=>x!==i) : [...p,i]);
@@ -51,11 +59,88 @@ function PlannerContent() {
     setTimeout(() => { setLoading(false); setGenerated(true); setStep(3); }, 2000);
   };
 
+  const handleBookTour = async () => {
+    setSearchingTours(true);
+    setShowRecommendation(true);
+    try {
+      // Search for tours matching destination and budget
+      const tours = await fetchTours({
+        destination: dest.split(' ')[0], // Use first word of destination (e.g., 'Hunza')
+        maxPrice: budget
+      });
+      setMatchingTours(tours);
+    } catch (err) {
+      console.error("Error searching tours:", err);
+      setMatchingTours([]);
+    } finally {
+      setSearchingTours(false);
+    }
+  };
+
   const totalCost = budget * group;
   const safetyInfo = SAFETY_ZONES.find(z => dest.includes(z.area.split(" ")[0])) || SAFETY_ZONES[0];
 
   return (
     <div className="animate-fade">
+      {/* Recommendation Overlay */}
+      {showRecommendation && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(12px)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div className="animate-scale-in" style={{ width: "100%", maxWidth: 600, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 24, overflow: "hidden", boxShadow: "0 32px 100px rgba(0,0,0,0.8)" }}>
+            <div style={{ padding: "24px 32px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--gradient-card)" }}>
+              <div>
+                <h3 style={{ fontSize: 20, fontWeight: 800 }}>🤖 AI Tour Recommendation</h3>
+                <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 2 }}>Matching {dest} tours under {formatPKR(budget)}</p>
+              </div>
+              <button onClick={() => setShowRecommendation(false)} style={{ background: "rgba(255,255,255,0.05)", border: "none", color: "#fff", width: 36, height: 36, borderRadius: "50%", cursor: "pointer" }}>✕</button>
+            </div>
+
+            <div style={{ padding: 32, maxHeight: "60vh", overflowY: "auto" }}>
+              {searchingTours ? (
+                <div style={{ textAlign: "center", padding: "40px 0" }}>
+                  <span className="loading-spinner" style={{ width: 40, height: 40, marginBottom: 16 }} />
+                  <p style={{ color: "var(--text-secondary)" }}>Scanning database for matching tours...</p>
+                </div>
+              ) : matchingTours && matchingTours.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <div className="alert alert-success" style={{ marginBottom: 8 }}>
+                    ✨ We found {matchingTours.length} tours that match your criteria!
+                  </div>
+                  {matchingTours.map(tour => (
+                    <div key={tour.id} className="card" style={{ padding: 16, background: "var(--bg-secondary)", display: "flex", gap: 16, alignItems: "center" }}>
+                      <div style={{ width: 80, height: 80, borderRadius: 12, background: `url(${tour.image_url || '/images/tour-placeholder.png'})`, backgroundSize: "cover", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{tour.title}</h4>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>{tour.companies?.name} • ⭐ {tour.rating}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                          <span style={{ color: "var(--teal)", fontWeight: 800 }}>{formatPKR(tour.price)}</span>
+                          <Link href={`/user/tours/${tour.id}`} className="btn btn-primary btn-sm">View Details</Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "40px 0" }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+                  <h4 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No Matching Tours Found</h4>
+                  <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.5, maxWidth: 400, margin: "0 auto" }}>
+                    Sorry, there are currently no tours existing in {dest} within your budget of {formatPKR(budget)}.
+                  </p>
+                  <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "center" }}>
+                    <button className="btn btn-secondary" onClick={() => setShowRecommendation(false)}>Adjust Budget</button>
+                    <Link href="/user/tours" className="btn btn-primary">Browse All Tours</Link>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: "20px 32px", background: "var(--bg-secondary)", borderTop: "1px solid var(--border)", textAlign: "center" }}>
+              <p style={{ fontSize: 12, color: "var(--text-muted)" }}>Prices and availability are subject to change by tour companies.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="topbar">
         <div>
           <div style={{ fontSize:13,color:"var(--text-muted)",marginBottom:4 }}>AI-Powered</div>
@@ -203,7 +288,7 @@ function PlannerContent() {
                 URL.revokeObjectURL(url);
               }}>📥 Download</button>
               <button className="btn btn-secondary btn-sm" onClick={() => { if (navigator.share) { navigator.share({ title: `${days}-Day ${dest} Itinerary`, text: `Check out my Smart Tour itinerary for ${dest}!`, url: window.location.href }); } else { navigator.clipboard.writeText(window.location.href); alert('Link copied to clipboard!'); } }}>📤 Share</button>
-              <Link href="/user/tours" className="btn btn-primary btn-sm">Book This Tour →</Link>
+              <button onClick={handleBookTour} className="btn btn-primary btn-sm">Book This Tour →</button>
             </div>
           </div>
 

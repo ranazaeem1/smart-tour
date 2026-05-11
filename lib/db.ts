@@ -111,6 +111,8 @@ export async function fetchTours(options?: {
   companyId?: string;
   category?: string;
   search?: string;
+  destination?: string;
+  maxPrice?: number;
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase
@@ -127,6 +129,8 @@ export async function fetchTours(options?: {
   if (options?.companyId) query = query.eq('company_id', options.companyId);
   if (options?.category) query = query.eq('category', options.category);
   if (options?.search) query = query.ilike('title', `%${options.search}%`);
+  if (options?.destination) query = query.ilike('destination', `%${options.destination}%`);
+  if (options?.maxPrice) query = query.lte('price', options.maxPrice);
 
   const { data, error } = await query;
   if (error) {
