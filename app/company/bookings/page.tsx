@@ -30,7 +30,25 @@ export default function CompanyBookingsPage() {
     if (!profile?.id) return;
     setLoading(true);
     try {
-      const targetId = profile.company_id || profile.id;
+      // 1. First get the company ID linked to this owner
+      const { data: company, error: companyError } = await supabase
+        .from('companies')
+        .select('id')
+        .eq('owner_id', profile.id)
+        .maybeSingle();
+
+      if (companyError) throw companyError;
+      
+      if (!company) {
+        console.warn("No company found for this owner");
+        setBookings([]);
+        setLoading(false);
+        return;
+      }
+
+      const targetId = company.id;
+
+      // 2. Fetch bookings for this company
       const { data, error } = await supabase
         .from('bookings')
         .select(`
