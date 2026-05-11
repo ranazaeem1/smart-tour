@@ -9,7 +9,7 @@ interface StartChatButtonProps {
   currentRole: "user" | "company";
 }
 
-export function StartChatButton({ bookingId, companyId, otherPartyName, currentRole }: StartChatButtonProps) {
+export function StartChatButton({ bookingId, userId, companyId, otherPartyName, currentRole }: StartChatButtonProps) {
   const router = useRouter();
 
   const handleStartChat = () => {
