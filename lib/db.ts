@@ -114,43 +114,47 @@ export async function fetchTours(options?: {
   destination?: string;
   maxPrice?: number;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query: any = supabase
-    .from('tours')
-    .select(`*, companies(name, logo, rating)`)
-    .order('rating', { ascending: false });
+  return withRetry(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase
+      .from('tours')
+      .select(`*, companies(name, logo, rating)`)
+      .order('rating', { ascending: false });
 
-  // Only filter by availability for public/featured listings
-  if (!options?.companyId) {
-    query = query.eq('available', true);
-  }
+    // Only filter by availability for public/featured listings
+    if (!options?.companyId) {
+      query = query.eq('available', true);
+    }
 
-  if (options?.featured) query = query.eq('featured', true);
-  if (options?.companyId) query = query.eq('company_id', options.companyId);
-  if (options?.category) query = query.eq('category', options.category);
-  if (options?.search) query = query.ilike('title', `%${options.search}%`);
-  if (options?.destination) query = query.ilike('destination', `%${options.destination}%`);
-  if (options?.maxPrice) query = query.lte('price', options.maxPrice);
+    if (options?.featured) query = query.eq('featured', true);
+    if (options?.companyId) query = query.eq('company_id', options.companyId);
+    if (options?.category) query = query.eq('category', options.category);
+    if (options?.search) query = query.ilike('title', `%${options.search}%`);
+    if (options?.destination) query = query.ilike('destination', `%${options.destination}%`);
+    if (options?.maxPrice) query = query.lte('price', options.maxPrice);
 
-  const { data, error } = await query;
-  if (error) {
-    console.error('[fetchTours]', error.message);
-    return [];
-  }
-  return data ?? [];
+    const { data, error } = await query;
+    if (error) {
+      console.error('[fetchTours]', error.message);
+      return [];
+    }
+    return data ?? [];
+  });
 }
 
 export async function fetchTourById(id: string) {
-  const { data, error } = await supabase
-    .from('tours')
-    .select(`*, companies(name, logo, rating, city, email, phone)`)
-    .eq('id', id)
-    .maybeSingle();
-  if (error) {
-    console.error('[fetchTourById] Error fetching tour:', error.message);
-    return null;
-  }
-  return data;
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from('tours')
+      .select(`*, companies(name, logo, rating, city, email, phone)`)
+      .eq('id', id)
+      .maybeSingle();
+    if (error) {
+      console.error('[fetchTourById] Error fetching tour:', error.message);
+      return null;
+    }
+    return data;
+  });
 }
 
 export async function createTour(tour: {
