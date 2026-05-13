@@ -1,81 +1,117 @@
 /**
  * @file terms/page.tsx
- * @description Terms of Service page for Smart Tour.
- * @author Smart Tour Team
+ * @description Terms of Service page for Smart Tour. Aligned with the Modern Dark Enterprise theme.
  */
 
+"use client";
 import React from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Scale, Gavel, UserCheck, AlertTriangle, Globe } from "lucide-react";
 import Footer from "@/components/Footer";
 
 export default function TermsPage() {
+  const router = useRouter();
+
   return (
-    <>
-      <Navbar />
-      <main style={{ paddingTop: "120px", paddingBottom: "100px", background: "var(--bg-primary)", minHeight: "100vh" }}>
-        <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }}>
+    <div className="bg-black min-h-screen text-white font-sans selection:bg-emerald-500/30">
+      {/* Header / Nav Placeholder */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+              S
+            </div>
+            <span className="font-bold text-white text-lg tracking-tight uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
+          </Link>
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
+            <ChevronLeft size={16} /> Back
+          </button>
+        </div>
+      </header>
+
+      <main className="pt-40 pb-32 px-6">
+        <div className="max-w-4xl mx-auto">
           
-          <div style={{ textAlign: "center", marginBottom: 60 }}>
-            <h1 style={{ fontSize: 48, fontWeight: 900, color: "var(--navy)", marginBottom: 16 }}>
-              Terms of <span className="text-gradient">Service</span>
+          {/* Hero Section */}
+          <div className="text-center mb-24 animate-fade">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-8">
+              <Scale size={14} className="text-emerald-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Legal Framework</span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none mb-8 uppercase italic">
+              Terms of <span className="text-emerald-500">Service</span>
             </h1>
-            <p style={{ fontSize: 16, color: "var(--text-secondary)" }}>
-              Last updated: May 4, 2026
+            <p className="text-zinc-500 text-sm font-bold uppercase tracking-[0.2em]">
+              Last updated: May 13, 2026
             </p>
           </div>
 
-          <div className="card" style={{ padding: "40px", lineHeight: "1.8", color: "var(--text-secondary)" }}>
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ color: "var(--text-primary)", fontSize: 24, fontWeight: 800, marginBottom: 20 }}>1. Agreement to Terms</h2>
-              <p>
+          {/* Content Card */}
+          <div className="bg-zinc-900/40 border border-white/5 rounded-[48px] p-8 md:p-16 space-y-20 animate-fade-up">
+            
+            <section className="space-y-6">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
+                  <UserCheck size={24} />
+                </div>
+                <h2 className="text-3xl font-black uppercase italic tracking-tight">1. Agreement</h2>
+              </div>
+              <p className="text-zinc-400 text-lg leading-relaxed font-medium">
                 By accessing or using Smart Tour, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, 
                 you may not access the service.
               </p>
             </section>
 
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ color: "var(--text-primary)", fontSize: 24, fontWeight: 800, marginBottom: 20 }}>2. Intellectual Property</h2>
-              <p>
-                The Service and its original content (excluding Content provided by users), features and functionality are and will remain 
-                the exclusive property of Smart Tour and its licensors. Our platform is protected by copyright, trademark, and other laws 
-                of both Pakistan and foreign countries.
+            <section className="space-y-6">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
+                  <Gavel size={24} />
+                </div>
+                <h2 className="text-3xl font-black uppercase italic tracking-tight">2. Intellectual Property</h2>
+              </div>
+              <p className="text-zinc-400 text-lg leading-relaxed font-medium">
+                The Service and its original content, features, and functionality are the exclusive property of Smart Tour. Our platform is protected by copyright, trademark, and other laws of Pakistan.
               </p>
             </section>
 
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ color: "var(--text-primary)", fontSize: 24, fontWeight: 800, marginBottom: 20 }}>3. User Accounts</h2>
-              <p>
-                When you create an account with us, you must provide information that is accurate, complete, and current at all times. 
-                Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Service.
+            <section className="space-y-6">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
+                  <AlertTriangle size={24} />
+                </div>
+                <h2 className="text-3xl font-black uppercase italic tracking-tight">3. Limitation of Liability</h2>
+              </div>
+              <p className="text-zinc-400 text-lg leading-relaxed font-medium">
+                In no event shall Smart Tour, nor its directors or employees, be liable for any indirect, incidental, or consequential damages resulting from your access to or use of the Service.
               </p>
             </section>
 
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ color: "var(--text-primary)", fontSize: 24, fontWeight: 800, marginBottom: 20 }}>4. Limitation of Liability</h2>
-              <p>
-                In no event shall Smart Tour, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any 
-                indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, 
-                goodwill, or other intangible losses, resulting from your access to or use of or inability to access or use the Service.
-              </p>
-            </section>
-
-            <section style={{ marginBottom: 40 }}>
-              <h2 style={{ color: "var(--text-primary)", fontSize: 24, fontWeight: 800, marginBottom: 20 }}>5. Governing Law</h2>
-              <p>
+            <section className="space-y-6">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
+                  <Globe size={24} />
+                </div>
+                <h2 className="text-3xl font-black uppercase italic tracking-tight">4. Governing Law</h2>
+              </div>
+              <p className="text-zinc-400 text-lg leading-relaxed font-medium">
                 These Terms shall be governed and construed in accordance with the laws of Pakistan, without regard to its conflict 
                 of law provisions.
               </p>
             </section>
 
-            <div style={{ marginTop: 60, padding: 30, background: "var(--bg-secondary)", borderRadius: 16, textAlign: "center" }}>
-              <p style={{ fontWeight: 700, marginBottom: 16 }}>Have questions about our Terms?</p>
-              <Link href="/contact" className="btn btn-primary" style={{ margin: "0 auto" }}>Contact Legal Team</Link>
+            {/* Contact Legal CTA */}
+            <div className="pt-12 mt-12 border-t border-white/5 text-center">
+              <p className="text-zinc-500 text-sm font-black uppercase tracking-widest mb-8">Have questions about our Terms?</p>
+              <Link href="/contact" className="inline-flex px-12 py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest text-xs transition-all shadow-xl shadow-emerald-500/20 active:scale-95">
+                Consult Legal Team
+              </Link>
             </div>
           </div>
         </div>
       </main>
+
       <Footer />
-    </>
+    </div>
   );
 }

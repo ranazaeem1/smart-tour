@@ -1,14 +1,9 @@
 /**
  * @file page.tsx
  * @description Authentication page for Smart Tour. Handles both Login and Registration flows
- * within a single UI using Supabase Auth. Also handles role-based redirection post-login.
- * @author Smart Tour Team
- * @dependencies react, next/navigation, next/link, @/lib/supabase, @/lib/db
+ * within a single UI using Supabase Auth. Optimized for the Modern Dark Enterprise theme.
  */
 
-// ==========================================
-// Imports
-// ==========================================
 "use client";
 import { useState } from "react";
 import Link from "next/link";
@@ -17,40 +12,17 @@ import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/db";
 
-// ==========================================
-// Component: AuthForm
-// ==========================================
-
-/**
- * Main form component managing authentication state, UI toggling between login and register,
- * and Supabase backend interactions.
- * 
- * @returns {JSX.Element} The rendered authentication form
- */
 function AuthForm() {
-  // Hooks
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Extract role query param to determine if registering as user or company
   const roleParam = searchParams.get("role") || "user";
 
-  // State Management
   const [mode, setMode] = useState<"login" | "register">("login");
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // ==========================================
-  // Handlers
-  // ==========================================
-
-  /**
-   * Handles form submission for both login and registration flows.
-   * Interacts with Supabase Auth API and manages local state (loading, error, success).
-   * 
-   * @param {React.FormEvent} e - Form submission event
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -59,8 +31,6 @@ function AuthForm() {
 
     try {
       if (mode === "register") {
-        // --- Registration Flow ---
-        // Determine role: Super Admin gets 'admin', company param gets 'company', everyone else defaults to 'user'
         const determinedRole = form.email.toLowerCase() === "zaeemrajpoot2234@gmail.com" 
           ? "admin" 
           : (roleParam === "company" ? "company" : "user");
@@ -80,9 +50,8 @@ function AuthForm() {
         if (signUpError) throw signUpError;
 
         if (data.user) {
-          // Save user data to profiles table immediately after signup
           try {
-            const { error: profileError } = await upsertProfile({
+            await upsertProfile({
               id: data.user.id,
               email: form.email,
               full_name: form.name,
@@ -90,27 +59,18 @@ function AuthForm() {
               role: determinedRole,
             });
 
-
-            if (profileError) {
-              console.error('Profile save error:', profileError);
-            }
-
-            // Check if email confirmation is disabled (auto-login) or enabled
             if (data.session) {
               if (determinedRole === "admin") router.push("/admin/dashboard");
               else if (determinedRole === "company") router.push("/company/dashboard");
               else router.push("/user/dashboard");
             } else {
-              setSuccess(`✅ Account created as ${determinedRole}! Check your email to confirm your account, then sign in.`);
+              setSuccess(`✅ Account created as ${determinedRole}! Check your email to confirm, then sign in.`);
             }
           } catch (err) {
             console.error('Error saving profile:', err);
           }
         }
-
-
       } else {
-        // --- Login Flow ---
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email: form.email,
           password: form.password,
@@ -119,30 +79,20 @@ function AuthForm() {
         if (signInError) throw signInError;
 
         if (data.user) {
-          // Fetch the user's role to determine correct post-login redirect
           const { data: profile } = await supabase
             .from("profiles")
             .select("role")
             .eq("id", data.user.id)
             .maybeSingle();
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const userRole = (profile as any)?.role || data.user.user_metadata?.role || "user";
 
-          // Redirect based on role
-
-          // Role-based redirection
-          if (userRole === "admin") {
-            router.push("/admin/dashboard");
-          } else if (userRole === "company") {
-            router.push("/company/dashboard");
-          } else {
-            router.push("/user/dashboard");
-          }
+          if (userRole === "admin") router.push("/admin/dashboard");
+          else if (userRole === "company") router.push("/company/dashboard");
+          else router.push("/user/dashboard");
         }
       }
     } catch (err: unknown) {
-      // Extract human-readable error message for UI
       const msg = err instanceof Error ? err.message : "An error occurred. Please try again.";
       setError(msg);
     } finally {
@@ -150,130 +100,147 @@ function AuthForm() {
     }
   };
 
-  // ==========================================
-  // JSX Return
-  // ==========================================
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, position: "relative", overflow: "hidden" }}>
-      {/* Background with overlay */}
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.85) contrast(1.05)", zIndex: 0 }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%)", zIndex: 1 }} />
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden bg-black font-sans">
+      {/* Background with mountain sunset and dark overlay */}
+      <div className="absolute inset-0 z-0">
+        <div 
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-[10s] scale-105 blur-[6px]"
+          style={{
+            backgroundImage: 'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=900&fit=crop")',
+          }}
+        />
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
 
-      <div style={{ width: "100%", maxWidth: 460, position: "relative", zIndex: 2 }}>
+      <div className="relative z-10 w-full max-w-[460px] animate-fade">
         {/* Logo Section */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <Link href="/" style={{ textDecoration: "none" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--gradient-main)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 3L28 28H4L16 3Z" fill="white" opacity="0.9" /><circle cx="16" cy="14" r="3" fill="white" /></svg>
-              </div>
-              <span style={{ fontSize: 26, fontWeight: 900, color: "#fff", fontFamily: "Outfit, sans-serif" }}>Smart Tour</span>
+        <div className="text-center mb-12">
+          <Link href="/" className="inline-flex items-center gap-3 group">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+              <span className="text-white font-black text-xl">S</span>
             </div>
+            <span className="text-3xl font-black text-white uppercase italic tracking-tighter">Smart<span className="text-emerald-500">Tour</span></span>
           </Link>
         </div>
 
-        {/* Main Card */}
-        <div style={{
-          padding: 40,
-          background: "rgba(255, 255, 255, 0.1)",
-          backdropFilter: "blur(32px) saturate(150%)",
-          WebkitBackdropFilter: "blur(32px) saturate(150%)",
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          borderTop: "1px solid rgba(255, 255, 255, 0.6)",
-          borderLeft: "1px solid rgba(255, 255, 255, 0.6)",
-          borderRadius: "var(--radius-xl)",
-          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)"
-        }}>
-          {/* Tabs: Login / Register switcher */}
-          <div style={{ display: "flex", gap: 4, marginBottom: 28, background: "rgba(255, 255, 255, 0.1)", padding: 4, borderRadius: "var(--radius-full)", border: "1px solid rgba(255, 255, 255, 0.2)" }}>
-            <button className={`tab-btn ${mode === "login" ? "active" : ""}`} onClick={() => { setMode("login"); setError(null); setSuccess(null); }} style={{ flex: 1, background: mode === "login" ? "rgba(255, 255, 255, 0.25)" : "transparent", color: "#fff", boxShadow: mode === "login" ? "0 2px 8px rgba(0,0,0,0.2)" : "none", textShadow: "0 1px 4px rgba(0,0,0,0.2)" }}>Login</button>
-            <button className={`tab-btn ${mode === "register" ? "active" : ""}`} onClick={() => { setMode("register"); setError(null); setSuccess(null); }} style={{ flex: 1, background: mode === "register" ? "rgba(255, 255, 255, 0.25)" : "transparent", color: "#fff", boxShadow: mode === "register" ? "0 2px 8px rgba(0,0,0,0.2)" : "none", textShadow: "0 1px 4px rgba(0,0,0,0.2)" }}>Register</button>
+        {/* Main Card - Dark Glass Effect to match Landing Page */}
+        <div className="bg-black/60 backdrop-blur-[40px] border border-white/10 rounded-[48px] p-10 md:p-12 shadow-2xl shadow-black/50">
+          {/* Tabs */}
+          <div className="flex gap-2 p-1 bg-white/5 border border-white/5 rounded-full mb-10">
+            <button 
+              className={`flex-1 py-3 px-6 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${mode === "login" ? "bg-white/10 text-white shadow-lg" : "text-zinc-500 hover:text-white"}`} 
+              onClick={() => { setMode("login"); setError(null); setSuccess(null); }}
+            >
+              Login
+            </button>
+            <button 
+              className={`flex-1 py-3 px-6 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${mode === "register" ? "bg-white/10 text-white shadow-lg" : "text-zinc-500 hover:text-white"}`} 
+              onClick={() => { setMode("register"); setError(null); setSuccess(null); }}
+            >
+              Register
+            </button>
           </div>
 
-          <h2 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6, color: "#fff", textShadow: "0 2px 10px rgba(0,0,0,0.3)" }}>
+          <h2 className="text-3xl font-black text-white mb-2 tracking-tighter uppercase italic">
             {mode === "login" ? "Welcome Back!" : "Create Account"}
           </h2>
-          <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.8)", marginBottom: 24, fontWeight: 500 }}>
+          <p className="text-zinc-400 text-sm font-medium mb-10 leading-relaxed">
             {mode === "login"
-              ? "Sign in to your account to continue your journey 👤"
-              : "Create an account to start your adventure with us 👤"}
+              ? "Sign in to your account to continue your extraordinary journey."
+              : "Create an account to start your adventure with our AI intelligence."}
           </p>
 
           {/* Feedback Messages */}
-          {error && (
-            <div className="alert alert-danger" style={{ marginBottom: 16, fontSize: 13 }}>
-              ⚠️ {error}
-            </div>
-          )}
-          {success && (
-            <div className="alert alert-success" style={{ marginBottom: 16, fontSize: 13 }}>
-              {success}
-            </div>
-          )}
+          {error && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 px-6 py-4 rounded-2xl text-sm mb-8 animate-fade">⚠️ {error}</div>}
+          {success && <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-6 py-4 rounded-2xl text-sm mb-8 animate-fade">{success}</div>}
 
-          {/* Authentication Form */}
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
             {mode === "register" && (
-              <div className="input-group">
-                <label className="input-label" style={{ fontWeight: 700, color: "#fff" }}>Full Name</label>
-                <input className="input" placeholder="Ali Hassan" required value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.3)", color: "#fff", backdropFilter: "blur(12px)" }} />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Full Name</label>
+                <input 
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all" 
+                  placeholder="Ali Hassan" 
+                  required 
+                  value={form.name} 
+                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))} 
+                />
               </div>
             )}
-            <div className="input-group">
-              <label className="input-label" style={{ fontWeight: 700, color: "#fff" }}>Email Address</label>
-              <input className="input" type="email" placeholder="you@example.com" required value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.3)", color: "#fff", backdropFilter: "blur(12px)" }} />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Email Address</label>
+              <input 
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all" 
+                type="email" 
+                placeholder="you@example.com" 
+                required 
+                value={form.email} 
+                onChange={e => setForm(p => ({ ...p, email: e.target.value }))} 
+              />
             </div>
             {mode === "register" && (
-              <div className="input-group">
-                <label className="input-label" style={{ fontWeight: 700, color: "#fff" }}>Phone Number</label>
-                <input className="input" type="tel" placeholder="03XX-XXXXXXX" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.3)", color: "#fff", backdropFilter: "blur(12px)" }} />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Phone Number</label>
+                <input 
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all" 
+                  type="tel" 
+                  placeholder="03XX-XXXXXXX" 
+                  value={form.phone} 
+                  onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} 
+                />
               </div>
             )}
-            <div className="input-group">
-              <label className="input-label" style={{ fontWeight: 700, color: "#fff" }}>Password</label>
-              <input className="input" type="password" placeholder="••••••••" required minLength={6} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.3)", color: "#fff", backdropFilter: "blur(12px)" }} />
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Password</label>
+              <input 
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all" 
+                type="password" 
+                placeholder="••••••••" 
+                required 
+                minLength={6} 
+                value={form.password} 
+                onChange={e => setForm(p => ({ ...p, password: e.target.value }))} 
+              />
             </div>
 
             {mode === "login" && (
-              <div style={{ textAlign: "right", marginTop: -8 }}>
-                <button type="button" onClick={() => router.push("/auth/forgot-password")} style={{ background: "none", border: "none", color: "#67e8f9", fontSize: 12, cursor: "pointer", fontWeight: 600, textDecoration: "none", textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+              <div className="text-right">
+                <button type="button" onClick={() => router.push("/auth/forgot-password")} className="text-[11px] font-black text-emerald-500 uppercase tracking-widest hover:text-emerald-400 transition-colors">
                   Forgot Password?
                 </button>
               </div>
             )}
 
-            <button type="submit" className="btn btn-emerald" style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "14px", border: "1px solid rgba(255,255,255,0.4)" }} disabled={loading}>
-              {loading ? <span className="loading-spinner" /> : (mode === "login" ? "Sign In →" : "Create Account →")}
+            <button 
+              type="submit" 
+              className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-xs shadow-xl shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" 
+              disabled={loading}
+            >
+              {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : (mode === "login" ? "Sign In →" : "Create Account →")}
             </button>
           </form>
 
-          {/* Toggle Action link */}
-          <div style={{ marginTop: 20, textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.8)" }}>
-            {mode === "login" ? "Don't have an account? " : "Already have an account? "}
-            <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(null); setSuccess(null); }} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontWeight: 700, fontSize: 13, textDecoration: "underline", textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+          {/* Toggle link */}
+          <div className="mt-10 text-center">
+            <span className="text-zinc-500 text-[11px] font-black uppercase tracking-widest">{mode === "login" ? "Don't have an account? " : "Already have an account? "}</span>
+            <button 
+              onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(null); setSuccess(null); }} 
+              className="text-white text-[11px] font-black uppercase tracking-widest hover:text-emerald-500 transition-colors underline decoration-emerald-500/50 underline-offset-4"
+            >
               {mode === "login" ? "Register" : "Login"}
             </button>
           </div>
-
         </div>
       </div>
     </div>
   );
 }
 
-// ==========================================
-// Default Export
-// ==========================================
-
-/**
- * AuthPage Component
- * Wraps the AuthForm in a Suspense boundary as it utilizes 'useSearchParams()'.
- * 
- * @returns {JSX.Element} The rendered authentication page wrapper
- */
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}><span className="loading-spinner" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /></div>}>
       <AuthForm />
     </Suspense>
   );

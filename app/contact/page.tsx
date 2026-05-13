@@ -1,9 +1,17 @@
+/**
+ * @file contact/page.tsx
+ * @description Contact page for Smart Tour. Aligned with the Modern Dark Enterprise theme.
+ */
+
 "use client";
 import React, { useState } from "react";
-import Navbar from "@/components/Navbar";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, Mail, Phone, MapPin, Send, HelpCircle, Briefcase } from "lucide-react";
 import Footer from "@/components/Footer";
 
 export default function ContactPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -11,7 +19,6 @@ export default function ContactPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate sending message
     setTimeout(() => {
       setLoading(false);
       setSuccess(true);
@@ -20,95 +27,133 @@ export default function ContactPage() {
   };
 
   return (
-    <>
-      <Navbar />
-      <main style={{ paddingTop: "120px", paddingBottom: "80px", background: "var(--bg-primary)", minHeight: "100vh" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto", padding: "0 20px" }}>
+    <div className="bg-black min-h-screen text-white font-sans selection:bg-emerald-500/30">
+      {/* Header / Nav Placeholder */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+              S
+            </div>
+            <span className="font-bold text-white text-lg tracking-tight uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
+          </Link>
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
+            <ChevronLeft size={16} /> Back
+          </button>
+        </div>
+      </header>
+
+      <main className="pt-40 pb-32 px-6">
+        <div className="max-w-6xl mx-auto">
           
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <h1 style={{ fontSize: 42, fontWeight: 900, color: "var(--navy)", marginBottom: 16 }}>
-              Contact <span className="text-gradient">Us</span>
+          {/* Hero Section */}
+          <div className="text-center mb-24 animate-fade">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-8">
+              <HelpCircle size={14} className="text-emerald-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Global Support Network</span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none mb-8 uppercase italic">
+              Contact <span className="text-emerald-500">Us</span>
             </h1>
-            <p style={{ fontSize: 16, color: "var(--text-secondary)", maxWidth: 600, margin: "0 auto" }}>
+            <p className="text-zinc-500 text-lg font-medium max-w-2xl mx-auto">
               Have questions about your trip, our AI planner, or want to list your company? We are here to help you 24/7.
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "start" }}>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start animate-fade-up">
             
-            {/* Contact Info */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <div className="card" style={{ padding: 24 }}>
-                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: "var(--text-primary)" }}>Our Headquarters</h3>
-                <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6 }}>
-                  SmartTour Basecamp<br />
-                  F-8 Markaz, Islamabad<br />
-                  Pakistan
-                </p>
-              </div>
+            {/* Contact Info Column */}
+            <div className="lg:col-span-2 space-y-6">
+              {[
+                { icon: <MapPin />, title: "Headquarters", content: "SmartTour Basecamp, F-8 Markaz, Islamabad, Pakistan" },
+                { icon: <Mail />, title: "Direct Support", content: "support@smarttour.pk | Available 24/7" },
+                { icon: <Phone />, title: "Phone Support", content: "+92 (51) 123-4567 | Mon-Fri 9am-6pm" },
+              ].map((item, i) => (
+                <div key={i} className="p-8 bg-zinc-900/40 border border-white/5 rounded-3xl group hover:border-emerald-500/30 transition-all">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 transition-transform">
+                    {item.icon}
+                  </div>
+                  <h3 className="text-lg font-black text-white mb-2 uppercase tracking-tighter italic">{item.title}</h3>
+                  <p className="text-zinc-500 text-sm font-medium leading-relaxed">{item.content}</p>
+                </div>
+              ))}
 
-              <div className="card" style={{ padding: 24 }}>
-                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: "var(--text-primary)" }}>Direct Contact</h3>
-                <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6 }}>
-                  <strong>Email:</strong> support@smarttour.pk<br />
-                  <strong>Phone:</strong> +92 (51) 123-4567<br />
-                  <strong>Hours:</strong> Mon-Fri, 9am - 6pm (PKT)
-                </p>
-              </div>
-
-              <div className="card" style={{ padding: 24, background: "var(--gradient-card)" }}>
-                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: "var(--text-primary)" }}>Partner With Us</h3>
-                <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
-                  Are you a tour operator looking to expand your reach? Join our trusted network of travel partners.
-                </p>
-                <a href="/auth/login" className="btn btn-secondary btn-sm" style={{ width: "fit-content" }}>Join as Partner</a>
+              <div className="p-8 bg-emerald-600/10 border border-emerald-500/20 rounded-3xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
+                <div className="relative z-10">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white mb-6">
+                    <Briefcase size={20} />
+                  </div>
+                  <h3 className="text-lg font-black text-emerald-400 mb-2 uppercase tracking-tighter italic">Partner With Us</h3>
+                  <p className="text-zinc-400 text-sm font-medium leading-relaxed mb-8">
+                    Join our trusted network of global travel operators and expand your business with SmartTour intelligence.
+                  </p>
+                  <Link href="/auth/login" className="inline-flex text-xs font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors">
+                    Join Partner Portal →
+                  </Link>
+                </div>
               </div>
             </div>
 
-            {/* Contact Form */}
-            <div className="card" style={{ padding: 32 }}>
-              <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 24, color: "var(--text-primary)" }}>Send us a Message</h2>
+            {/* Contact Form Column */}
+            <div className="lg:col-span-3 bg-zinc-900/40 border border-white/5 rounded-[48px] p-8 md:p-12 shadow-2xl">
+              <h2 className="text-3xl font-black uppercase italic tracking-tight mb-10">Send us a <span className="text-emerald-500">Message</span></h2>
               
               {success ? (
-                <div className="alert alert-success" style={{ padding: 24, textAlign: "center", flexDirection: "column", gap: 12 }}>
-                  <div style={{ fontSize: 40 }}>✅</div>
-                  <h4 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Message Sent!</h4>
-                  <p style={{ fontSize: 14, margin: 0 }}>Thanks for reaching out. We will get back to you within 24 hours.</p>
-                  <button className="btn btn-secondary" onClick={() => setSuccess(false)} style={{ marginTop: 16 }}>Send Another</button>
+                <div className="py-20 text-center space-y-6 animate-fade">
+                  <div className="w-20 h-20 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center text-emerald-500 mx-auto mb-8">
+                    <Send size={32} />
+                  </div>
+                  <h4 className="text-2xl font-black text-white uppercase italic">Message Sent!</h4>
+                  <p className="text-zinc-500 font-medium">Thanks for reaching out. Our team will get back to you within 24 hours.</p>
+                  <button 
+                    className="px-10 py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
+                    onClick={() => setSuccess(false)}
+                  >
+                    Send Another Inquiry
+                  </button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                    <div className="input-group">
-                      <label className="input-label">Your Name</label>
-                      <input className="input" placeholder="Ali Hassan" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Your Name</label>
+                      <input 
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all" 
+                        placeholder="Ali Hassan" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} 
+                      />
                     </div>
-                    <div className="input-group">
-                      <label className="input-label">Email Address</label>
-                      <input className="input" type="email" placeholder="ali@example.com" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Email Address</label>
+                      <input 
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all" 
+                        type="email" placeholder="ali@example.com" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} 
+                      />
                     </div>
                   </div>
                   
-                  <div className="input-group">
-                    <label className="input-label">Subject</label>
-                    <input className="input" placeholder="How can we help?" required value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Subject</label>
+                    <input 
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all" 
+                      placeholder="How can we help?" required value={form.subject} onChange={e => setForm({...form, subject: e.target.value})} 
+                    />
                   </div>
                   
-                  <div className="input-group">
-                    <label className="input-label">Message</label>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest ml-4">Message</label>
                     <textarea 
-                      className="input" 
-                      placeholder="Tell us about your inquiry..." 
-                      rows={5} 
-                      required 
-                      value={form.message} 
-                      onChange={e => setForm({...form, message: e.target.value})}
-                      style={{ resize: "vertical", fontFamily: "inherit" }}
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-all min-h-[160px] resize-none" 
+                      placeholder="Tell us about your inquiry..." required value={form.message} onChange={e => setForm({...form, message: e.target.value})} 
                     />
                   </div>
 
-                  <button type="submit" className="btn btn-primary" style={{ justifyContent: "center", padding: "14px", marginTop: 8 }} disabled={loading}>
-                    {loading ? <span className="loading-spinner" /> : "Send Message"}
+                  <button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black py-5 rounded-2xl uppercase tracking-[0.2em] text-xs shadow-xl shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-3" 
+                    disabled={loading}
+                  >
+                    {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <>Send Message <Send size={14} /></>}
                   </button>
                 </form>
               )}
@@ -117,7 +162,8 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
+
       <Footer />
-    </>
+    </div>
   );
 }
