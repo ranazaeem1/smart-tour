@@ -2,301 +2,289 @@
  * @file page.tsx
  * @description The main landing page for Smart Tour. Showcases top tours, destinations, 
  * features, and provides direct entry points for users and companies.
- * @author Smart Tour Team
- * @dependencies react, next/link, lucide-react
  */
 
-// ==========================================
-// Imports
-// ==========================================
 "use client";
+import React, { useState } from 'react';
 import Link from "next/link";
-import { ArrowRight, Map, Shield, Users, Star, Brain, Coins, CloudSun, Smartphone } from "lucide-react";
+import { useRouter } from 'next/navigation';
+import { 
+  Menu, 
+  X, 
+  ArrowRight, 
+  Star, 
+  Brain, 
+  Shield, 
+  Coins, 
+  CloudSun, 
+  Smartphone, 
+  MapPin, 
+  ChevronRight, 
+  Play,
+  ArrowDown
+} from "lucide-react";
 import Footer from "@/components/Footer";
 
-// ==========================================
-// Component: Home
-// ==========================================
-
-/**
- * Main Home Component
- * Renders the full unauthenticated landing page (hero section, featured tours, AI features).
- * 
- * @returns {JSX.Element} The rendered landing page
- */
 export default function Home() {
-  // ==========================================
-  // JSX Return
-  // ==========================================
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleNavigation = (path: string) => {
+    if (path.startsWith('#')) {
+      scrollToSection(path.substring(1));
+    } else {
+      router.push(path);
+    }
+    setMobileMenuOpen(false);
+  };
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <>
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-emerald-500/30">
       {/* 
         ================================================================
-        1. Top Navigation Bar (Absolute over Hero)
+        1. NAVBAR
         ================================================================
       */}
-      <header className="navbar" style={{ 
-        position: "absolute", 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        zIndex: 100, 
-        background: "transparent", 
-        backdropFilter: "none",
-        WebkitBackdropFilter: "none",
-        border: "none", 
-        boxShadow: "none",
-        padding: "14px 60px"
-      }}>
-        <Link href="/" className="nav-logo" style={{ gap: "8px", textDecoration: "none" }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="16" height="16" viewBox="0 0 32 32" fill="none"><path d="M16 3L28 28H4L16 3Z" fill="white" opacity="0.9" /><circle cx="16" cy="14" r="3" fill="white" /></svg>
-          </div>
-          <span style={{ fontSize: "22px", fontWeight: "700", color: "#fff", fontFamily: "Outfit, sans-serif", letterSpacing: "-0.5px" }}>SmartTour</span>
-        </Link>
-        <nav className="nav-links">
-          <Link href="/destinations" className="nav-link" style={{ color: "#fff" }}>Destinations</Link>
-          <Link href="#tours" className="nav-link" style={{ color: "#fff" }}>Tours</Link>
-          <Link href="#features" className="nav-link" style={{ color: "#fff" }}>AI Planner</Link>
-          <Link href="/about" className="nav-link" style={{ color: "#fff" }}>About</Link>
-        </nav>
-        <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-          <Link href="/auth/login" className="nav-link" style={{ fontSize: 14, fontWeight: 500, color: "#fff" }}>Login</Link>
-          <Link href="/auth/login" className="btn" style={{ padding: "8px 24px", fontSize: "14px", background: "transparent", border: "1px solid rgba(255,255,255,0.5)", color: "#fff", borderRadius: "999px", transition: "all 0.3s" }}>Get Started</Link>
-        </div>
-      </header>
+      <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16 sm:h-20">
+            
+            {/* LOGO */}
+            <Link href="/" className="flex items-center gap-2 cursor-pointer group">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                S
+              </div>
+              <span className="font-bold text-white text-lg tracking-tight uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
+            </Link>
 
-      <main style={{ position: "relative" }}>
-        {/* Floating Blobs Background Layer */}
-        {/* Adds dynamic aesthetics to the background */}
-        <div className="blobs-container" style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 1, pointerEvents: "none" }}>
-          <div className="blob blob-1"></div>
-          <div className="blob blob-2"></div>
-          <div className="blob blob-3"></div>
-          <div className="blob blob-4"></div>
-          <div className="blob blob-5"></div>
-        </div>
-
-        {/* 
-          ================================================================
-          2. Hero Section
-          ================================================================
-        */}
-        <section className="hero" style={{ minHeight: "75vh", display: "flex", alignItems: "center", position: "relative", padding: "0", overflow: "hidden" }}>
-          <div className="hero-bg" style={{ 
-            backgroundImage: "url('/images/sunset-bg.png')", 
-            backgroundSize: "cover", 
-            backgroundPosition: "center", 
-            position: "absolute", 
-            inset: 0, 
-            zIndex: -2,
-            filter: "brightness(0.85) contrast(1.05)" 
-          }}></div>
-          <div className="hero-overlay" style={{ 
-            background: "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%)", 
-            position: "absolute", 
-            inset: 0, 
-            zIndex: -1 
-          }}></div>
-          
-          <div className="hero-content" style={{ margin: "0 auto", padding: "120px 40px 60px", width: "100%", maxWidth: "1200px", zIndex: 3, textAlign: "center" }}>
-            <div style={{ margin: "0 auto 48px", animation: "fadeIn 1s ease" }}>
-              <h1 style={{ fontSize: "72px", fontWeight: "900", lineHeight: "1", marginBottom: "12px", color: "white", letterSpacing: "2px", textTransform: "uppercase", textShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
-                DISCOVER THE
-              </h1>
-              <h2 style={{ fontSize: "72px", fontWeight: "900", lineHeight: "1", marginBottom: "32px", color: "#ffffff", letterSpacing: "2px", textTransform: "uppercase", textShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
-                EXTRAORDINARY
-              </h2>
+            {/* DESKTOP MENU */}
+            <div className="hidden md:flex items-center gap-8">
+              <button onClick={() => scrollToSection('destinations')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">Destinations</button>
+              <button onClick={() => scrollToSection('tours')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">Tours</button>
+              <button onClick={() => scrollToSection('planner')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">AI Planner</button>
+              <button onClick={() => scrollToSection('about')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">About</button>
             </div>
 
-            {/* Search Panel - Pill Shaped Frosted Glass */}
-            {/* FIXME: Convert these inputs to fully functional controlled components for real search queries */}
-            <div className="search-panel" style={{ 
-              background: "rgba(255, 255, 255, 0.2)", 
-              backdropFilter: "blur(40px)", 
-              border: "1px solid rgba(255,255,255,0.4)", 
-              borderRadius: "999px", 
-              padding: "8px 8px 8px 32px", 
-              display: "flex", 
-              gap: "0px", 
-              alignItems: "center", 
-              margin: "0 auto 48px", 
-              maxWidth: "900px",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.2)"
-            }}>
-              <div className="input-group" style={{ flex: 1.2, textAlign: "left" }}>
-                <label className="input-label" style={{ color: "rgba(255,255,255,0.9)", fontSize: "11px", marginBottom: "4px", display: "flex", alignItems: "center", gap: 6, fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px" }}>
-                  Destination
-                </label>
-                <input className="input" placeholder="Where to?" style={{ background: "transparent", border: "none", padding: "0", borderRadius: "0", color: "#fff", width: "100%", fontSize: "16px", fontWeight: "600" }} />
+            {/* AUTH BUTTONS */}
+            <div className="hidden sm:flex items-center gap-4">
+              <button onClick={() => handleNavigation('/auth/login')} className="px-6 py-2 text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest border border-white/10 rounded-xl hover:bg-white/5">Login</button>
+              <button onClick={() => handleNavigation('/auth/login')} className="px-8 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.15em] transition shadow-xl shadow-emerald-500/20 active:scale-95">GET STARTED</button>
+            </div>
+
+            {/* MOBILE MENU BUTTON */}
+            <div className="md:hidden">
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white p-2">{mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
+            </div>
+          </div>
+
+          {/* MOBILE MENU */}
+          {mobileMenuOpen && (
+            <div className="md:hidden py-6 space-y-4 border-t border-white/10 animate-fade">
+              <button onClick={() => scrollToSection('destinations')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">Destinations</button>
+              <button onClick={() => scrollToSection('tours')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">Tours</button>
+              <button onClick={() => scrollToSection('planner')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">AI Planner</button>
+              <button onClick={() => scrollToSection('about')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">About</button>
+              <div className="pt-4 flex flex-col gap-3 px-4">
+                <button onClick={() => handleNavigation('/auth/login')} className="w-full py-3 text-center text-white/80 border border-white/10 rounded-xl font-bold uppercase tracking-widest text-xs">Login</button>
+                <button onClick={() => handleNavigation('/auth/login')} className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20">GET STARTED</button>
               </div>
-              <div style={{ width: "1px", height: "30px", background: "rgba(255,255,255,0.3)", margin: "0 20px" }}></div>
-              <div className="input-group" style={{ flex: 1, textAlign: "left" }}>
-                <label className="input-label" style={{ color: "rgba(255,255,255,0.9)", fontSize: "11px", marginBottom: "4px", display: "flex", alignItems: "center", gap: 6, fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px" }}>
-                  Budget
-                </label>
-                <input className="input" placeholder="PKR" style={{ background: "transparent", border: "none", padding: "0", borderRadius: "0", color: "#fff", width: "100%", fontSize: "16px", fontWeight: "600" }} />
-              </div>
-              <div style={{ width: "1px", height: "30px", background: "rgba(255,255,255,0.3)", margin: "0 20px" }}></div>
-              <div className="input-group" style={{ flex: 1, textAlign: "left" }}>
-                <label className="input-label" style={{ color: "rgba(255,255,255,0.9)", fontSize: "11px", marginBottom: "4px", display: "flex", alignItems: "center", gap: 6, fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px" }}>
-                  Dates
-                </label>
-                <input type="text" onFocus={(e) => e.target.type = "date"} placeholder="Add dates" className="input" style={{ background: "transparent", border: "none", padding: "0", borderRadius: "0", color: "#fff", width: "100%", fontSize: "16px", fontWeight: "600" }} />
-              </div>
-              <Link href="/auth/login" className="btn btn-primary" style={{ padding: "0 40px", height: "54px", borderRadius: "999px", display: "flex", alignItems: "center", gap: "10px", fontWeight: "700", fontSize: "15px", background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", border: "none", color: "#111", textTransform: "uppercase", letterSpacing: "1px" }}>
-                Explore Now
-              </Link>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      <main className="relative">
+        {/* 
+          ================================================================
+          2. HERO SECTION
+          ================================================================
+        */}
+        <section className="relative w-full h-screen pt-20 flex items-center justify-center overflow-hidden">
+          <div 
+            className="absolute inset-0 w-full h-full bg-cover bg-center transition-transform duration-[10s] scale-105"
+            style={{
+              backgroundImage: 'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=900&fit=crop")',
+              backgroundPosition: 'center'
+            }}
+          />
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/20 rounded-full mb-8 animate-fade">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Next Gen Travel Intelligence</span>
+            </div>
+            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white mb-6 leading-[0.9] tracking-tighter animate-fade-up italic">
+              DISCOVER THE
+              <br />
+              <span className="text-emerald-500">EXTRAORDINARY</span>
+            </h1>
+            <p className="text-lg sm:text-xl text-white/90 mb-12 max-w-2xl mx-auto font-medium animate-fade-up delay-100">
+              Let's start your journey with us, your dream will come true
+            </p>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-[32px] sm:rounded-full p-2 flex flex-col sm:flex-row gap-2 sm:gap-0 max-w-3xl mx-auto mb-8 animate-fade-up delay-200">
+              <input type="text" placeholder="Where to?" className="flex-1 bg-transparent text-white placeholder-white/50 px-6 py-4 sm:py-3 outline-none text-sm font-bold" />
+              <input type="text" placeholder="PKR" className="flex-1 bg-transparent text-white placeholder-white/50 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-white/10" />
+              <input type="text" onFocus={(e) => (e.target.type = "date")} placeholder="Add dates" className="flex-1 bg-transparent text-white placeholder-white/50 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-white/10" />
+              <button onClick={() => scrollToSection('tours')} className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black px-10 py-4 sm:py-3 rounded-full whitespace-nowrap transition shadow-xl shadow-emerald-500/30 text-xs uppercase tracking-widest active:scale-95">EXPLORE NOW</button>
             </div>
           </div>
         </section>
 
         {/* 
           ================================================================
-          3. Popular Destinations Section
+          3. FEATURED EXPERIENCES / TOURS GRID
           ================================================================
         */}
-        <section id="destinations" style={{ background: "#fff", padding: "80px 60px" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "left", marginBottom: 48 }}>
-            <h2 style={{ fontSize: 32, fontWeight: 800, color: "#111", marginBottom: 14 }}>Featured Experiences</h2>
-          </div>
-          <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 32 }}>
-            {[
-              { img:"/images/hunza.png", name:"Hunza Valley", price:"From PKR 40K", desc:"Mountain & Culture" },
-              { img:"/images/skardu.png", name:"Skardu", price:"From PKR 55K", desc:"Lakes & Desert" },
-              { img:"/images/swat.jpg",  name:"Swat Valley",  price:"From PKR 25K", desc:"Hike & Wellness" },
-              { img:"/images/fairy-meadows.png", name:"Fairy Meadows", price:"From PKR 30K", desc:"Adventure Track" },
-            ].map((d, i)=>(
-              <div key={d.name} className="dest-card" style={{ 
-                borderRadius: 24, 
-                overflow: "hidden", 
-                position: "relative", 
-                background: "#fff",
-                boxShadow: `0 20px 40px ${i % 2 === 0 ? 'rgba(0, 255, 200, 0.15)' : 'rgba(255, 100, 200, 0.15)'}`,
-                border: "1px solid rgba(0,0,0,0.03)",
-                transition: "transform 0.3s ease"
-              }}>
-                <div style={{ padding: "12px 12px 0" }}>
-                  <img src={d.img} alt={d.name} style={{ width:"100%", height:"200px", objectFit:"cover", borderRadius: "16px" }} />
-                </div>
-                <div style={{ padding: "20px" }}>
-                  <h4 style={{ fontSize: 18, color: "#111", marginBottom: 4, fontWeight: 800 }}>{d.name}</h4>
-                  <div style={{ fontSize: 13, color: "#666", fontWeight: 500 }}>
-                    {d.desc} - {d.price}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 
-          ================================================================
-          4. Top Tours Section
-          ================================================================
-        */}
-        <section id="tours" style={{ background:"var(--bg-primary)", padding:"80px 60px" }}>
-          <div style={{ maxWidth:1200, margin:"0 auto" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:36 }}>
-              <h2 style={{ fontSize:34, fontWeight:800, color:"var(--text-primary)" }}>
-                Top <span className="text-gradient">Tour Packages</span>
-              </h2>
-              <Link href="/auth/login" style={{ color:"var(--text-secondary)", display:"flex", alignItems:"center", gap:8, textDecoration:"none", fontWeight:500, fontSize:14 }}>
-                View All Tours <ArrowRight size={16} />
-              </Link>
+        <section id="tours" className="py-32 bg-white text-slate-900 scroll-mt-20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="mb-16">
+              <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 mb-4 uppercase italic">Featured <span className="text-emerald-600">Experiences</span></h2>
+              <p className="text-lg text-slate-600 font-medium max-w-2xl">Discover amazing destinations and create unforgettable memories with our curated selections.</p>
             </div>
-            {/* Dynamic Tours Grid */}
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {[
-                { img:"/images/hunza.png", co:"Northern Tour Co.", title:"Hunza Valley Explorer", tags:["Trekking","Culture","Photography"], price:"PKR 45K", dur:"7 days", rating:"4.9", badge:"BESTSELLER", badgeColor:"var(--coral)", badgeBg:"rgba(249,115,22,0.85)" },
-                { img:"/images/skardu.png", co:"K2 Adventures", title:"Skardu & Deosai Plains", tags:["K2 View","Camping","Wildlife"], price:"PKR 65K", dur:"10 days", rating:"4.8", badge:null },
-                { img:"/images/swat.jpg",  co:"Swat Tourism", title:"Swat Valley Heritage Tour", tags:["History","Nature","Family"], price:"PKR 38K", dur:"5 days", rating:"4.7", badge:"FEATURED", badgeColor:"#fff", badgeBg:"rgba(16,185,129,0.85)" },
-              ].map(t=>(
-                <div key={t.title} className="card" style={{ padding:16, borderRadius:20, display:"flex", flexDirection:"column", gap:14 }}>
-                  <div style={{ position:"relative", borderRadius:14, overflow:"hidden", height:210 }}>
-                    <img src={t.img} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                    {/* Optional Badge rendering */}
-                    {t.badge && <div style={{ position:"absolute", top:10, left:10, background:t.badgeBg, color:t.badgeColor||"#fff", padding:"5px 11px", borderRadius:10, fontSize:11, fontWeight:800 }}>{t.badge}</div>}
-                    <div style={{ position:"absolute", top:10, right:10, background:"rgba(0,0,0,0.55)", color:"#fff", padding:"5px 9px", borderRadius:10, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>
-                      <Star size={11} fill="#f59e0b" color="#f59e0b" /> {t.rating}
-                    </div>
+                { img:"https://images.unsplash.com/photo-1525596662741-e94ff9f26de1?w=800&h=600&fit=crop", name:"Indonesia Paradise", price:"$500", dur:"3 Days, 2 Nights", badge:"HOT DEAL" },
+                { img:"https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=600&fit=crop", name:"Japan Adventure", price:"$800", dur:"5 Days, 4 Nights", badge:"PREMIUM" },
+                { img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=600&fit=crop", name:"Mountain Escape", price:"$600", dur:"3 Days, 2 Nights", badge:"BESTSELLER" },
+              ].map((d) => (
+                <div key={d.name} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer" onClick={() => handleNavigation('/auth/login')}>
+                  <div className="relative h-64 bg-slate-100 overflow-hidden">
+                    <img src={d.img} alt={d.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute top-4 right-4 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-lg">{d.badge}</div>
                   </div>
-                  <div>
-                    <div style={{ color:"var(--text-muted)", fontSize:12, marginBottom:4, fontWeight:500 }}>{t.co}</div>
-                    <h4 style={{ color:"var(--text-primary)", fontSize:18, fontWeight:700, marginBottom:12 }}>{t.title}</h4>
-                    {/* Tags mapping */}
-                    <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                      {t.tags.map(g=><span key={g} style={{ color:"var(--text-secondary)", fontSize:12, background:"var(--bg-secondary)", padding:"5px 12px", borderRadius:14, border:"1px solid var(--border)" }}>{g}</span>)}
+                  <div className="p-8">
+                    <h3 className="text-2xl font-black text-slate-900 mb-2 leading-tight">{d.name}</h3>
+                    <p className="text-slate-500 text-sm font-bold mb-6 flex items-center gap-2"><CloudSun size={14} className="text-emerald-500" /> {d.dur}</p>
+                    <div className="flex justify-between items-center pt-6 border-t border-slate-100">
+                      <span className="text-3xl font-black text-emerald-600">{d.price}</span>
+                      <button className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-black text-xs uppercase tracking-widest group/link">Know More <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" /></button>
                     </div>
-                  </div>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:"auto", paddingTop:14, borderTop:"1px solid var(--border)" }}>
-                    <div>
-                      <div style={{ color:"var(--navy)", fontSize:20, fontWeight:900 }}>{t.price}</div>
-                      <div style={{ color:"var(--text-muted)", fontSize:12 }}>per person • {t.dur}</div>
-                    </div>
-                    <Link href="/auth/login" className="btn btn-primary btn-sm">Book Now</Link>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        {/* 
-          ================================================================
-          5. AI Features Section
-          ================================================================
-        */}
-        <section id="features" style={{ background:"#fff", padding:"80px 60px", borderTop:"1px solid var(--border)" }}>
-          <div style={{ maxWidth:1200, margin:"0 auto", textAlign:"center" }}>
-            <div style={{ fontSize:11, fontWeight:700, color:"var(--teal)", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:14, background:"rgba(13,148,136,0.08)", display:"inline-block", padding:"5px 16px", borderRadius:20 }}>PLATFORM FEATURES</div>
-            <h2 style={{ fontSize:36, fontWeight:800, color:"var(--text-primary)", marginBottom:16 }}>Everything You Need</h2>
-            <p style={{ color:"var(--text-secondary)", fontSize:16, maxWidth:560, margin:"0 auto 48px auto", lineHeight:1.6 }}>
-              Every feature is designed to make your northern Pakistan adventure safer, smarter, and unforgettable.
-            </p>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:24 }}>
-              {[
-                { icon:<Brain size={20} color="#2563eb"/>, bg:"rgba(37,99,235,0.1)", title:"AI Itinerary Planner", desc:"Get personalized day-by-day itineraries optimized for your budget, time, and interests." },
-                { icon:<Shield size={20} color="#dc2626"/>, bg:"rgba(220,38,38,0.1)", title:"Safety & Risk Prediction", desc:"Real-time safety scores for every route and destination across northern Pakistan." },
-                { icon:<Coins size={20} color="#d97706"/>, bg:"rgba(217,119,6,0.1)", title:"Budget Breakdown", desc:"Visual breakdown of your travel costs — accommodation, food, transport & activities." },
-                { icon:<CloudSun size={20} color="#0891b2"/>, bg:"rgba(8,145,178,0.1)", title:"Weather Intelligence", desc:"Weather-aware itinerary planning so you never get caught in a mountain storm." },
-                { icon:<Smartphone size={20} color="#059669"/>, bg:"rgba(5,150,105,0.1)", title:"Offline Smart Mode", desc:"Download your itinerary and use the app fully offline in areas with no signal." },
-              ].map(f=>(
-                <div key={f.title} className="card" style={{ padding:"28px 22px", textAlign:"left" }}>
-                  <div style={{ width:44, height:44, background:f.bg, borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:16 }}>{f.icon}</div>
-                  <h4 style={{ color:"var(--text-primary)", fontSize:17, fontWeight:700, marginBottom:10 }}>{f.title}</h4>
-                  <p style={{ color:"var(--text-secondary)", fontSize:14, lineHeight:1.6 }}>{f.desc}</p>
-                </div>
-              ))}
+            <div className="text-center mt-20">
+              <button onClick={() => handleNavigation('/auth/login')} className="px-12 py-5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black rounded-2xl transition-all shadow-2xl shadow-emerald-500/30 uppercase tracking-[0.2em] text-xs active:scale-95">View All Tours</button>
             </div>
           </div>
         </section>
 
         {/* 
           ================================================================
-          6. Call To Action (CTA)
+          4. AI Planner (The Smart Edge)
           ================================================================
         */}
-        <section id="about" style={{ background:"var(--navy)", textAlign:"center", padding:"100px 20px", position:"relative", overflow:"hidden" }}>
-          <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:500, height:500, background:"radial-gradient(circle, rgba(201,168,76,0.15) 0%, transparent 70%)", zIndex:0 }} />
-          <div style={{ maxWidth:760, margin:"0 auto", position:"relative", zIndex:1 }}>
-            <h2 style={{ fontSize:50, fontWeight:900, color:"#fff", marginBottom:20, lineHeight:1.2 }}>
-              Ready to Explore <br />
-              <span style={{ color:"var(--gold-light)" }}>Northern Pakistan?</span>
-            </h2>
-            <p style={{ color:"rgba(255,255,255,0.7)", fontSize:18, marginBottom:44 }}>
-              Join thousands of travelers who trust Smart Tour for their northern Pakistan adventures.
-            </p>
-            <div style={{ display:"flex", gap:16, justifyContent:"center" }}>
-              <Link href="/auth/login" className="btn btn-primary btn-lg">
-                <Brain size={18} /> Start Planning Free
-              </Link>
+        <section id="planner" className="py-32 px-6 bg-black scroll-mt-20">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+              <div>
+                <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-6 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full w-fit">The Future of Travel</p>
+                <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.9] mb-10 uppercase italic">Smarter <br /><span className="text-emerald-500">Adventures</span></h2>
+                <p className="text-zinc-400 text-lg font-medium leading-relaxed mb-12 max-w-lg">Every feature is designed to make your northern Pakistan adventure safer, smarter, and unforgettable using state-of-the-art AI.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  {[
+                    { icon:<Brain className="text-emerald-500"/>, title:"AI Itinerary", desc:"Personalized plans based on your budget & time." },
+                    { icon:<Shield className="text-rose-500"/>, title:"Safety Tracking", desc:"Real-time risk scoring for every route." },
+                    { icon:<Coins className="text-gold"/>, title:"Budget AI", desc:"Visual breakdown of all travel expenses." },
+                    { icon:<CloudSun className="text-blue-400"/>, title:"Weather Intel", desc:"Avoid mountain storms with smart alerts." },
+                  ].map((item, i) => (
+                    <div key={i} className="group">
+                      <div className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:border-emerald-500/30 transition-all">{item.icon}</div>
+                      <h4 className="font-black text-white mb-2">{item.title}</h4>
+                      <p className="text-zinc-500 text-sm leading-snug">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="relative group overflow-hidden rounded-[48px] border border-white/10 shadow-3xl bg-zinc-900">
+                <img src="/images/skardu.png" className="w-full h-full object-cover opacity-60" />
+                <div className="absolute inset-0 flex items-center justify-center"><div className="w-20 h-20 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110"><Play fill="white" size={24} /></div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 
+          ================================================================
+          5. ABOUT SECTION
+          ================================================================
+        */}
+        <section id="about" className="py-32 bg-slate-50 text-slate-900 scroll-mt-20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
+              <div>
+                <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-8 uppercase italic tracking-tighter">About <span className="text-emerald-600">SmartTour</span></h2>
+                <p className="text-lg text-slate-600 mb-10 leading-relaxed font-medium">
+                  We believe travel is more than just visiting places — it's about creating memories, 
+                  meeting cultures, and discovering yourself. SmartTour makes it easy to plan, book, 
+                  and experience the world on your terms.
+                </p>
+                <div className="space-y-6">
+                  {[
+                    { title: "Expert Planning", desc: "AI-powered itinerary suggestions based on deep travel data." },
+                    { title: "Best Prices", desc: "Competitive rates from our network of verified global operators." },
+                    { title: "24/7 Support", desc: "Round-the-clock customer assistance wherever you are in the world." },
+                  ].map((item) => (
+                    <div key={item.title} className="flex gap-5 group">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">✓</div>
+                      </div>
+                      <div>
+                        <h3 className="font-black text-slate-900 text-lg">{item.title}</h3>
+                        <p className="text-slate-500 text-sm font-medium leading-snug">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="h-[500px] rounded-[48px] overflow-hidden shadow-2xl border-8 border-white group">
+                <img 
+                  src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&h=1000&fit=crop" 
+                  alt="About SmartTour"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 
+          ================================================================
+          6. CTA SECTION
+          ================================================================
+        */}
+        <section className="py-32 bg-gradient-to-r from-emerald-500 to-emerald-600 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2" />
+          <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+            <h2 className="text-4xl sm:text-6xl font-black text-white mb-8 tracking-tighter uppercase italic">Ready to Explore?</h2>
+            <p className="text-xl text-white/90 mb-12 font-medium">Start planning your next adventure with SmartTour intelligence.</p>
+            <div className="flex flex-col sm:flex-row gap-5 justify-center">
+              <button 
+                onClick={() => handleNavigation('/auth/login')}
+                className="px-10 py-4 bg-white text-emerald-600 font-black rounded-2xl hover:bg-slate-50 transition-all shadow-xl shadow-black/10 uppercase tracking-widest text-xs active:scale-95"
+              >
+                Get Started Free
+              </button>
+              <button 
+                onClick={() => scrollToSection('tours')}
+                className="px-10 py-4 border-2 border-white text-white font-black rounded-2xl hover:bg-white/10 transition-all uppercase tracking-widest text-xs active:scale-95"
+              >
+                Browse Tours
+              </button>
             </div>
           </div>
         </section>
       </main>
 
       <Footer />
-    </>
+    </div>
   );
 }

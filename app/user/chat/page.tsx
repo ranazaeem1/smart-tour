@@ -18,14 +18,14 @@ function ChatRedirect() {
       const name = searchParams.get("name");
 
       if (!companyId) {
-        console.error("Missing companyId in chat redirect");
-        router.push("/user/dashboard");
+        // If no specific chat parameters, go to Inbox
+        router.replace("/user/chat/list");
         return;
       }
 
       // Try to find an existing conversation between this user and company
-      const { data: existing, error: findError } = await supabase
-        .from("conversations")
+      const { data: existing, error: findError } = await (supabase
+        .from("conversations") as any)
         .select("id")
         .eq("user_id", profile.id)
         .eq("company_id", companyId)

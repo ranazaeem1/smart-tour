@@ -74,7 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       {/* Suppress hydration warning to allow client-side extensions (e.g., Grammarly) */}
-      <body suppressHydrationWarning={true}>
+      <body suppressHydrationWarning={true} style={{ backgroundColor: '#000000', color: '#FFFFFF' }} className="antialiased min-h-screen">
         {/* AuthProvider wraps the app to provide authentication context to all child routes */}
         <AuthProvider>
           {children}

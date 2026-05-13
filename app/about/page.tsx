@@ -50,7 +50,7 @@ export default function AboutPage() {
             {[
               { icon: <Zap size={24} color="#0d9488" />, title: "AI Driven", desc: "Smarter planning with predictive analytics." },
               { icon: <Shield size={24} color="#7c3aed" />, title: "Safety First", desc: "Real-time risk assessment for every route." },
-              { icon: <Users size={24} color="#2563eb" />, title: "Local Partners", desc: "Trusted relationships with mountain experts." },
+              { icon: <Users size={24} color="#1F2937" />, title: "Local Partners", desc: "Trusted relationships with mountain experts." },
               { icon: <Target size={24} color="#dc2626" />, title: "Personalized", desc: "Tours tailored to your budget and interests." },
             ].map((item, i) => (
               <div key={i} className="card" style={{ padding: 30, textAlign: "center" }}>

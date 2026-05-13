@@ -6,12 +6,7 @@ const maxBookings = Math.max(...MONTHLY_REVENUE.map(m=>m.bookings));
 export default function AdminAnalyticsPage() {
   return (
     <div className="animate-fade">
-      <div className="topbar">
-        <div>
-          <div style={{ fontSize:13,color:"var(--text-muted)",marginBottom:4 }}>Admin Panel</div>
-          <h1 className="topbar-title">📊 Platform Analytics</h1>
-        </div>
-      </div>
+      {/* Platform Insights */}
 
       <div className="grid-2" style={{ gap:24,marginBottom:24 }}>
         <div className="card">

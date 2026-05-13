@@ -115,7 +115,7 @@ export function BookingSuccessModal({ onClose, tourTitle }: BookingSuccessModalP
 
         <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, marginBottom: 24 }}>
           You can track your booking status in{" "}
-          <span style={{ color: "#3B82F6" }}>My Bookings</span>
+          <span style={{ color: "#FFFFFF" }}>My Bookings</span>
         </p>
 
         {/* Close button */}

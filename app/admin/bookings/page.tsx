@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { fetchBookings, updateBookingStatus } from "@/lib/db";
 import { BOOKINGS, formatPKR, getStatusColor } from "@/lib/data";
+import { ClipboardList, CheckCircle, Clock, CheckCircle2, Search, Filter, MoreVertical, CreditCard, Users, Calendar } from "lucide-react";
 
 interface Booking {
   id: string;
@@ -19,7 +20,6 @@ interface Booking {
   destination?: string;
   profiles?: { full_name: string | null; email: string } | null;
   userName?: string;
-  companyName?: string;
 }
 
 export default function AdminBookingsPage() {
@@ -32,30 +32,39 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const data = await fetchBookings();
-      if (data.length > 0) {
-        setBookings(data as Booking[]);
-      } else {
-        setBookings(BOOKINGS as unknown as Booking[]);
+      try {
+        const data = await fetchBookings();
+        if (data && data.length > 0) {
+          setBookings(data as Booking[]);
+        } else {
+          setBookings(BOOKINGS as unknown as Booking[]);
+        }
+      } catch (err) {
+        console.error("Error fetching bookings:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, []);
 
-  const getTitle = (b: Booking) => b.tours?.title || (b as { tourTitle?: string }).tourTitle || "—";
-  const getDest = (b: Booking) => b.tours?.destination || (b as { destination?: string }).destination || "—";
-  const getDate = (b: Booking) => b.travel_date || (b as { date?: string }).date || "—";
-  const getGroup = (b: Booking) => b.group_size || (b as { groupSize?: number }).groupSize || 0;
-  const getPrice = (b: Booking) => b.total_price || (b as { totalPrice?: number }).totalPrice || 0;
-  const getPayment = (b: Booking) => b.payment_status || (b as { paymentStatus?: string }).paymentStatus || "pending";
-  const getName = (b: Booking) => b.profiles?.full_name || (b as { userName?: string }).userName || "—";
+  const getTitle = (b: Booking) => b.tours?.title || (b as any).tourTitle || "—";
+  const getDate = (b: Booking) => b.travel_date || (b as any).date || "—";
+  const getGroup = (b: Booking) => b.group_size || (b as any).groupSize || 0;
+  const getPrice = (b: Booking) => b.total_price || (b as any).totalPrice || 0;
+  const getPayment = (b: Booking) => b.payment_status || (b as any).paymentStatus || "pending";
+  const getName = (b: Booking) => b.profiles?.full_name || (b as any).userName || "—";
 
   const handleConfirm = async (id: string) => {
     setUpdatingId(id);
-    await updateBookingStatus(id, "confirmed");
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: "confirmed", payment_status: "paid" } : b));
-    setUpdatingId(null);
+    try {
+      await updateBookingStatus(id, "confirmed");
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: "confirmed", payment_status: "paid" } : b));
+    } catch (err) {
+      console.error("Booking confirmation error:", err);
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const filtered = bookings
@@ -68,101 +77,155 @@ export default function AdminBookingsPage() {
     });
 
   const stats = [
-    { label: "Total Bookings", value: bookings.length, color: "var(--teal)", icon: "📋" },
-    { label: "Confirmed", value: bookings.filter(b => b.status === "confirmed").length, color: "var(--emerald)", icon: "✅" },
-    { label: "Pending", value: bookings.filter(b => b.status === "pending").length, color: "var(--gold)", icon: "⏳" },
-    { label: "Completed", value: bookings.filter(b => b.status === "completed").length, color: "var(--purple-light)", icon: "🏁" },
+    { label: "Total Bookings", value: bookings.length, icon: <ClipboardList size={18} />, color: "#FFFFFF" },
+    { label: "Confirmed", value: bookings.filter(b => b.status === "confirmed").length, icon: <CheckCircle size={18} />, color: "#10B981" },
+    { label: "Pending", value: bookings.filter(b => b.status === "pending").length, icon: <Clock size={18} />, color: "#F59E0B" },
+    { label: "Completed", value: bookings.filter(b => b.status === "completed").length, icon: <CheckCircle2 size={18} />, color: "#8B5CF6" },
   ];
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+    <div className="flex items-center justify-center h-[60vh]">
       <span className="loading-spinner" />
     </div>
   );
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Admin Panel</div>
-          <h1 className="topbar-title">📋 All Bookings</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <ClipboardList size={16} className="text-emerald-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Inventory Management</span>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight m-0">Reservation Ledger</h1>
         </div>
-        <div className="topbar-actions">
-          <button className="btn btn-secondary btn-sm">📥 Export CSV</button>
+        <div className="flex items-center gap-3">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" size={14} />
+            <input 
+              className="input !pl-10 !py-2.5 !text-xs w-full sm:w-[300px] !bg-zinc-900/50" 
+              placeholder="Search customers, tours, or IDs..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+            />
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid-4" style={{ marginBottom: 24 }}>
+      {/* Stats Grid - FIXED ALIGNMENT */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(s => (
-          <div key={s.label} className="stat-card">
-            <div style={{ fontSize: 22 }}>{s.icon}</div>
-            <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+          <div key={s.label} className="bg-zinc-900/40 border border-white/5 p-5 rounded-2xl transition-all hover:border-emerald-500/20 hover:bg-zinc-900/60">
+            <div className="flex items-start justify-between mb-4">
+              <div className="p-2 rounded-xl bg-white/5" style={{ color: s.color }}>{s.icon}</div>
+              <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.color }} />
+            </div>
+            <div className="text-3xl font-black mb-1" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Search + Filter */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap", alignItems: "flex-end" }}>
-        <div className="input-group" style={{ flex: 1, minWidth: 200 }}>
-          <label className="input-label">🔍 Search Bookings</label>
-          <input className="input" placeholder="Search by customer or tour..." value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Table Section */}
+      <div className="bg-zinc-900/30 border border-white/5 rounded-3xl overflow-hidden">
+        {/* Filter Bar */}
+        <div className="px-6 py-4 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/5">
+          <div className="flex items-center gap-2 text-zinc-400">
+            <Filter size={14} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Active Filters</span>
+          </div>
+          <div className="flex gap-1 bg-black/40 p-1 rounded-xl">
+            {["all", "confirmed", "pending", "completed", "cancelled"].map(f => (
+              <button 
+                key={f} 
+                className={`px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${filter === f ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20" : "text-zinc-500 hover:text-white"}`}
+                onClick={() => setFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="tabs" style={{ alignSelf: "flex-end" }}>
-          {["all", "confirmed", "pending", "completed", "cancelled"].map(f => (
-            <button key={f} className={`tab-btn ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      <div className="card" style={{ padding: 0 }}>
+        {/* Data Grid */}
         <div className="table-container">
-          <table>
+          <table className="w-full">
             <thead>
-              <tr>
-                <th>ID</th>
-                <th>Customer</th>
-                <th>Tour</th>
-                <th>Date</th>
-                <th>Group</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Payment</th>
-                <th>Actions</th>
+              <tr className="bg-white/2">
+                <th className="px-6 py-4 text-left">Customer Details</th>
+                <th className="px-6 py-4 text-left">Expedition</th>
+                <th className="px-6 py-4 text-left">Schedule</th>
+                <th className="px-6 py-4 text-left">Volume</th>
+                <th className="px-6 py-4 text-left">Valuation</th>
+                <th className="px-6 py-4 text-left">Status</th>
+                <th className="px-6 py-4 text-right">Operations</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/5">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
-                    No bookings found
+                  <td colSpan={7} className="text-center py-24">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-white/5 rounded-full text-zinc-700"><ClipboardList size={32} /></div>
+                      <p className="text-zinc-500 font-bold">No reservations match your criteria.</p>
+                    </div>
                   </td>
                 </tr>
               ) : filtered.map(b => (
-                <tr key={b.id}>
-                  <td style={{ color: "var(--teal)", fontWeight: 600 }}>#{b.id.substring(0, 6).toUpperCase()}</td>
-                  <td style={{ fontWeight: 600 }}>{getName(b)}</td>
-                  <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{getTitle(b)}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{getDate(b)}</td>
-                  <td>{getGroup(b)} pax</td>
-                  <td style={{ color: "var(--teal)", fontWeight: 700 }}>{formatPKR(getPrice(b))}</td>
-                  <td><span className={`badge ${getStatusColor(b.status)}`}>{b.status}</span></td>
-                  <td><span className={`badge ${getStatusColor(getPayment(b))}`}>{getPayment(b)}</span></td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6 }}>
+                <tr key={b.id} className="group hover:bg-white/2 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center text-[10px] font-black text-zinc-500 border border-white/5">
+                        {getName(b).charAt(0)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-white leading-none mb-1">{getName(b)}</div>
+                        <div className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">#{b.id.substring(0, 8)}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-xs font-bold text-zinc-300 leading-tight">{getTitle(b)}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 text-zinc-400">
+                      <Calendar size={12} className="text-zinc-600" />
+                      <span className="text-[11px] font-medium">{getDate(b)}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <Users size={12} className="text-zinc-600" />
+                      <span className="text-xs font-black">{getGroup(b)}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CreditCard size={12} className="text-zinc-600" />
+                      <span className="text-xs font-black text-emerald-500">{formatPKR(getPrice(b))}</span>
+                    </div>
+                    <div className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border w-fit ${getPayment(b) === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800 text-zinc-500 border-white/5'}`}>
+                      {getPayment(b)}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`badge ${getStatusColor(b.status)} !px-2 !py-1 !rounded-md !text-[8px]`}>{b.status}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
                       {b.status === "pending" && (
-                        <button
-                          className="btn btn-sm"
-                          style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", border: "1px solid rgba(16,185,129,0.3)" }}
+                        <button 
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all shadow-lg shadow-emerald-600/20"
                           onClick={() => handleConfirm(b.id)}
                           disabled={updatingId === b.id}
                         >
-                          {updatingId === b.id ? "..." : "✅ Confirm"}
+                          {updatingId === b.id ? "..." : "Confirm"}
                         </button>
                       )}
+                      <button className="p-2 hover:bg-white/10 rounded-lg transition-colors text-zinc-600 hover:text-white">
+                        <MoreVertical size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>

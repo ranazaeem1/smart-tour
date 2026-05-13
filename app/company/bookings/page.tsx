@@ -1,11 +1,25 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { fetchCompanyByOwner, updateBookingStatus } from "@/lib/db";
 import { formatPKR, getStatusColor } from "@/lib/data";
 import { StartChatButton } from "@/components/shared/StartChatButton";
-import Link from "next/link";
+import { 
+  ClipboardList, 
+  Search, 
+  Filter, 
+  User, 
+  MapPin, 
+  Calendar, 
+  Users, 
+  Wallet, 
+  Check, 
+  X, 
+  Activity,
+  ArrowRight
+} from "lucide-react";
 
 interface CompanyBooking {
   id: string;
@@ -31,31 +45,21 @@ export default function CompanyBookingsPage() {
     if (!profile?.id) return;
     setLoading(true);
     try {
-      // 1. First get the company ID linked to this owner
       const company = await fetchCompanyByOwner(profile.id);
+      if (company) {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            profiles:user_id (full_name, phone),
+            tours:tour_id (title, destination)
+          `)
+          .eq('company_id', company.id)
+          .order('created_at', { ascending: false });
 
-      if (!company) {
-        console.warn("No company found for this owner");
-        setBookings([]);
-        setLoading(false);
-        return;
+        if (error) throw error;
+        setBookings(data || []);
       }
-
-      const targetId = company.id;
-
-      // 2. Fetch bookings for this company
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          profiles:user_id (full_name, phone),
-          tours:tour_id (title, destination)
-        `)
-        .eq('company_id', targetId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setBookings(data || []);
     } catch (err) {
       console.error("Failed to load company bookings:", err);
     } finally {
@@ -70,13 +74,9 @@ export default function CompanyBookingsPage() {
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
       const result = await updateBookingStatus(id, status as any);
-      
-      if (!result) throw new Error("Update failed");
-      // Refresh list
-      load();
+      if (result) load();
     } catch (err) {
       console.error("Status update error:", err);
-      alert("Failed to update booking status.");
     }
   };
 
@@ -89,148 +89,172 @@ export default function CompanyBookingsPage() {
   });
 
   if (loading || authLoading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-      <span className="loading-spinner" />
+    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+      <div className="loading-spinner h-12 w-12" />
+      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Accessing Operations Ledger...</p>
     </div>
   );
 
   return (
-    <div className="animate-fade" style={{ padding: "0 20px 60px" }}>
-      {/* Dashboard Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40 }}>
-        <div>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 6, fontWeight: 500, letterSpacing: 1, textTransform: "uppercase" }}>Operations</p>
-          <h1 className="topbar-title" style={{ fontSize: 36, fontWeight: 900, margin: 0 }}>Bookings Management</h1>
-        </div>
-        <div style={{ display: "flex", gap: 32 }}>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Pending Action</p>
-            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--gold)", margin: 0 }}>
-              {bookings.filter(b => b.status === 'pending').length}
-            </p>
+    <div className="animate-fade space-y-10 pb-20" role="main">
+      {/* ── Operations Hero Header ── */}
+      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
+          <div className="text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full mb-4 border border-emerald-500/20">
+              <Activity size={12} className="text-emerald-400" />
+              <span className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em]">Operational Command</span>
+            </div>
+            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+              Bookings Ledger
+            </h1>
+            <p className="text-slate-400 text-sm md:text-base font-medium">Manage traveler reservations and mission deployments.</p>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Active Trips</p>
-            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--emerald)", margin: 0 }}>
-              {bookings.filter(b => b.status === 'confirmed').length}
-            </p>
-          </div>
-        </div>
-      </div>
 
-      {/* Control Bar */}
-      <div style={{ 
-        display: "flex", justifyContent: "space-between", alignItems: "center", 
-        marginBottom: 32, gap: 20, flexWrap: "wrap" 
-      }}>
-        <div style={{ display: "flex", gap: 8, padding: 4, borderRadius: 16, background: "rgba(255,255,255,0.03)", width: "fit-content" }}>
+          <div className="flex gap-12">
+            <div className="text-right">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Pending Action</p>
+              <p className="text-3xl font-black text-amber-500 tracking-tighter">{bookings.filter(b => b.status === 'pending').length}</p>
+            </div>
+            <div className="w-[1px] h-12 bg-white/10 hidden md:block" />
+            <div className="text-right">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Active Trips</p>
+              <p className="text-3xl font-black text-emerald-500 tracking-tighter">{bookings.filter(b => b.status === 'confirmed').length}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Controls ── */}
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div className="flex bg-[var(--muted)] p-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] w-full lg:w-auto overflow-x-auto">
           {["all", "confirmed", "pending", "completed", "cancelled"].map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              style={{
-                padding: "8px 16px", borderRadius: 12, border: "none", fontSize: 12, fontWeight: 600,
-                cursor: "pointer", transition: "all 0.3s", textTransform: "capitalize",
-                background: filter === f ? "rgba(255,255,255,0.1)" : "transparent",
-                color: filter === f ? "#fff" : "var(--text-secondary)"
-              }}
+              className={`flex-1 lg:flex-none px-6 py-3 rounded-[var(--radius-md)] text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${filter === f ? "bg-[var(--card)] text-[var(--foreground)] shadow-lg" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
             >
               {f}
             </button>
           ))}
         </div>
 
-        <div style={{ position: "relative", flex: 1, maxWidth: 400 }}>
+        <div className="relative w-full lg:max-w-md group">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] group-focus-within:text-emerald-500 transition-colors" />
           <input 
             type="text" 
-            placeholder="Search by customer or tour..."
+            placeholder="Search traveler or package..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%", padding: "12px 20px", borderRadius: 16,
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-              color: "#fff", fontSize: 14, outline: "none"
-            }}
+            className="input !pl-12 !py-4 font-black"
           />
         </div>
       </div>
 
-      {/* Bookings List */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* ── Bookings List ── */}
+      <div className="space-y-6">
         {filtered.length === 0 ? (
-          <div className="glass-card" style={{ textAlign: "center", padding: 80, borderRadius: 24 }}>
-            <p style={{ color: "var(--text-secondary)" }}>No bookings found matching your criteria.</p>
-          </div>
-        ) : (
-          filtered.map(booking => (
-            <div key={booking.id} className="glass-card" style={{ 
-              padding: "24px 32px", borderRadius: 24, border: "1px solid rgba(255,255,255,0.05)",
-              display: "flex", alignItems: "center", gap: 40
-            }}>
-              {/* Status & ID */}
-              <div style={{ width: 120 }}>
-                <span className={`badge ${getStatusColor(booking.status)}`} style={{ fontSize: 10, display: "block", textAlign: "center", marginBottom: 8 }}>
-                  {booking.status}
-                </span>
-                <p style={{ fontSize: 10, color: "var(--text-secondary)", textAlign: "center", fontFamily: "monospace" }}>#{booking.id.slice(0,8)}</p>
-              </div>
-
-              {/* Customer Info */}
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 4 }}>Customer</p>
-                <h4 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{booking.profiles?.full_name}</h4>
-                <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>{booking.profiles?.phone || "No phone provided"}</p>
-              </div>
-
-              {/* Tour Details */}
-              <div style={{ flex: 1.5 }}>
-                <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 4 }}>Trip Details</p>
-                <h4 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{booking.tours?.title}</h4>
-                <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-                  {new Date(booking.travel_date).toLocaleDateString()} • {booking.group_size} Person
-                </p>
-              </div>
-
-              {/* Financials */}
-              <div style={{ width: 150, textAlign: "right" }}>
-                <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 4 }}>Revenue</p>
-                <p style={{ fontSize: 18, fontWeight: 900, color: "var(--accent)", margin: 0 }}>{formatPKR(booking.total_price)}</p>
-                <p style={{ fontSize: 11, color: booking.payment_status === 'paid' ? 'var(--emerald)' : 'var(--gold)', fontWeight: 600, marginTop: 2 }}>
-                  {booking.payment_status.toUpperCase()}
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                {booking.status === 'pending' && (
-                  <>
-                    <button 
-                      className="btn btn-primary btn-sm" 
-                      style={{ background: "var(--emerald)", border: "none" }}
-                      onClick={() => handleUpdateStatus(booking.id, 'confirmed')}
-                    >
-                      Confirm
-                    </button>
-                    <button 
-                      className="btn btn-ghost btn-sm" 
-                      style={{ color: "var(--rose)" }}
-                      onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
-                {profile && (
-                  <StartChatButton 
-                    bookingId={booking.id}
-                    userId={booking.user_id}
-                    companyId={profile.id}
-                    otherPartyName={booking.profiles?.full_name || "Traveler"}
-                    currentRole="company"
-                  />
-                )}
-              </div>
+          <section className="card-premium py-20 text-center flex flex-col items-center">
+            <div className="w-20 h-20 bg-[var(--muted)] rounded-[32px] flex items-center justify-center text-[var(--muted-foreground)] mb-8 shadow-inner border border-[var(--border)]">
+              <ClipboardList size={40} />
             </div>
+            <h2 className="text-2xl font-black text-[var(--foreground)] mb-2 tracking-tight">Zero Records</h2>
+            <p className="text-[var(--muted-foreground)] font-medium max-w-xs mx-auto leading-relaxed uppercase text-[10px] tracking-widest">
+              No reservations matched your current filter parameters.
+            </p>
+          </section>
+        ) : (
+          filtered.map((booking, idx) => (
+            <article 
+              key={booking.id} 
+              className="card-premium !p-0 overflow-hidden flex border border-[var(--border)] group hover:shadow-2xl transition-all duration-500 animate-fade"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className={`w-2 shrink-0 ${booking.status === 'confirmed' ? 'bg-emerald-500' : booking.status === 'pending' ? 'bg-amber-500' : 'bg-[var(--muted)]'}`} />
+              
+              <div className="flex-1 p-8 md:p-10 flex flex-col lg:flex-row items-center gap-10">
+                {/* ID & Status */}
+                <div className="w-full lg:w-32 flex flex-col items-center lg:items-start text-center lg:text-left">
+                  <span className={`badge ${getStatusColor(booking.status)} !px-4 !py-1.5 !rounded-lg !text-[9px] !font-black !uppercase !tracking-widest mb-3 w-full text-center`}>
+                    {booking.status}
+                  </span>
+                  <p className="text-[9px] font-black text-[var(--muted-foreground)] uppercase tracking-widest font-mono">#{booking.id.slice(0,8)}</p>
+                </div>
+
+                {/* Traveler */}
+                <div className="flex-1 min-w-0 text-center lg:text-left">
+                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-2">Traveler</p>
+                  <div className="flex items-center justify-center lg:justify-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[var(--muted)] flex items-center justify-center text-[var(--muted-foreground)] border border-[var(--border)]">
+                      <User size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-lg font-black text-[var(--foreground)] truncate m-0 leading-tight">{booking.profiles?.full_name}</h4>
+                      <p className="text-xs font-bold text-emerald-500 mt-1">{booking.profiles?.phone || "Private Contact"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Expedition */}
+                <div className="flex-[1.5] min-w-0 text-center lg:text-left">
+                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-2">Mission</p>
+                  <h4 className="text-base font-black text-[var(--foreground)] truncate m-0 mb-3">{booking.tours?.title}</h4>
+                  <div className="flex flex-wrap justify-center lg:justify-start gap-4">
+                    <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
+                      <Calendar size={14} className="text-emerald-500" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{new Date(booking.travel_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
+                      <Users size={14} className="text-emerald-500" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{booking.group_size} Personnel</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Financials */}
+                <div className="w-full lg:w-44 text-center lg:text-right">
+                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-2">Revenue</p>
+                  <p className="text-2xl font-black text-emerald-500 tracking-tighter">{formatPKR(booking.total_price)}</p>
+                  <span className={`text-[9px] font-black uppercase tracking-widest mt-2 block ${booking.payment_status === 'paid' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {booking.payment_status}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-3 w-full lg:w-auto justify-center lg:justify-end">
+                  {booking.status === 'pending' && (
+                    <>
+                      <button 
+                        className="w-12 h-12 flex items-center justify-center bg-emerald-500 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+                        onClick={() => handleUpdateStatus(booking.id, 'confirmed')}
+                        aria-label="Confirm Booking"
+                      >
+                        <Check size={20} />
+                      </button>
+                      <button 
+                        className="w-12 h-12 flex items-center justify-center bg-rose-500/10 text-rose-500 rounded-2xl border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all shadow-lg"
+                        onClick={() => handleUpdateStatus(booking.id, 'cancelled')}
+                        aria-label="Reject Booking"
+                      >
+                        <X size={20} />
+                      </button>
+                    </>
+                  )}
+                  {profile && (
+                    <StartChatButton 
+                      bookingId={booking.id}
+                      userId={booking.user_id}
+                      companyId={profile.id}
+                      otherPartyName={booking.profiles?.full_name || "Traveler"}
+                      currentRole="company"
+                    />
+                  )}
+                </div>
+              </div>
+            </article>
           ))
         )}
       </div>

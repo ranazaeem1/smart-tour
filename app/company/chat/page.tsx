@@ -18,8 +18,8 @@ function ChatRedirect() {
       const name = searchParams.get("name");
 
       if (!userId) {
-        console.error("Missing userId in chat redirect");
-        router.push("/company/dashboard");
+        // If no specific user targeted, go to inbox list
+        router.replace("/company/chat/list");
         return;
       }
 

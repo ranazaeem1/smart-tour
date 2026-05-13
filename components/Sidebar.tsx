@@ -1,224 +1,124 @@
-/**
- * @file Sidebar.tsx
- * @description Application sidebar navigation component. Handles responsive collapsing,
- * dynamic role-based navigation links, and user settings/logout interactions.
- * @author Smart Tour Team
- * @dependencies react, next/link, next/navigation, @/components/AuthProvider
- */
-
-// ==========================================
-// Imports
-// ==========================================
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { 
+  LogOut, 
+  ChevronLeft, 
+  ChevronRight,
+  ShieldCheck,
+} from "lucide-react";
 
-// ==========================================
-// Types & Interfaces
-// ==========================================
-
-/**
- * Defines the structure for an individual sidebar navigation link.
- * @interface SidebarItem
- */
 interface SidebarItem { 
-  icon: string; 
+  icon: React.ReactNode; 
   label: string; 
   href: string; 
 }
 
-/**
- * Props for the Sidebar component.
- * @interface SidebarProps
- */
 interface SidebarProps {
   items: SidebarItem[];
   role: "user" | "company" | "admin";
-  userName?: string;
-  userInitials?: string;
-  onCollapseChange?: (collapsed: boolean) => void;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
 }
 
-// ==========================================
-// Constants
-// ==========================================
-
-const roleColors: Record<string, string> = {
-  user: "var(--teal)",
-  company: "var(--purple-light)",
-  admin: "var(--teal)", // Hidden color
-};
-
-const roleLabels: Record<string, string> = {
-  user: "Traveler",
-  company: "Tour Company",
-  admin: "Administrator",
-};
-
-// ==========================================
-// Component: Sidebar
-// ==========================================
-
-/**
- * Sidebar Component
- * Displays the main navigation, user profile summary, and application settings.
- * 
- * @param {SidebarProps} props - Component properties
- * @returns {JSX.Element} The rendered Sidebar
- */
-export default function Sidebar({ items, role, userName: propUserName, userInitials: propInitials, onCollapseChange }: SidebarProps) {
-  // Hooks
+export default function Sidebar({ items, role, collapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
-  
-  // State Management
-  const [collapsed, setCollapsed] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Computed Values
-  const displayName = profile?.full_name || propUserName || "User";
-  const displayRole = (profile?.role as string) || role;
-  // Fallback initial generation
-  const initials = displayName.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase() || propInitials || "U";
+  const toggleCollapse = () => setCollapsed(!collapsed);
 
-  // ==========================================
-  // Handlers
-  // ==========================================
-
-  /**
-   * Toggles the sidebar collapsed state and notifies parent components.
-   * 
-   * @param {boolean} val - New collapsed state
-   */
-  const handleCollapse = (val: boolean) => {
-    setCollapsed(val);
-    onCollapseChange?.(val);
-  };
-
-  const w = collapsed ? 72 : 260;
-
-  // ==========================================
-  // JSX Return
-  // ==========================================
   return (
-    <aside className={`sidebar ${!collapsed ? 'active' : ''}`} style={{ 
-      width: w, 
-      transition: "width 0.25s ease",
-      background: "rgba(21, 34, 56, 0.85)",
-      backdropFilter: "blur(24px)",
-      WebkitBackdropFilter: "blur(24px)",
-      borderRight: "1px solid rgba(255, 255, 255, 0.1)"
-    }}>
+    <aside 
+      className={`sidebar-gradient h-screen flex flex-col transition-all duration-500 cubic-bezier(0.16, 1, 0.3, 1) ${collapsed ? 'w-[80px]' : 'w-[224px]'} border-r border-white/5 bg-black`}
+    >
       {/* Logo Section */}
-      <Link href="/" className="sidebar-logo" style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden", marginBottom: 28, textDecoration: "none" }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--gradient-main)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-            <path d="M16 3L28 28H4L16 3Z" fill="white" opacity="0.9" />
-            <circle cx="16" cy="14" r="3" fill="white" />
-          </svg>
-        </div>
-        {!collapsed && <span style={{ fontWeight: 800, fontSize: 18, whiteSpace: "nowrap" }} className="text-gradient">Smart Tour</span>}
-      </Link>
-
-      {/* Role Badge Panel */}
-      {!collapsed && (
-        <div style={{ margin: "0 4px 20px", padding: "10px 14px", background: "rgba(255,255,255,0.08)", borderRadius: "var(--radius-md)", border: "1px solid rgba(255,255,255,0.12)" }}>
-          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Panel</div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#e0be78" }}>
-            {roleLabels[displayRole] || roleLabels[role]}
+      <div className="h-[80px] flex items-center px-6 mb-2">
+        <div className="flex items-center gap-3.5 overflow-hidden">
+          <div className="h-9 w-9 shrink-0 bg-emerald-600 rounded-[14px] flex items-center justify-center shadow-[0_8px_16px_-4px_rgba(16,185,129,0.5)]">
+            <span className="text-white font-black text-lg tracking-tighter">S</span>
           </div>
+          {!collapsed && (
+            <div className="flex flex-col animate-fade">
+              <span className="text-[14px] font-black text-white whitespace-nowrap tracking-tighter leading-tight">
+                SMART<span className="text-emerald-500">TOUR</span>
+              </span>
+              <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mt-0.5">
+                Enterprise Hub
+              </span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Navigation Links Loop */}
-      <nav className="sidebar-nav">
-        {items.map(item => {
-          // Complex logic to determine if the link is active based on exact or partial path matches
-          const active = pathname === item.href || (item.href !== "/user/dashboard" && item.href !== "/admin/dashboard" && item.href !== "/company/dashboard" && pathname.startsWith(item.href + "/"));
-          const exactActive = pathname === item.href;
-          const isActive = exactActive || (!exactActive && active);
+      {/* Navigation Menu */}
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto custom-scrollbar pb-10">
+        {!collapsed && (
+          <div className="px-4 py-3 text-[9px] font-black text-slate-600 uppercase tracking-widest opacity-50">
+            Main Menu
+          </div>
+        )}
+        
+        {items.map((item) => {
+          const isActive = pathname === item.href || (item.href !== "/user/dashboard" && pathname.startsWith(item.href + "/"));
           
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`nav-item ${isActive ? "active" : ""}`}
-              style={{ justifyContent: collapsed ? "center" : "flex-start", paddingLeft: collapsed ? 0 : 14 }}
-              title={collapsed ? item.label : undefined}
+              className={`nav-item group flex items-center gap-3 py-3 px-4 rounded-xl transition-all ${isActive ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'} ${collapsed ? 'justify-center px-0' : 'px-4'}`}
+              title={collapsed ? item.label : ""}
             >
-              <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-              {!collapsed && <span style={{ fontSize: 14 }}>{item.label}</span>}
+              <span className={`transition-all duration-300 ${isActive ? 'text-white' : 'group-hover:scale-110 group-hover:text-emerald-500'}`}>
+                {item.icon}
+              </span>
+              {!collapsed && (
+                <span className="whitespace-nowrap font-bold text-[13px] tracking-tight animate-fade">
+                  {item.label}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom User Actions & Settings */}
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 8, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.12)" }}>
-        
-        {/* User Profile Summary */}
-        {!collapsed && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(255,255,255,0.08)", borderRadius: "var(--radius-md)", border: "1px solid rgba(255,255,255,0.12)", marginBottom: 4 }}>
-            <div className="avatar" style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>{initials}</div>
-            <div style={{ overflow: "hidden", flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "#fff" }}>{displayName}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{roleLabels[displayRole] || roleLabels[role]}</div>
+      {/* User Profile Section & Footer */}
+      <div className="mt-auto p-4 space-y-4" role="contentinfo">
+        {!collapsed && profile && (
+          <div className="p-4 bg-white/5 rounded-[24px] border border-white/5 animate-fade mb-2">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-white font-black border border-white/10 shadow-lg">
+                {profile.full_name?.[0]?.toUpperCase() || "U"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-white truncate leading-none">{profile.full_name}</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{profile.phone || role}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-lg">
+              <ShieldCheck size={12} className="text-emerald-500" />
+              <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Verified</span>
             </div>
           </div>
         )}
 
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => signOut()}
+            className={`flex items-center gap-3 p-3 min-h-[44px] rounded-2xl text-rose-400 hover:bg-rose-500/10 transition-all duration-300 group ${collapsed ? 'justify-center' : 'px-4'}`}
+          >
+            <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+            {!collapsed && <span className="font-bold text-[13px] animate-fade">Logout</span>}
+          </button>
 
-
-        {/* ── Logout Button — prominent red, always visible ── */}
-        <button
-          onClick={() => signOut()}
-          title={collapsed ? "Logout" : undefined}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: collapsed ? "center" : "flex-start",
-            gap: 10,
-            width: "100%",
-            padding: collapsed ? "11px 0" : "11px 14px",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid rgba(244, 63, 94, 0.35)",
-            background: "rgba(244, 63, 94, 0.12)",
-            color: "#f87171",
-            fontWeight: 700,
-            fontSize: 14,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = "rgba(244, 63, 94, 0.25)";
-            e.currentTarget.style.borderColor = "rgba(244, 63, 94, 0.6)";
-            e.currentTarget.style.color = "#fff";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = "rgba(244, 63, 94, 0.12)";
-            e.currentTarget.style.borderColor = "rgba(244, 63, 94, 0.35)";
-            e.currentTarget.style.color = "#f87171";
-          }}
-        >
-          <span style={{ fontSize: 18, flexShrink: 0 }}>🚪</span>
-          {!collapsed && <span>Logout</span>}
-        </button>
-
-        {/* Sidebar Collapse Toggle */}
-        <button
-          onClick={() => handleCollapse(!collapsed)}
-          style={{
-            background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "var(--radius-md)",
-            padding: "10px", cursor: "pointer", color: "rgba(255,255,255,0.6)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transition: "var(--transition)", fontSize: 16,
-          }}
-          title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {collapsed ? "→" : "←"}
-        </button>
+          <button
+            onClick={toggleCollapse}
+            className="flex items-center justify-center p-3 min-h-[44px] rounded-2xl bg-white/5 border border-white/5 text-slate-500 hover:bg-white/10 hover:text-white transition-all duration-300 hidden lg:flex"
+          >
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        </div>
       </div>
     </aside>
   );

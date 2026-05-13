@@ -1,8 +1,22 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { fetchReviews, fetchCompanyByOwner } from "@/lib/db";
 import { getStatusColor } from "@/lib/data";
+import { 
+  Star, 
+  MessageSquare, 
+  Smile, 
+  Meh, 
+  Frown, 
+  User, 
+  Quote, 
+  Activity,
+  ArrowRight,
+  Reply,
+  Calendar
+} from "lucide-react";
 
 export default function CompanyReviewsPage() {
   const { profile, loading: authLoading } = useAuth();
@@ -12,18 +26,19 @@ export default function CompanyReviewsPage() {
 
   useEffect(() => {
     async function load() {
-      if (!profile?.id) return;
-      setLoading(true);
-      try {
-        const company = await fetchCompanyByOwner(profile.id);
-        if (company) {
-          const data = await fetchReviews({ companyId: company.id });
-          setReviews(data);
+      if (profile?.id) {
+        setLoading(true);
+        try {
+          const company = await fetchCompanyByOwner(profile.id);
+          if (company) {
+            const data = await fetchReviews({ companyId: company.id });
+            setReviews(data);
+          }
+        } catch (err) {
+          console.error("Failed to load reviews:", err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Failed to load reviews:", err);
-      } finally {
-        setLoading(false);
       }
     }
     if (!authLoading) load();
@@ -38,86 +53,140 @@ export default function CompanyReviewsPage() {
   const negative = reviews.filter(r => r.sentiment === 'negative').length;
 
   const SENTIMENT_STATS = [
-    { label: "Positive", value: total ? Math.round((positive / total) * 100) : 0, color: "var(--emerald)", icon: "😊" },
-    { label: "Neutral", value: total ? Math.round((neutral / total) * 100) : 0, color: "var(--gold)", icon: "😐" },
-    { label: "Negative", value: total ? Math.round((negative / total) * 100) : 0, color: "var(--rose)", icon: "😞" },
+    { label: "Positive", value: total ? Math.round((positive / total) * 100) : 0, color: "text-emerald-500", barColor: "bg-emerald-500", icon: Smile, bgColor: "bg-emerald-500/10" },
+    { label: "Neutral", value: total ? Math.round((neutral / total) * 100) : 0, color: "text-amber-500", barColor: "bg-amber-500", icon: Meh, bgColor: "bg-amber-500/10" },
+    { label: "Negative", value: total ? Math.round((negative / total) * 100) : 0, color: "text-rose-500", barColor: "bg-rose-500", icon: Frown, bgColor: "bg-rose-500/10" },
   ];
 
   if (loading || authLoading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-      <span className="loading-spinner" />
+    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+      <div className="loading-spinner h-12 w-12" />
+      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Analyzing Traveler Sentiments...</p>
     </div>
   );
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
-        <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Company Panel</div>
-          <h1 className="topbar-title">⭐ Reviews & Sentiment</h1>
-        </div>
-        <div className="topbar-actions">
-          <span className="badge badge-teal">{total} Total Reviews</span>
-        </div>
-      </div>
+    <div className="animate-fade space-y-10 pb-20" role="main">
+      {/* ── Sentiment Hero Header ── */}
+      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516245834210-c4c142787335?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
+          <div className="text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full mb-4 border border-emerald-500/20">
+              <Activity size={12} className="text-emerald-400" />
+              <span className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em]">Reputation Management</span>
+            </div>
+            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+              Reviews & Sentiment
+            </h1>
+            <p className="text-slate-400 text-sm md:text-base font-medium">Listen to your travelers and refine your expedition protocol.</p>
+          </div>
 
-      {/* Sentiment overview */}
-      <div className="grid-3" style={{ marginBottom: 24 }}>
+          <div className="text-right hidden md:block">
+            <span className="badge badge-emerald !bg-emerald-500/20 !text-emerald-400 border border-emerald-500/30 font-black">
+              {total} TOTAL SIGNALS
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Sentiment Analysis Overview ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         {SENTIMENT_STATS.map(s => (
-          <div key={s.label} className="stat-card">
-            <div style={{ fontSize: 28 }}>{s.icon}</div>
-            <div className="stat-value" style={{ color: s.color }}>{s.value}%</div>
-            <div className="stat-label">{s.label} Reviews</div>
-            <div className="progress-bar" style={{ marginTop: 8 }}>
-              <div className="progress-fill" style={{ width: `${s.value}%`, background: s.color }} />
+          <div key={s.label} className="card-premium flex flex-col space-y-4 group">
+            <div className="flex items-center justify-between">
+              <div className={`w-12 h-12 rounded-2xl ${s.bgColor} flex items-center justify-center ${s.color} shadow-lg transition-transform group-hover:scale-110`}>
+                <s.icon size={24} />
+              </div>
+              <p className={`text-2xl font-black tracking-tighter ${s.color}`}>{s.value}%</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">{s.label} Feedback</p>
+              <div className="w-full h-1.5 bg-[var(--muted)] rounded-full mt-3 overflow-hidden border border-[var(--border)]">
+                <div className={`h-full ${s.barColor} transition-all duration-1000 ease-out`} style={{ width: `${s.value}%` }} />
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Filter */}
-      <div className="tabs" style={{ marginBottom: 20, width: "fit-content" }}>
+      {/* ── Filters ── */}
+      <div className="flex bg-[var(--muted)] p-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] w-fit overflow-x-auto">
         {["all", "positive", "neutral", "negative"].map(f => (
-          <button key={f} className={`tab-btn ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-            {f.charAt(0).toUpperCase() + f.slice(1)}
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-8 py-3 rounded-[var(--radius-md)] text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${filter === f ? "bg-[var(--card)] text-[var(--foreground)] shadow-lg" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
+          >
+            {f}
           </button>
         ))}
       </div>
 
-      {/* Reviews list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* ── Reviews List ── */}
+      <div className="space-y-6">
         {filtered.length === 0 ? (
-          <div className="card" style={{ textAlign: "center", padding: 60, color: "var(--text-muted)" }}>
-            No reviews found.
-          </div>
+          <section className="card-premium py-20 text-center flex flex-col items-center">
+            <div className="w-20 h-20 bg-[var(--muted)] rounded-[32px] flex items-center justify-center text-[var(--muted-foreground)] mb-8 shadow-inner border border-[var(--border)]">
+              <MessageSquare size={40} />
+            </div>
+            <h2 className="text-2xl font-black text-[var(--foreground)] mb-2 tracking-tight m-0">Zero Sentiment Detected</h2>
+            <p className="text-[var(--muted-foreground)] font-medium max-w-xs mx-auto leading-relaxed uppercase text-[10px] tracking-widest mt-2">
+              No reviews matched your current filter parameters.
+            </p>
+          </section>
         ) : (
-          filtered.map(r => (
-            <div key={r.id} className="card" style={{ padding: "18px 20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div className="avatar" style={{ width: 40, height: 40, fontSize: 14, flexShrink: 0 }}>
-                    {r.profiles?.full_name?.charAt(0) || "?"}
+          filtered.map((r, idx) => (
+            <article 
+              key={r.id} 
+              className="card-premium space-y-6 animate-fade"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="flex flex-col md:flex-row justify-between items-start gap-6 border-b border-[var(--border)] pb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--muted)] border border-[var(--border)] flex items-center justify-center text-[var(--foreground)] font-black shadow-lg">
+                    {r.profiles?.full_name?.charAt(0) || <User size={20} />}
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{r.profiles?.full_name || "Anonymous"}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                      {r.tours?.title} · {new Date(r.created_at).toLocaleDateString()}
-                    </div>
+                    <h4 className="text-base font-black text-[var(--foreground)] m-0 leading-tight">{r.profiles?.full_name || "Guest Traveler"}</h4>
+                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-2">
+                      {r.tours?.title} <span className="text-[var(--muted-foreground)] mx-2">•</span> {new Date(r.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <div style={{ color: "var(--gold)", fontSize: 16 }}>{"⭐".repeat(r.rating)}</div>
-                  <span className={`badge ${getStatusColor(r.sentiment)}`}>{r.sentiment || "neutral"}</span>
+                
+                <div className="flex items-center gap-4">
+                  <div className="flex gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={14} className={i < r.rating ? "text-amber-400 fill-amber-400" : "text-[var(--muted)]"} />
+                    ))}
+                  </div>
+                  <span className={`badge ${getStatusColor(r.sentiment)} !px-4 !py-1.5 !rounded-lg !text-[9px] !font-black !uppercase !tracking-widest`}>
+                    {r.sentiment || "NEUTRAL"}
+                  </span>
                 </div>
               </div>
-              <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, margin: 0 }}>&quot;{r.comment}&quot;</p>
-              <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  Travel date: {r.travel_date || "N/A"}
-                </span>
-                <button className="btn btn-secondary btn-sm">↩️ Reply</button>
+
+              <div className="relative">
+                <Quote size={40} className="absolute -top-2 -left-2 text-emerald-500/10 -z-10" />
+                <p className="text-base font-medium text-[var(--foreground)] leading-relaxed italic m-0">
+                  &quot;{r.comment}&quot;
+                </p>
               </div>
-            </div>
+
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-[var(--border)]">
+                <div className="flex items-center gap-2">
+                  <Calendar size={14} className="text-emerald-500" />
+                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">Travel Deployment: {r.travel_date || "UNDEFINED"}</p>
+                </div>
+                <button className="btn btn-secondary !py-3 !px-6 !rounded-xl flex items-center gap-2 group">
+                  <Reply size={16} className="group-hover:-translate-x-1 transition-transform" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Transmit Response</span>
+                </button>
+              </div>
+            </article>
           ))
         )}
       </div>

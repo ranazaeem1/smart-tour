@@ -81,26 +81,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, full_name, phone, role, avatar_url")
+        .select("*") // Fetch all fields including total_budget, verified, etc.
         .eq("id", authUser.id)
-        .maybeSingle(); // Use maybeSingle to avoid throwing on missing row
+        .maybeSingle();
         
       if (data) {
         setProfile(data as AuthContextType["profile"]);
       } else {
         // Fallback if row missing
-        setProfile({
+        const fallback = {
           id: authUser.id,
           email: authUser.email || "",
           full_name: authUser.user_metadata?.full_name || "Traveler",
           phone: authUser.user_metadata?.phone || null,
           role: authUser.user_metadata?.role || "user",
-          avatar_url: null
-        });
+          avatar_url: null,
+          total_budget: 100000,
+          verified: false
+        };
+        setProfile(fallback as any);
       }
     } catch (err) {
       console.error("[loadProfile] Error:", err);
-      // Ensure we don't hang even on error
       setProfile({
         id: authUser.id,
         email: authUser.email || "",
@@ -108,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone: authUser.user_metadata?.phone || null,
         role: "user",
         avatar_url: null
-      });
+      } as any);
     }
   };
 
@@ -121,11 +123,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error && error.message.includes("Refresh Token Not Found")) {
-          console.warn("Stale session detected, clearing...");
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
+        // Silently handle expired/missing refresh tokens
+        if (error) {
+          if (error.message.includes("Refresh Token Not Found") || error.status === 400) {
+            console.warn("[Auth] Stale session detected. Clearing storage...");
+            // Force clear storage if refresh token is broken
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+          throw error; // Let other errors be handled by the catch block
         }
 
         setSession(session);
@@ -135,7 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await loadProfile(session.user);
         }
       } catch (err) {
-        console.error("Auth initialization failed:", err);
+        // Only log non-routine errors
+        console.error("[Auth] Initialization failed:", err);
       } finally {
         setLoading(false);
       }

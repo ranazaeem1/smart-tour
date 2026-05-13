@@ -1,5 +1,24 @@
 "use client";
+
 import { useState } from "react";
+import { 
+  Settings, 
+  Building2, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  FileText, 
+  Save, 
+  Bell, 
+  Shield, 
+  Lock, 
+  CheckCircle2, 
+  AlertCircle,
+  Activity,
+  ArrowLeft
+} from "lucide-react";
+import Link from "next/link";
+
 export default function CompanySettingsPage() {
   const [saved, setSaved] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
@@ -21,49 +40,205 @@ export default function CompanySettingsPage() {
     setCurrentPw(""); setNewPw("");
     setTimeout(() => setPwSuccess(false), 3000);
   };
+
   return (
-    <div className="animate-fade">
-      <div className="topbar">
-        <div>
-          <div style={{ fontSize:13,color:"var(--text-muted)",marginBottom:4 }}>Company Panel</div>
-          <h1 className="topbar-title">⚙️ Company Settings</h1>
-        </div>
-      </div>
-      <div className="grid-2" style={{ gap:24 }}>
-        <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
-          <div className="card">
-            <h2 style={{ fontSize:18,fontWeight:700,marginBottom:20 }}>🏢 Company Profile</h2>
-            <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
-              <div className="input-group"><label className="input-label">Company Name</label><input className="input" defaultValue="Northern Trails Co."/></div>
-              <div className="input-group"><label className="input-label">Email</label><input className="input" type="email" defaultValue="info@northerntrails.pk"/></div>
-              <div className="input-group"><label className="input-label">Phone</label><input className="input" defaultValue="0300-1234567"/></div>
-              <div className="input-group"><label className="input-label">City</label><select className="input"><option>Gilgit</option><option>Skardu</option><option>Islamabad</option><option>Lahore</option></select></div>
-              <div className="input-group"><label className="input-label">Description</label><textarea className="input" rows={3} defaultValue="Leading adventure tour company in northern Pakistan since 2010."/></div>
-              {saved && <div className="alert alert-success" style={{ marginBottom: 12, fontSize: 13 }}>✅ Changes saved successfully!</div>}
-              <button className="btn btn-primary" style={{ alignSelf:"flex-start" }} onClick={handleSave}>💾 Save Changes</button>
+    <div className="animate-fade space-y-10 pb-20" role="main">
+      {/* ── Settings Hero Header ── */}
+      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1454165833767-027eeed15c3e?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
+          <div className="text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-500/10 rounded-full mb-4 border border-slate-500/20">
+              <Settings size={12} className="text-slate-400" />
+              <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Operational Config</span>
             </div>
+            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+              Control Panel
+            </h1>
+            <p className="text-slate-400 text-sm md:text-base font-medium">Synchronize your corporate identity and security protocols.</p>
+          </div>
+
+          <div className="text-right hidden md:block">
+            <span className="badge badge-slate !bg-slate-500/20 !text-slate-400 border border-slate-500/30 font-black">
+              SECURE ACCESS ACTIVE
+            </span>
           </div>
         </div>
-        <div style={{ display:"flex",flexDirection:"column",gap:20 }}>
-          <div className="card">
-            <h2 style={{ fontSize:18,fontWeight:700,marginBottom:20 }}>🔔 Notifications</h2>
-            {["New booking alerts","Payment received","Customer reviews","Tour cancellations","Weekly revenue report"].map((item,i)=>(
-              <label key={i} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid var(--border)",cursor:"pointer" }}>
-                <span style={{ fontSize:14 }}>{item}</span>
-                <label className="switch"><input type="checkbox" defaultChecked={i<3}/><span className="switch-slider"/></label>
-              </label>
-            ))}
-          </div>
-          <div className="card">
-            <h2 style={{ fontSize:18,fontWeight:700,marginBottom:16 }}>🔐 Security</h2>
-            <div style={{ display:"flex",flexDirection:"column",gap:14 }}>
-              <div className="input-group"><label className="input-label">Current Password</label><input className="input" type="password" placeholder="••••••••" value={currentPw} onChange={e => setCurrentPw(e.target.value)}/></div>
-              <div className="input-group"><label className="input-label">New Password</label><input className="input" type="password" placeholder="••••••••" value={newPw} onChange={e => setNewPw(e.target.value)}/></div>
-              {pwError && <div className="alert alert-danger" style={{ fontSize: 13 }}>⚠️ {pwError}</div>}
-              {pwSuccess && <div className="alert alert-success" style={{ fontSize: 13 }}>✅ Password updated!</div>}
-              <button className="btn btn-secondary btn-sm" style={{ alignSelf:"flex-start" }} onClick={handleUpdatePassword}>🔑 Update Password</button>
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* ── Left Column: Corporate Profile ── */}
+        <div className="space-y-10">
+          <section className="card-premium space-y-8">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-6 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+                <Building2 size={20} />
+              </div>
+              <h2 className="text-xl font-black text-[var(--foreground)] m-0">Corporate Profile</h2>
             </div>
-          </div>
+
+            <div className="space-y-6">
+              <div className="input-group">
+                <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Expedition Label</label>
+                <div className="relative">
+                  <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                  <input className="input !pl-12 font-bold" defaultValue="Northern Trails Co." />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="input-group">
+                  <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Communication Node</label>
+                  <div className="relative">
+                    <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                    <input className="input !pl-12 font-bold" type="email" defaultValue="info@northerntrails.pk" />
+                  </div>
+                </div>
+                <div className="input-group">
+                  <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Contact Primary</label>
+                  <div className="relative">
+                    <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                    <input className="input !pl-12 font-bold" defaultValue="0300-1234567" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">HQ Sector</label>
+                <div className="relative">
+                  <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                  <select className="input !pl-12 font-bold">
+                    <option>Gilgit</option>
+                    <option>Skardu</option>
+                    <option>Islamabad</option>
+                    <option>Lahore</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Mission Statement</label>
+                <div className="relative">
+                  <FileText size={16} className="absolute left-4 top-4 text-[var(--muted-foreground)]" />
+                  <textarea 
+                    className="input !pl-12 font-medium min-h-[100px]" 
+                    rows={3} 
+                    defaultValue="Leading adventure tour company in northern Pakistan since 2010. Dedicated to ecological integrity and traveler safety." 
+                  />
+                </div>
+              </div>
+
+              {saved && (
+                <div className="flex items-center gap-3 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-500 animate-fade">
+                  <CheckCircle2 size={18} />
+                  <p className="text-xs font-black uppercase tracking-widest m-0">Identity Synchronized Successfully</p>
+                </div>
+              )}
+
+              <button 
+                className="btn btn-emerald !py-4 !px-8 !rounded-2xl shadow-xl shadow-emerald-500/20 flex items-center gap-2 group active:scale-95 transition-all"
+                onClick={handleSave}
+              >
+                <Save size={18} className="group-hover:-translate-y-1 transition-transform" />
+                <span className="text-xs font-black uppercase tracking-widest">Update Profile</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        {/* ── Right Column: Protocols & Security ── */}
+        <div className="space-y-10">
+          {/* Signal Protocols */}
+          <section className="card-premium space-y-8">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-6 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+                <Bell size={20} />
+              </div>
+              <h2 className="text-xl font-black text-[var(--foreground)] m-0">Signal Protocols</h2>
+            </div>
+
+            <div className="space-y-2">
+              {[
+                "New Booking Deployment Alerts",
+                "Financial Transaction Signals",
+                "Traveler Sentiment Notifications",
+                "Expedition Decommissioning Alerts",
+                "Intelligence Reports (Weekly)"
+              ].map((item, i) => (
+                <label key={i} className="flex items-center justify-between p-5 rounded-2xl hover:bg-[var(--muted)] border border-transparent hover:border-[var(--border)] transition-all cursor-pointer group">
+                  <span className="text-sm font-bold text-[var(--foreground)] group-hover:text-emerald-500 transition-colors">{item}</span>
+                  <label className="switch">
+                    <input type="checkbox" defaultChecked={i < 3} />
+                    <span className="switch-slider" />
+                  </label>
+                </label>
+              ))}
+            </div>
+          </section>
+
+          {/* Infrastructure Security */}
+          <section className="card-premium space-y-8">
+            <div className="flex items-center gap-3 border-b border-[var(--border)] pb-6 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+                <Shield size={20} />
+              </div>
+              <h2 className="text-xl font-black text-[var(--foreground)] m-0">Infrastructure Security</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div className="input-group">
+                <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Primary Key</label>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                  <input 
+                    className="input !pl-12 font-black" 
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={currentPw} 
+                    onChange={e => setCurrentPw(e.target.value)} 
+                  />
+                </div>
+              </div>
+
+              <div className="input-group">
+                <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Replacement Key</label>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+                  <input 
+                    className="input !pl-12 font-black" 
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={newPw} 
+                    onChange={e => setNewPw(e.target.value)} 
+                  />
+                </div>
+              </div>
+
+              {pwError && (
+                <div className="flex items-center gap-3 p-4 bg-rose-500/10 rounded-xl border border-rose-500/20 text-rose-500 animate-fade">
+                  <AlertCircle size={18} />
+                  <p className="text-xs font-black uppercase tracking-widest m-0">{pwError}</p>
+                </div>
+              )}
+
+              {pwSuccess && (
+                <div className="flex items-center gap-3 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-500 animate-fade">
+                  <CheckCircle2 size={18} />
+                  <p className="text-xs font-black uppercase tracking-widest m-0">Access Credentials Rotated</p>
+                </div>
+              )}
+
+              <button 
+                className="btn btn-secondary !py-4 !px-8 !rounded-2xl flex items-center gap-2 group active:scale-95 transition-all w-full md:w-auto"
+                onClick={handleUpdatePassword}
+              >
+                <Shield size={18} className="group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-black uppercase tracking-widest">Update Security Vault</span>
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </div>

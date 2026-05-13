@@ -47,7 +47,7 @@ export default function CompanyDashboardError({
           onClick={reset}
           style={{
             padding: '12px 28px',
-            background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+            background: 'linear-gradient(135deg, #111827, #8B5CF6)',
             color: '#fff',
             border: 'none',
             borderRadius: 12,

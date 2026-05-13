@@ -1,12 +1,25 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { fetchBookings } from "@/lib/db";
-import { formatPKR, getStatusColor } from "@/lib/data";
+import { formatPKR } from "@/lib/data";
 import { CancelBookingButton } from "@/components/user/CancelBookingButton";
 import { StartChatButton } from "@/components/shared/StartChatButton";
 import { ReviewModal } from "@/components/user/ReviewModal";
+import { 
+  Calendar, 
+  Users, 
+  CreditCard, 
+  Compass, 
+  Star, 
+  ChevronRight,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  MapPin,
+} from "lucide-react";
 
 interface Booking {
   id: string;
@@ -36,89 +49,76 @@ export default function BookingsPage() {
 
   useEffect(() => {
     let mounted = true;
-    
     async function load() {
-      // Safety timeout: stop loading after 8 seconds no matter what
-      const timer = setTimeout(() => {
-        if (mounted) setLoading(false);
-      }, 8000);
-
       try {
         if (profile?.id) {
-          console.log("[Bookings] Fetching for user:", profile.id);
           const data = await fetchBookings({ userId: profile.id });
           if (mounted) setBookings(data as unknown as Booking[]);
-        } else {
-          console.log("[Bookings] Waiting for profile...");
         }
       } catch (err) {
         console.error("[Bookings] Load failed:", err);
       } finally {
-        if (mounted) {
-          setLoading(false);
-          clearTimeout(timer);
-        }
+        if (mounted) setLoading(false);
       }
     }
-
-    if (!profile && !authLoading) {
-      setLoading(false); // Stop if definitely no user
-    } else {
-      load();
-    }
-
+    if (!profile && !authLoading) setLoading(false);
+    else load();
     return () => { mounted = false; };
   }, [profile, authLoading]);
 
   const filtered = filter === "all" ? bookings : bookings.filter(b => b.status === filter);
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-      <span className="loading-spinner" />
+    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4 animate-fade">
+      <div className="loading-spinner h-12 w-12" />
+      <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">Retrieving Itinerary...</p>
     </div>
   );
 
   const getCompanyName = (b: Booking) => b.tours?.companies?.name || "Tour Company";
 
+  const getStatusBadge = (status: string) => {
+    switch(status) {
+      case 'confirmed': return <span className="badge badge-emerald"><CheckCircle2 size={12} className="mr-1.5" /> Confirmed</span>;
+      case 'pending': return <span className="badge badge-amber"><Clock size={12} className="mr-1.5" /> Pending</span>;
+      case 'completed': return <span className="badge badge-slate"><CheckCircle2 size={12} className="mr-1.5" /> Completed</span>;
+      case 'cancelled': return <span className="badge badge-rose"><AlertCircle size={12} className="mr-1.5" /> Cancelled</span>;
+      default: return <span className="badge badge-slate">{status}</span>;
+    }
+  };
+
   return (
-    <div className="animate-fade" style={{ padding: "0 20px 60px" }}>
-      {/* Premium Stats Header */}
-      <div style={{ 
-        display: "flex", justifyContent: "space-between", alignItems: "center", 
-        marginBottom: 40, marginTop: 10, padding: "0 10px" 
-      }}>
+    <div className="animate-fade space-y-10 pb-20">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 6, fontWeight: 500, letterSpacing: 1, textTransform: "uppercase" }}>My Journey</p>
-          <h1 className="topbar-title" style={{ fontSize: 36, fontWeight: 900, margin: 0 }}>My Bookings</h1>
+          <p className="text-zinc-500 text-[11px] font-black uppercase tracking-widest mb-2">Adventure Archive</p>
+          <h1 className="m-0 !text-white">My Bookings</h1>
         </div>
-        <div style={{ display: "flex", gap: 24 }}>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Total trips</p>
-            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--text-primary)", margin: 0 }}>{bookings.length}</p>
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Trips</p>
+            <p className="text-3xl font-black text-white leading-none">{bookings.length}</p>
           </div>
-          <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.1)", alignSelf: "center" }} />
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 10, color: "var(--accent)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Confirmed</p>
-            <p style={{ fontSize: 24, fontWeight: 900, color: "var(--accent)", margin: 0 }}>
-              {bookings.filter(b => b.status === 'confirmed').length}
-            </p>
+          <div className="w-px h-10 bg-zinc-800" />
+          <div className="text-right">
+            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Confirmed</p>
+            <p className="text-3xl font-black text-emerald-500 leading-none">{bookings.filter(b => b.status === 'confirmed').length}</p>
           </div>
         </div>
       </div>
 
       {/* Filter Navigation */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 40, padding: 4, borderRadius: 16, background: "rgba(255,255,255,0.03)", width: "fit-content" }}>
+      <div className="flex flex-wrap gap-2 p-2 bg-zinc-900/50 backdrop-blur-md rounded-[20px] w-fit border border-white/5">
         {["all", "confirmed", "pending", "completed", "cancelled"].map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            style={{
-              padding: "10px 20px", borderRadius: 12, border: "none", fontSize: 13, fontWeight: 600,
-              cursor: "pointer", transition: "all 0.3s", textTransform: "capitalize",
-              background: filter === f ? "rgba(255,255,255,0.1)" : "transparent",
-              color: filter === f ? "#fff" : "var(--text-secondary)",
-              boxShadow: filter === f ? "0 4px 12px rgba(0,0,0,0.2)" : "none"
-            }}
+            className={`px-8 py-3 rounded-[14px] text-[13px] font-black uppercase tracking-widest transition-all duration-500 ${
+              filter === f 
+                ? "bg-emerald-600 text-white shadow-xl shadow-emerald-600/20 scale-[1.02]" 
+                : "text-zinc-500 hover:text-white hover:bg-white/5"
+            }`}
           >
             {f}
           </button>
@@ -126,75 +126,85 @@ export default function BookingsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="glass-card" style={{ textAlign: 'center', padding: '100px 40px', borderRadius: 32 }}>
-          <div style={{ fontSize: 72, marginBottom: 24 }}>🧭</div>
-          <h2 style={{ fontSize: 28, marginBottom: 16 }}>No bookings found</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: 32, maxWidth: 460, margin: '0 auto 32px', lineHeight: 1.6 }}>
+        <div className="card text-center py-24 flex flex-col items-center">
+          <div className="w-24 h-24 bg-zinc-900 rounded-[32px] flex items-center justify-center text-zinc-700 mb-8 shadow-inner ring-1 ring-white/5">
+            <Compass size={48} />
+          </div>
+          <h2 className="text-2xl font-black text-white mb-2">No expeditions found</h2>
+          <p className="text-zinc-400 mb-10 max-w-md mx-auto font-medium">
             {filter === 'all' 
-              ? "You haven't planned any adventures yet. Explore our curated tours to start your journey."
-              : `You don't have any ${filter} bookings at the moment.`}
+              ? "Your itinerary is currently clear. Discover breathtaking destinations and start your next legendary journey today."
+              : `You have no ${filter} bookings at this moment.`}
           </p>
-          <Link href="/user/tours" className="btn btn-primary" style={{ padding: "14px 32px" }}>Explore Destinations</Link>
+          <Link href="/user/tours" className="btn btn-emerald py-4 px-10">
+            Browse Experiences <ChevronRight size={18} className="ml-2" />
+          </Link>
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+        <div className="grid grid-cols-1 gap-8">
           {filtered.map((booking) => (
-            <div key={booking.id} className="glass-card" style={{ 
-              padding: 0, overflow: "hidden", borderRadius: 32, 
-              border: "1px solid rgba(255,255,255,0.08)",
-              display: "flex", minHeight: 280, position: "relative"
-            }}>
-              {/* IMAGE SECTION (Fixed Side) */}
-              <div style={{ width: 380, minWidth: 380, position: "relative", overflow: "hidden" }}>
+            <div key={booking.id} className="card !p-0 overflow-hidden flex flex-col lg:flex-row gap-0 hover:border-emerald-500/30 transition-all duration-500 group">
+              {/* IMAGE SECTION */}
+              <div className="relative w-full lg:w-[400px] h-[300px] lg:h-auto overflow-hidden">
                 <img 
                   src={booking.tours?.image_url || "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80"} 
                   alt={booking.tours?.title}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(13,17,23,0), rgba(13,17,23,0.4))" }} />
-                {/* Destination Badge */}
-                <div style={{ 
-                  position: "absolute", top: 20, left: 20,
-                  padding: "8px 16px", borderRadius: 14, fontSize: 11, fontWeight: 800,
-                  textTransform: "uppercase", letterSpacing: 1.5,
-                  background: "rgba(0,0,0,0.8)", color: "#fff",
-                  backdropFilter: "blur(4px)", border: "1px solid rgba(255,255,255,0.2)"
-                }}>
-                  {booking.tours?.destination || "Adventure"}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute top-6 left-6">
+                  <span className="px-4 py-2 bg-black/80 backdrop-blur-md text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-white/10 shadow-2xl">
+                    <MapPin size={12} className="inline mr-1.5" />
+                    {booking.tours?.destination || "Expedition"}
+                  </span>
                 </div>
               </div>
 
               {/* INFO SECTION */}
-              <div style={{ flex: 1, padding: "32px 40px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+              <div className="flex-1 p-8 md:p-10 flex flex-col justify-between">
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                    <h3 style={{ fontSize: 24, fontWeight: 800, margin: 0, color: "#fff" }}>{booking.tours?.title}</h3>
-                    <span className={`badge ${getStatusColor(booking.status)}`} style={{ padding: "6px 14px", borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
-                      {booking.status}
-                    </span>
+                  <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
+                    <div>
+                      <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">ID: {booking.id.slice(0, 8)}</p>
+                      <h3 className="text-3xl font-black text-white m-0 tracking-tight group-hover:text-emerald-500 transition-colors">{booking.tours?.title}</h3>
+                      <p className="text-zinc-400 text-sm font-bold mt-1 flex items-center gap-2">
+                        by <span className="text-emerald-500">{getCompanyName(booking)}</span>
+                      </p>
+                    </div>
+                    {getStatusBadge(booking.status)}
                   </div>
                   
-                  <div style={{ display: "flex", gap: 48, marginTop: 24 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 20 }}>📅</span>
-                      <div>
-                        <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, margin: 0 }}>Date</p>
-                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{new Date(booking.travel_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-8 my-8 bg-white/5 p-6 md:p-8 rounded-[24px] border border-white/5">
+                    <div>
+                      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2 px-1">Departure</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-zinc-400">
+                          <Calendar size={16} />
+                        </div>
+                        <p className="text-white font-black text-sm">
+                          {new Date(booking.travel_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 20 }}>👥</span>
-                      <div>
-                        <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, margin: 0 }}>Travelers</p>
-                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{booking.group_size} Person</p>
+                    <div>
+                      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2 px-1">Size</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-zinc-400">
+                          <Users size={16} />
+                        </div>
+                        <p className="text-white font-black text-sm">
+                          {booking.group_size} Pax
+                        </p>
                       </div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 20 }}>🛡️</span>
-                      <div>
-                        <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 700, margin: 0 }}>Payment</p>
-                        <p style={{ fontSize: 15, fontWeight: 600, margin: 0, color: booking.payment_status === 'paid' ? 'var(--emerald)' : 'var(--gold)' }}>
-                          {booking.payment_status}
+                    <div className="hidden md:block">
+                      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-2 px-1">Payment</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-zinc-400">
+                          <CreditCard size={16} />
+                        </div>
+                        <p className="text-white font-black text-sm capitalize">
+                          {booking.payment_status || "Pending"}
                         </p>
                       </div>
                     </div>
@@ -202,12 +212,12 @@ export default function BookingsPage() {
                 </div>
 
                 {/* Footer Actions */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-white/5 gap-6">
                   <div>
-                    <p style={{ fontSize: 10, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Total Paid</p>
-                    <p style={{ fontSize: 26, fontWeight: 900, color: "var(--accent)", margin: 0 }}>{formatPKR(booking.total_price)}</p>
+                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mb-1">Total Investment</p>
+                    <p className="text-4xl font-black text-emerald-500 tracking-tighter">{formatPKR(booking.total_price)}</p>
                   </div>
-                  <div style={{ display: "flex", gap: 12 }}>
+                  <div className="flex flex-wrap gap-4 w-full sm:w-auto justify-end">
                     {profile && (booking.company_id || booking.tours?.company_id) && (
                       <StartChatButton
                         bookingId={booking.id}
@@ -221,10 +231,9 @@ export default function BookingsPage() {
                     {(booking.status === "completed" || booking.status === "confirmed") && (
                       <button 
                         onClick={() => setReviewBooking({ id: booking.id, tourId: booking.tour_id })} 
-                        className="btn btn-ghost" 
-                        style={{ color: "var(--accent)", fontWeight: 700, border: "1px solid rgba(161,196,253,0.2)" }}
+                        className="btn btn-secondary !px-6 py-4 flex items-center gap-2"
                       >
-                        ⭐ Review
+                        <Star size={18} /> Rate
                       </button>
                     )}
                     

@@ -122,7 +122,7 @@ export function NotificationBell({ role, userId, companyId }: NotificationBellPr
               {unread > 0 && (
                 <button
                   onClick={markAllRead}
-                  style={{ fontSize: 12, color: '#60A5FA', background: 'none', border: 'none', cursor: 'pointer' }}
+                  style={{ fontSize: 12, color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer' }}
                 >
                   Mark all read
                 </button>
@@ -138,7 +138,7 @@ export function NotificationBell({ role, userId, companyId }: NotificationBellPr
                 notifications.map(n => (
                   <div key={n.id} style={{
                     padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    background: !n.read ? 'rgba(59,130,246,0.05)' : 'transparent',
+                    background: !n.read ? 'rgba(255,255,255,0.05)' : 'transparent',
                     cursor: 'default',
                   }}>
                     <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: '0 0 4px' }}>{n.message}</p>

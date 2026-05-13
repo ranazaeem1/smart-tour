@@ -1,32 +1,80 @@
 "use client";
+
 import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
+import TopNav from "@/components/TopNav";
 import RequireAuth from "@/components/RequireAuth";
+import { 
+  LayoutDashboard, 
+  Users, 
+  Building2, 
+  Mountain, 
+  ClipboardList, 
+  Wallet, 
+  Star, 
+  ShieldAlert, 
+  BarChart3, 
+  Settings 
+} from "lucide-react";
 
 const ADMIN_NAV = [
-  { icon: "🏠", label: "Dashboard", href: "/admin/dashboard" },
-  { icon: "👥", label: "Users", href: "/admin/users" },
-  { icon: "🏢", label: "Companies", href: "/admin/companies" },
-  { icon: "🏔️", label: "All Tours", href: "/admin/tours" },
-  { icon: "📋", label: "Bookings", href: "/admin/bookings" },
-  { icon: "💰", label: "Revenue", href: "/admin/revenue" },
-  { icon: "⭐", label: "Reviews", href: "/admin/reviews" },
-  { icon: "🛡️", label: "Safety Alerts", href: "/admin/safety" },
-  { icon: "📊", label: "Analytics", href: "/admin/analytics" },
-  { icon: "⚙️", label: "Settings", href: "/admin/settings" },
+  { icon: <LayoutDashboard size={20} />, label: "Dashboard", href: "/admin/dashboard" },
+  { icon: <Users size={20} />, label: "Users", href: "/admin/users" },
+  { icon: <Building2 size={20} />, label: "Companies", href: "/admin/companies" },
+  { icon: <Mountain size={20} />, label: "All Tours", href: "/admin/tours" },
+  { icon: <ClipboardList size={20} />, label: "Bookings", href: "/admin/bookings" },
+  { icon: <Wallet size={20} />, label: "Revenue", href: "/admin/revenue" },
+  { icon: <Star size={20} />, label: "Reviews", href: "/admin/reviews" },
+  { icon: <ShieldAlert size={20} />, label: "Safety Management", href: "/admin/safety" },
+  { icon: <BarChart3 size={20} />, label: "Analytics", href: "/admin/analytics" },
+  { icon: <Settings size={20} />, label: "Settings", href: "/admin/settings" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
-  const sidebarWidth = collapsed ? 72 : 260;
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <RequireAuth role="admin">
-      <div className="dashboard-layout">
-        <Sidebar items={ADMIN_NAV} role="admin" onCollapseChange={setCollapsed} />
-        <main className="main-content" style={{ marginLeft: sidebarWidth }}>
-          {children}
-        </main>
+      <div className="flex min-h-screen bg-[var(--background)]">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block sticky top-0 h-screen z-50">
+          <Sidebar 
+            items={ADMIN_NAV} 
+            role="admin" 
+            collapsed={collapsed} 
+            setCollapsed={setCollapsed} 
+          />
+        </div>
+
+        {/* Mobile Sidebar (Drawer) */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden fixed inset-0 z-[200] animate-fade">
+            <div 
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" 
+              onClick={() => setIsMobileMenuOpen(false)} 
+            />
+            <div className="relative w-[224px] h-full animate-fade-in-left shadow-2xl">
+              <Sidebar 
+                items={ADMIN_NAV} 
+                role="admin" 
+                collapsed={false} 
+                setCollapsed={() => setIsMobileMenuOpen(false)} 
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0" style={{ backgroundColor: '#000000', color: '#FFFFFF' }}>
+          <TopNav title="Administrator Panel" onMenuClick={() => setIsMobileMenuOpen(true)} />
+          <main 
+            className="flex-1 p-6 md:p-8 lg:p-10 w-full transition-all duration-500"
+            role="main"
+          >
+            {children}
+          </main>
+        </div>
       </div>
     </RequireAuth>
   );

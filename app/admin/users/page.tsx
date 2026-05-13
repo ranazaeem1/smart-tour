@@ -62,15 +62,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="animate-fade">
-      <div className="topbar">
-        <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Admin Panel</div>
-          <h1 className="topbar-title">👥 User Management</h1>
-        </div>
-        <div className="topbar-actions">
-          <span className="badge badge-teal">{users.length} Total Users</span>
-        </div>
-      </div>
+      {/* Summary Stats */}
 
       <div className="grid-4" style={{ marginBottom: 24 }}>
         {[
@@ -137,7 +129,7 @@ export default function AdminUsersPage() {
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{u.phone || "—"}</div>
                   </td>
                   <td>
-                    <span className={`badge ${u.role === "admin" ? "badge-rose" : u.role === "company" ? "badge-purple" : "badge-teal"}`}>
+                    <span className={`badge ${u.role === "admin" ? "badge-rose" : u.role === "company" ? "badge-purple" : "badge-emerald"}`}>
                       {u.role}
                     </span>
                   </td>
@@ -152,7 +144,7 @@ export default function AdminUsersPage() {
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button
-                        className={`btn btn-sm ${u.status === "suspended" ? "btn-primary" : "btn-danger"}`}
+                        className={`btn btn-sm ${u.status === "suspended" ? "btn-emerald" : "btn-secondary"}`}
                         onClick={() => handleToggleStatus(u.id)}
                       >
                         {u.status === "suspended" ? "✅ Restore" : "🚫 Suspend"}

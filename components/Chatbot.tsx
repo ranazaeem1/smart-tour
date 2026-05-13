@@ -60,7 +60,7 @@ const BOT_RESPONSES: Record<string, string> = {
   budget: "💰 For a typical 5-day northern Pakistan tour:\n• Economy: PKR 20,000-30,000\n• Standard: PKR 35,000-55,000\n• Premium: PKR 60,000-100,000+\nAll include transport, accommodation & meals.",
   weather: "🌤️ Best weather in northern Pakistan:\n• Spring (Apr-May): Blooming apricots in Hunza\n• Summer (Jun-Aug): Best for high altitude treks\n• Autumn (Sep-Oct): Golden foliage, clear skies\n• Winter (Nov-Mar): Snow sports in Naltar & Malam Jabba",
   book: "📅 To book a tour:\n1. Browse available tours\n2. Select your budget & dates\n3. Choose group size\n4. Confirm & pay securely\nNeed help finding the perfect tour? Tell me your budget!",
-  default: "🤖 I'm your Smart Tour AI assistant! I can help with:\n• Destination recommendations weather & best time to visit\n• What would you like to know?",
+  default: "🤖 I'm your Smart Tour AI assistant! I can help with:\n• Destination recommendations, weather & best time to visit\n• Budget guides and safety scores\n\nNeed to talk to a human? [Chat with a Tour Operator](/user/chat/list)\n\nWhat would you like to know?",
 };
 
 // ==========================================

@@ -27,17 +27,25 @@ import { TOURS, BOOKINGS, REVIEWS, COMPANIES, SAFETY_ZONES, MONTHLY_REVENUE } fr
  * @param {number} delay - Initial delay between retries in ms
  * @returns {Promise<T>} The result of the operation
  */
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 500): Promise<T> {
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delay = 500
+): Promise<T> {
   try {
     return await fn();
-  } catch (err: any) {
-    const isLockError = err.message?.includes('Lock broken') || err.name === 'AbortError';
-    if (isLockError && retries > 0) {
-      console.warn(`[db] Transient lock error detected. Retrying... (${retries} attempts left)`);
+  } catch (error: any) {
+    // If it's a "lock stolen" error, wait a bit and retry as it's transient
+    const isLockError = error?.message?.includes("lock") || error?.message?.includes("stole") || error.message?.includes('Lock broken') || error.name === 'AbortError';
+    
+    if (retries > 0) {
+      if (isLockError) {
+        console.warn(`[Retry] Auth lock contention detected, retrying in ${delay}ms... (${retries} attempts left)`);
+      }
       await new Promise(resolve => setTimeout(resolve, delay));
-      return withRetry(fn, retries - 1, delay * 2); // Exponential backoff
+      return withRetry(fn, retries - 1, delay * 2);
     }
-    throw err;
+    throw error;
   }
 }
 
@@ -56,40 +64,33 @@ export async function fetchProfile(userId: string) {
   return data;
 }
 
-export async function upsertProfile(profile: {
+export async function upsertProfile({
+  id,
+  email,
+  full_name,
+  phone,
+  role,
+}: {
   id: string;
   email: string;
   full_name?: string;
   phone?: string;
-  role?: 'user' | 'company' | 'admin';
+  role?: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from('profiles') as any)
-    .upsert(
-      { ...profile, updated_at: new Date().toISOString() },
-      { onConflict: 'id', ignoreDuplicates: false }
-    )
-    .select()
-    .maybeSingle();
+  const { error } = await (supabase.from('profiles') as any)
+    .upsert({
+      id,
+      email,
+      full_name: full_name || '',
+      phone: phone || '',
+      role: role || 'user',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
 
-  if (error) {
-    // If upsert fails (likely RLS on insert for existing user), try plain update
-    const { data: updated, error: updateError } = await (supabase.from('profiles') as any)
-      .update({ ...profile, updated_at: new Date().toISOString() })
-      .eq('id', profile.id)
-      .select()
-      .maybeSingle();
-
-    if (updateError) {
-      // Only log if the update also fails (real error)
-      console.warn('[upsertProfile] Profile update skipped/failed:', updateError.message);
-      return null;
-    }
-    return updated;
-  }
-
-  return data;
+  if (error) console.error('upsertProfile error:', error);
+  return { error };
 }
+
 
 
 export async function fetchAllUsers() {
@@ -173,8 +174,8 @@ export async function createTour(tour: {
   image_url?: string;
 }) {
   // 1. Verify company is approved before allowing tour creation
-  const { data: company, error: companyError } = await supabase
-    .from('companies')
+  const { data: company, error: companyError } = await (supabase
+    .from('companies') as any)
     .select('status')
     .eq('id', tour.company_id)
     .maybeSingle();
@@ -221,11 +222,14 @@ export async function fetchBookings(options?: {
 
     const { data, error } = await query;
     if (error) {
-      console.error('[fetchBookings]', error.message);
-      return [];
+      throw error;
     }
     return data ?? [];
   });
+}
+
+export async function fetchBookingsByUser(userId: string) {
+  return fetchBookings({ userId });
 }
 
 export async function createBooking(booking: {
@@ -237,7 +241,6 @@ export async function createBooking(booking: {
   travel_date: string;
   notes?: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('bookings') as any)
     .insert({ ...booking, status: 'pending', payment_status: 'pending' })
     .select()
@@ -247,7 +250,6 @@ export async function createBooking(booking: {
 }
 
 export async function updateBookingStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('bookings') as any)
     .update({ status })
     .eq('id', id)
@@ -334,7 +336,6 @@ export async function fetchCompanyByOwner(ownerId: string): Promise<{ id: string
 }
 
 export async function updateCompanyStatus(id: string, status: 'pending' | 'approved' | 'suspended' | 'rejected') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('companies') as any)
     .update({ status })
     .eq('id', id)
@@ -371,7 +372,6 @@ export async function createSafetyAlert(alert: {
   area: string; type: string;
   severity: 'low' | 'medium' | 'high'; description: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('safety_alerts') as any)
     .insert({ ...alert, active: true })
     .select()
@@ -505,7 +505,7 @@ export async function deleteUserExpense(id: string, userId: string) {
 }
 
 export async function updateProfileBudget(userId: string, budget: number) {
-  const { error } = await (supabase.from('profiles') as any)
+  const { data, error } = await (supabase.from('profiles') as any)
     .update({ total_budget: budget })
     .eq('id', userId);
 
@@ -515,4 +515,3 @@ export async function updateProfileBudget(userId: string, budget: number) {
   }
   return true;
 }
-

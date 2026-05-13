@@ -60,8 +60,10 @@ function AuthForm() {
     try {
       if (mode === "register") {
         // --- Registration Flow ---
-        // Determine role: Super Admin gets 'admin', everyone else defaults to 'user'
-        const determinedRole = form.email.toLowerCase() === "zaeemrajpoot2234@gmail.com" ? "admin" : "user";
+        // Determine role: Super Admin gets 'admin', company param gets 'company', everyone else defaults to 'user'
+        const determinedRole = form.email.toLowerCase() === "zaeemrajpoot2234@gmail.com" 
+          ? "admin" 
+          : (roleParam === "company" ? "company" : "user");
 
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: form.email,
@@ -78,14 +80,35 @@ function AuthForm() {
         if (signUpError) throw signUpError;
 
         if (data.user) {
-          // Check if email confirmation is disabled (auto-login) or enabled
-          if (data.session) {
-            if (determinedRole === "admin") router.push("/admin/dashboard");
-            else router.push("/user/dashboard");
-          } else {
-            setSuccess(`✅ Account created as ${determinedRole}! Check your email to confirm your account, then sign in.`);
+          // Save user data to profiles table immediately after signup
+          try {
+            const { error: profileError } = await upsertProfile({
+              id: data.user.id,
+              email: form.email,
+              full_name: form.name,
+              phone: form.phone,
+              role: determinedRole,
+            });
+
+
+            if (profileError) {
+              console.error('Profile save error:', profileError);
+            }
+
+            // Check if email confirmation is disabled (auto-login) or enabled
+            if (data.session) {
+              if (determinedRole === "admin") router.push("/admin/dashboard");
+              else if (determinedRole === "company") router.push("/company/dashboard");
+              else router.push("/user/dashboard");
+            } else {
+              setSuccess(`✅ Account created as ${determinedRole}! Check your email to confirm your account, then sign in.`);
+            }
+          } catch (err) {
+            console.error('Error saving profile:', err);
           }
         }
+
+
       } else {
         // --- Login Flow ---
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -106,7 +129,7 @@ function AuthForm() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const userRole = (profile as any)?.role || data.user.user_metadata?.role || "user";
 
-          console.log("[Auth] User logged in with role:", userRole);
+          // Redirect based on role
 
           // Role-based redirection
           if (userRole === "admin") {
@@ -141,7 +164,7 @@ function AuthForm() {
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <Link href="/" style={{ textDecoration: "none" }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#0d9488,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--gradient-main)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 3L28 28H4L16 3Z" fill="white" opacity="0.9" /><circle cx="16" cy="14" r="3" fill="white" /></svg>
               </div>
               <span style={{ fontSize: 26, fontWeight: 900, color: "#fff", fontFamily: "Outfit, sans-serif" }}>Smart Tour</span>
@@ -219,7 +242,7 @@ function AuthForm() {
               </div>
             )}
 
-            <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "14px", border: "1px solid rgba(255,255,255,0.4)" }} disabled={loading}>
+            <button type="submit" className="btn btn-emerald" style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "14px", border: "1px solid rgba(255,255,255,0.4)" }} disabled={loading}>
               {loading ? <span className="loading-spinner" /> : (mode === "login" ? "Sign In →" : "Create Account →")}
             </button>
           </form>

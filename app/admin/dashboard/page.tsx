@@ -176,24 +176,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="animate-fade">
-      {/* 
-        ================================================================
-        Header Section
-        ================================================================
-      */}
-      <div className="topbar">
-        <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Administrator Panel</div>
-          <h1 className="topbar-title">🛡️ Admin Dashboard</h1>
-        </div>
-        <div className="topbar-actions">
-          <span className="badge badge-gold">🔐 Super Admin</span>
-          <NotificationBell role="admin" userId={profile?.id} />
-          <div className="avatar" style={{ background: "var(--gold)", color: "#000" }}>
-            {profile?.full_name?.substring(0, 2).toUpperCase() || "AD"}
-          </div>
-        </div>
-      </div>
+      {/* Dashboard Metrics */}
 
       {/* 
         ================================================================
@@ -229,7 +212,7 @@ export default function AdminDashboard() {
               <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                 {/* Dynamic bar height based on relative monthly revenue */}
                 <div
-                  style={{ width: "100%", borderRadius: "4px 4px 0 0", background: "linear-gradient(180deg, var(--gold), var(--purple))", height: `${(m.revenue / maxRev) * 140}px`, transition: "height 0.5s ease", minHeight: 4 }}
+                  style={{ width: "100%", borderRadius: "4px 4px 0 0", background: "linear-gradient(180deg, var(--emerald), var(--teal))", height: `${(m.revenue / maxRev) * 140}px`, transition: "height 0.5s ease", minHeight: 4 }}
                   title={formatPKR(m.revenue)}
                 />
                 <div style={{ fontSize: 9, color: "var(--text-muted)", transform: "rotate(-45deg)" }}>{m.month}</div>

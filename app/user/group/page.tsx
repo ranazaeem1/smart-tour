@@ -71,7 +71,7 @@ function GroupTravelContent() {
               <button 
                 onClick={() => {
                   const newGuestNum = members.length + 1;
-                  setMembers(p => [...p, { name: `Traveler ${newGuestNum}`, status: "accepted", budget: 45000 }]);
+                  setMembers(p => [...p, { name: `Traveler ${newGuestNum}`, email: `traveler${newGuestNum}@example.com`, status: "accepted", budget: 45000 }]);
                 }} 
                 className="btn btn-primary btn-sm"
               >

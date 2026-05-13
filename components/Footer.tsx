@@ -1,107 +1,90 @@
 /**
  * @file Footer.tsx
- * @description Professional footer component for the Smart Tour platform.
- * Contains navigation links, brand information, and social entry points.
- * @author Smart Tour Team
- * @dependencies next/link, react
+ * @description Professional dark footer component for the Smart Tour platform.
  */
 
+"use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-/**
- * Footer Component
- * Renders a multi-column professional footer with brand identity and structured navigation.
- * 
- * @returns {JSX.Element} The rendered footer
- */
 export default function Footer() {
+  const router = useRouter();
   const currentYear = new Date().getFullYear();
 
-  return (
-    <footer style={{ background: "#fff", padding: "80px 60px 40px", borderTop: "1px solid var(--border)" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 60, marginBottom: 60 }}>
-        
-        {/* Brand Column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, #0d9488, #7c3aed)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-                <path d="M16 3L28 28H4L16 3Z" fill="white" opacity="0.9" />
-                <circle cx="16" cy="14" r="3" fill="white" />
-              </svg>
-            </div>
-            <span style={{ fontSize: 24, fontWeight: 800, color: "var(--navy)", letterSpacing: "-0.5px" }}>Smart Tour</span>
-          </Link>
-          <p style={{ fontSize: 15, lineHeight: 1.7, color: "var(--text-secondary)", maxWidth: 320 }}>
-            Pioneering the future of travel in Pakistan with artificial intelligence, 
-            dynamic safety systems, and trusted tour partners. Your gateway to the extraordinary.
-          </p>
-          <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
-            {/* Social Icons Placeholders - Using simple styled circles for now */}
-            {["FB", "TW", "IG", "LI"].map(social => (
-              <div key={social} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-secondary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", cursor: "pointer", transition: "all 0.3s" }}>
-                {social}
-              </div>
-            ))}
-          </div>
-        </div>
+  const handleNavigation = (path: string) => {
+    if (path.startsWith('#')) {
+      const element = document.getElementById(path.substring(1));
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      router.push(path);
+    }
+  };
 
-        {/* Navigation Columns */}
-        {[
-          {
-            heading: "Account",
-            links: [
-              { label: "Log In", href: "/auth/login" },
-              { label: "Sign Up", href: "/auth/login" },
-              { label: "User Dashboard", href: "/user/dashboard" },
-              { label: "Destinations", href: "/destinations" },
-            ],
-          },
-          {
-            heading: "Company",
-            links: [
-              { label: "Partner Portal", href: "/auth/login" },
-              { label: "Partner Benefits", href: "/about" },
-              { label: "Contact Sales", href: "/contact" },
-              { label: "About Us", href: "/about" },
-            ],
-          },
-          {
-            heading: "Legal & Support",
-            links: [
-              { label: "Contact Us", href: "/contact" },
-              { label: "Privacy Policy", href: "/privacy" },
-              { label: "Terms of Service", href: "/terms" },
-              { label: "Safety Guide", href: "/#features" },
-            ],
-          },
-        ].map(col => (
-          <div key={col.heading}>
-            <h4 style={{ color: "var(--text-primary)", marginBottom: 24, fontSize: 16, fontWeight: 800, textTransform: "uppercase", letterSpacing: "1px" }}>
-              {col.heading}
-            </h4>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 14 }}>
-              {col.links.map(link => (
-                <li key={link.label}>
-                  <Link href={link.href} style={{ color: "var(--text-secondary)", textDecoration: "none", fontSize: 15, transition: "color 0.2s" }}>
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+  return (
+    <footer className="bg-slate-950 text-white py-20 px-6 border-t border-white/5 relative overflow-hidden">
+      {/* Subtle Background Glow */}
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-emerald-600/5 blur-[120px] rounded-full translate-x-1/2 translate-y-1/2 pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-20 mb-16">
+          
+          {/* Brand Column */}
+          <div className="flex flex-col gap-6">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+                S
+              </div>
+              <span className="font-bold text-white text-xl tracking-tighter uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
+            </Link>
+            <p className="text-slate-400 text-sm leading-relaxed max-w-xs font-medium">
+              Your trusted partner in travel planning and booking. Discover the extraordinary with AI-powered intelligence.
+            </p>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-8">Quick Links</h3>
+            <ul className="space-y-4">
+              <li><button onClick={() => handleNavigation('#tours')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Tours</button></li>
+              <li><button onClick={() => handleNavigation('#destinations')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Destinations</button></li>
+              <li><button onClick={() => handleNavigation('/user/dashboard')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Dashboard</button></li>
             </ul>
           </div>
-        ))}
-      </div>
 
-      {/* Bottom Bar */}
-      <div style={{ borderTop: "1px solid var(--border)", paddingTop: 30, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <p style={{ fontSize: 14, color: "var(--text-muted)" }}>
-          &copy; {currentYear} Smart Tour Platform. All rights reserved.
-        </p>
-        <div style={{ display: "flex", gap: 24 }}>
-          <Link href="/privacy" style={{ fontSize: 13, color: "var(--text-muted)", textDecoration: "none" }}>Privacy</Link>
-          <Link href="/terms" style={{ fontSize: 13, color: "var(--text-muted)", textDecoration: "none" }}>Terms</Link>
-          <Link href="/contact" style={{ fontSize: 13, color: "var(--text-muted)", textDecoration: "none" }}>Cookies</Link>
+          {/* Company */}
+          <div>
+            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-8">Company</h3>
+            <ul className="space-y-4">
+              <li><button onClick={() => handleNavigation('#about')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">About Us</button></li>
+              <li><button onClick={() => handleNavigation('/company/dashboard')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">For Companies</button></li>
+              <li><button onClick={() => handleNavigation('/admin/dashboard')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Admin</button></li>
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-8">Legal</h3>
+            <ul className="space-y-4">
+              <li><Link href="/privacy" className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Terms of Service</Link></li>
+              <li><Link href="/contact" className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Contact</Link></li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="border-t border-white/5 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
+          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
+            &copy; {currentYear} SmartTour. All rights reserved.
+          </p>
+          <div className="flex flex-wrap justify-center gap-6 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <button onClick={() => handleNavigation('/user/dashboard')} className="hover:text-emerald-400 transition-colors">Dashboard</button>
+            <button onClick={() => handleNavigation('/company/dashboard')} className="hover:text-emerald-400 transition-colors">Company Panel</button>
+            <button onClick={() => handleNavigation('/admin/dashboard')} className="hover:text-emerald-400 transition-colors">Admin</button>
+          </div>
         </div>
       </div>
     </footer>

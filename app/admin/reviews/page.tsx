@@ -68,15 +68,7 @@ export default function AdminReviewsPage() {
 
   return (
     <div className="animate-fade">
-      <div className="topbar">
-        <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Admin Panel</div>
-          <h1 className="topbar-title">⭐ Reviews & Sentiment</h1>
-        </div>
-        <div className="topbar-actions">
-          <span className="badge badge-teal">{reviews.length} Total Reviews</span>
-        </div>
-      </div>
+      {/* Sentiment Analysis */}
 
       {/* Sentiment stats */}
       <div className="grid-3" style={{ marginBottom: 24 }}>

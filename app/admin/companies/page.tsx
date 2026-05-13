@@ -2,13 +2,13 @@
 import { useEffect, useState } from "react";
 import { fetchCompanies, updateCompanyStatus } from "@/lib/db";
 import { COMPANIES, formatPKR, getStatusColor } from "@/lib/data";
+import { Building2, CheckCircle, Clock, XCircle, Search, Filter, MoreVertical, ExternalLink } from "lucide-react";
 
 interface Company {
   id: string; name: string; email: string; phone?: string | null;
   city?: string | null; logo?: string | null; status: string;
   verified: boolean; rating: number; total_tours: number;
   total_bookings: number; total_revenue: number; created_at: string;
-  joinDate?: string;
 }
 
 export default function AdminCompaniesPage() {
@@ -21,179 +21,215 @@ export default function AdminCompaniesPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const data = await fetchCompanies();
-      if (data.length > 0) {
-        setCompanies(data as Company[]);
-      } else {
-        setCompanies(COMPANIES.map(c => ({
-          id: c.id, name: c.name, email: c.email, phone: c.phone,
-          city: c.city, logo: c.logo, status: c.status, verified: c.verified,
-          rating: c.rating, total_tours: c.totalTours, total_bookings: c.totalBookings,
-          total_revenue: c.totalRevenue, created_at: c.joinDate,
-        })));
+      try {
+        const data = await fetchCompanies();
+        if (data && data.length > 0) {
+          setCompanies(data as Company[]);
+        } else {
+          setCompanies(COMPANIES.map(c => ({
+            id: c.id, name: c.name, email: c.email, phone: c.phone,
+            city: c.city, logo: c.logo, status: c.status, verified: c.verified,
+            rating: c.rating, total_tours: c.totalTours, total_bookings: c.totalBookings,
+            total_revenue: c.totalRevenue, created_at: c.joinDate || new Date().toISOString(),
+          })));
+        }
+      } catch (err) {
+        console.error("Error fetching companies:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, []);
 
-  const handleApprove = async (id: string) => {
+  const handleStatusUpdate = async (id: string, newStatus: string) => {
     setActionId(id);
-    const updated = await updateCompanyStatus(id, "approved");
-    if (updated) setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: "approved", verified: true } : c));
-    setActionId(null);
-  };
-
-  const handleSuspend = async (id: string) => {
-    if (!confirm("Suspend this company? They won't be able to accept new bookings.")) return;
-    setActionId(id);
-    const updated = await updateCompanyStatus(id, "suspended");
-    if (updated) setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: "suspended" } : c));
-    setActionId(null);
-  };
-
-  const handleReject = async (id: string) => {
-    if (!confirm("Reject this company application?")) return;
-    setActionId(id);
-    const updated = await updateCompanyStatus(id, "rejected");
-    if (updated) setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: "rejected" } : c));
-    setActionId(null);
+    try {
+      const updated = await updateCompanyStatus(id, newStatus);
+      if (updated) {
+        setCompanies(prev => prev.map(c => c.id === id ? { ...c, status: newStatus, verified: newStatus === 'approved' } : c));
+      }
+    } catch (err) {
+      console.error("Status update error:", err);
+    } finally {
+      setActionId(null);
+    }
   };
 
   const filtered = companies
     .filter(c => filter === "all" || c.status === filter)
-    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    .filter(c => 
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      c.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.city || "").toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-  const pendingCount = companies.filter(c => c.status === "pending").length;
+  const stats = [
+    { label: "Total Partners", value: companies.length, icon: <Building2 size={20} />, color: "var(--foreground)" },
+    { label: "Approved", value: companies.filter(c => c.status === "approved").length, icon: <CheckCircle size={20} />, color: "var(--emerald)" },
+    { label: "Pending", value: companies.filter(c => c.status === "pending").length, icon: <Clock size={20} />, color: "var(--gold)" },
+    { label: "Suspended", value: companies.filter(c => c.status === "suspended").length, icon: <XCircle size={20} />, color: "var(--rose)" },
+  ];
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+    <div className="flex items-center justify-center h-[60vh]">
       <span className="loading-spinner" />
     </div>
   );
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Admin Panel</div>
-          <h1 className="topbar-title">🏢 Company Management</h1>
+          <h1 className="text-2xl font-black tracking-tight">🏢 Company Management</h1>
+          <p className="text-sm text-[var(--muted-foreground)] font-medium">Verify and manage tour operator partnerships</p>
         </div>
-        <div className="topbar-actions">
-          {pendingCount > 0 && <span className="badge badge-gold">⏳ {pendingCount} Pending Approval</span>}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" size={16} />
+            <input 
+              className="input !pl-10 !py-2.5 !text-xs w-[240px]" 
+              placeholder="Search companies..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+            />
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid-4" style={{ marginBottom: 24 }}>
-        {[
-          { label: "Total Companies", value: companies.length, color: "var(--teal)", icon: "🏢" },
-          { label: "Approved", value: companies.filter(c => c.status === "approved").length, color: "var(--emerald)", icon: "✅" },
-          { label: "Pending", value: pendingCount, color: "var(--gold)", icon: "⏳" },
-          { label: "Suspended", value: companies.filter(c => (c.status === "suspended" || c.status === "rejected")).length, color: "var(--rose)", icon: "🚫" },
-        ].map(s => (
+      {/* Stats Grid */}
+      <div className="grid-4">
+        {stats.map(s => (
           <div key={s.label} className="stat-card">
-            <div style={{ fontSize: 22 }}>{s.icon}</div>
+            <div className="flex items-center justify-between">
+              <div className="p-2 rounded-lg bg-[var(--muted)]/50" style={{ color: s.color }}>{s.icon}</div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[var(--muted-foreground)]">Network</span>
+            </div>
             <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
             <div className="stat-label">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Search */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="input-group">
-          <label className="input-label">🔍 Search Companies</label>
-          <input className="input" placeholder="Search by name or email..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+      {/* Main Content Card */}
+      <div className="card !p-0 overflow-hidden">
+        {/* Table Filter Header */}
+        <div className="px-6 py-4 border-b border-[var(--border)] flex items-center justify-between bg-[var(--muted)]/10">
+          <div className="flex items-center gap-2">
+            <Filter size={14} className="text-[var(--muted-foreground)]" />
+            <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Filter Status</span>
+          </div>
+          <div className="flex gap-1 bg-[var(--muted)]/50 p-1 rounded-xl">
+            {["all", "approved", "pending", "suspended"].map(f => (
+              <button 
+                key={f} 
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${filter === f ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
+                onClick={() => setFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Responsive Table */}
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Location</th>
+                <th>Tours</th>
+                <th>Revenue</th>
+                <th>Rating</th>
+                <th>Status</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-20 text-[var(--muted-foreground)] font-medium">
+                    No company partnerships found matching your criteria.
+                  </td>
+                </tr>
+              ) : filtered.map(c => (
+                <tr key={c.id}>
+                  <td>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-[var(--gradient-main)] flex items-center justify-center text-white font-black text-sm shadow-lg">
+                        {c.logo || c.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm">{c.name}</div>
+                        <div className="text-[11px] text-[var(--muted-foreground)] font-medium">{c.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-xs">🇵🇰 {c.city || "Pakistan"}</span>
+                      <span className="text-[10px] text-[var(--muted-foreground)]">Since {new Date(c.created_at).getFullYear()}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="font-black text-sm">{c.total_tours}</span>
+                    <span className="text-[10px] text-[var(--muted-foreground)] ml-1">Live</span>
+                  </td>
+                  <td>
+                    <div className="font-black text-xs text-[var(--emerald)]">{formatPKR(c.total_revenue)}</div>
+                    <div className="text-[9px] text-[var(--muted-foreground)] uppercase tracking-tighter">Gross Earnings</div>
+                  </td>
+                  <td>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-black">{c.rating || "N/A"}</span>
+                      <span className="text-[var(--gold)]">★</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span className={`badge ${getStatusColor(c.status)}`}>{c.status}</span>
+                  </td>
+                  <td className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {c.status === "pending" && (
+                        <button 
+                          className="btn btn-emerald !px-4 !py-2 !text-[10px]"
+                          onClick={() => handleStatusUpdate(c.id, "approved")}
+                          disabled={actionId === c.id}
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {c.status === "approved" && (
+                        <button 
+                          className="btn btn-secondary !px-4 !py-2 !text-[10px] border-rose-500/20 hover:border-rose-500/40 text-rose-500"
+                          onClick={() => handleStatusUpdate(c.id, "suspended")}
+                          disabled={actionId === c.id}
+                        >
+                          Suspend
+                        </button>
+                      )}
+                      {(c.status === "suspended" || c.status === "rejected") && (
+                        <button 
+                          className="btn btn-emerald !px-4 !py-2 !text-[10px]"
+                          onClick={() => handleStatusUpdate(c.id, "approved")}
+                          disabled={actionId === c.id}
+                        >
+                          Restore
+                        </button>
+                      )}
+                      <button className="p-2 hover:bg-[var(--muted)] rounded-lg transition-colors text-[var(--muted-foreground)]">
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-
-      {/* Filter tabs */}
-      <div className="tabs" style={{ marginBottom: 20, width: "fit-content" }}>
-        {["all", "approved", "pending", "suspended", "rejected"].map(f => (
-          <button key={f} className={`tab-btn ${filter === f ? "active" : ""}`} onClick={() => setFilter(f)}>
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-            {f === "pending" && pendingCount > 0 && (
-              <span style={{ marginLeft: 6, background: "var(--rose)", color: "white", borderRadius: "50%", padding: "0 5px", fontSize: 10 }}>{pendingCount}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", padding: "40px" }}>
-          <p style={{ color: "var(--text-muted)" }}>No companies found for this filter.</p>
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {filtered.map(c => (
-            <div key={c.id} className="card" style={{ padding: "18px 20px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-                <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: "var(--gradient-main)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, flexShrink: 0 }}>
-                    {c.logo || c.name.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{c.name}</div>
-                    <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{c.email} {c.phone ? `· ${c.phone}` : ""}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-                      📍 {c.city || "—"} · Joined {c.created_at ? new Date(c.created_at).toLocaleDateString("en-PK") : "—"}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  {c.verified && <span className="badge badge-teal">✅ Verified</span>}
-                  <span className={`badge ${getStatusColor(c.status)}`}>{c.status}</span>
-                </div>
-              </div>
-              <div className="divider" />
-              <div style={{ display: "flex", gap: 32, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-                  {[
-                    { label: "Tours", value: c.total_tours },
-                    { label: "Bookings", value: c.total_bookings },
-                    { label: "Revenue", value: c.total_revenue > 0 ? formatPKR(c.total_revenue) : "—" },
-                    { label: "Rating", value: c.rating > 0 ? `⭐ ${c.rating}` : "—" },
-                  ].map(r => (
-                    <div key={r.label}>
-                      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{r.label}</div>
-                      <div style={{ fontWeight: 700, color: "var(--teal)" }}>{r.value}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {c.status === "pending" && <>
-                    <button
-                      className="btn btn-sm"
-                      style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", border: "1px solid rgba(16,185,129,0.3)" }}
-                      onClick={() => handleApprove(c.id)}
-                      disabled={actionId === c.id}
-                    >
-                      {actionId === c.id ? "..." : "✅ Approve"}
-                    </button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleReject(c.id)} disabled={actionId === c.id}>❌ Reject</button>
-                  </>}
-                  {c.status === "approved" && (
-                    <button className="btn btn-danger btn-sm" onClick={() => handleSuspend(c.id)} disabled={actionId === c.id}>
-                      {actionId === c.id ? "..." : "🚫 Suspend"}
-                    </button>
-                  )}
-                  {(c.status === "suspended" || c.status === "rejected") && (
-                    <button
-                      className="btn btn-sm"
-                      style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", border: "1px solid rgba(16,185,129,0.3)" }}
-                      onClick={() => handleApprove(c.id)}
-                      disabled={actionId === c.id}
-                    >
-                      {actionId === c.id ? "..." : "✅ Restore"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

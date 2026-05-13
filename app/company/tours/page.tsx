@@ -1,9 +1,27 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchTours, updateTour, fetchCompanyByOwner } from "@/lib/db";
-import { TOURS, formatPKR } from "@/lib/data";
+import { formatPKR } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
+import { 
+  Plus, 
+  Search, 
+  MapPin, 
+  Clock, 
+  Mountain, 
+  Star, 
+  Shield, 
+  Settings2, 
+  ClipboardList, 
+  Pause, 
+  Play,
+  Activity,
+  Filter,
+  ArrowRight,
+  Info
+} from "lucide-react";
 
 interface Tour {
   id: string; title: string; destination: string; price: number;
@@ -24,37 +42,32 @@ export default function CompanyToursPage() {
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
-      try {
-        if (profile?.id) {
+      if (profile?.id) {
+        setLoading(true);
+        try {
           const company = await fetchCompanyByOwner(profile.id);
-          let data: Tour[] = [];
           if (company && company.id) {
             const raw = await fetchTours({ companyId: company.id });
-            data = raw as Tour[];
+            setTours(raw as Tour[]);
           }
-          setTours(data.length > 0 ? data : []);
-        } else {
-          setTours([]);
+        } catch (err) {
+          console.error("Failed to load tours:", err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error("Failed to load tours:", err);
-        setTours([]);
-      } finally {
-        setLoading(false);
       }
     }
     load();
   }, [profile]);
 
-  const getSafety = (t: Tour) => t.safety_score || t.safetyScore || 80;
-  const getImg = (t: Tour) => t.image_url || t.image || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400";
-
   const handleToggle = async (id: string, current: boolean) => {
     setUpdatingId(id);
-    await updateTour(id, { available: !current });
-    setTours(prev => prev.map(t => t.id === id ? { ...t, available: !current } : t));
-    setUpdatingId(null);
+    try {
+      await updateTour(id, { available: !current });
+      setTours(prev => prev.map(t => t.id === id ? { ...t, available: !current } : t));
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   const filtered = tours
@@ -65,98 +78,202 @@ export default function CompanyToursPage() {
     );
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-      <span className="loading-spinner" />
+    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+      <div className="loading-spinner h-12 w-12" />
+      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Syncing Expedition Ledger...</p>
     </div>
   );
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
-        <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Company Panel</div>
-          <h1 className="topbar-title">🏔️ My Tour Packages</h1>
+    <div className="animate-fade space-y-10 pb-20" role="main">
+      {/* ── Expedition Hero Header ── */}
+      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
+          <div className="text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full mb-4 border border-emerald-500/20">
+              <Mountain size={12} className="text-emerald-400" />
+              <span className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em]">Package Inventory</span>
+            </div>
+            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+              Expedition Catalog
+            </h1>
+            <p className="text-slate-400 text-sm md:text-base font-medium">Manage your regional offerings and deployment status.</p>
+          </div>
+
+          <div className="flex flex-col items-center md:items-end gap-6">
+            <div className="text-right hidden md:block">
+              <span className="badge badge-emerald !bg-emerald-500/20 !text-emerald-400 border border-emerald-500/30">
+                {tours.filter(t => t.available).length} Active Units
+              </span>
+            </div>
+            <Link
+              href="/company/tours/new"
+              className="btn btn-emerald min-h-[56px] px-10 rounded-2xl shadow-2xl shadow-emerald-500/20 flex items-center gap-3 active:scale-95 transition-all"
+            >
+              <Plus size={20} />
+              <span className="text-sm font-black tracking-widest uppercase">Add New Tour</span>
+            </Link>
+          </div>
         </div>
-        <div className="topbar-actions">
-          <span className="badge badge-teal">{tours.filter(t => t.available).length} Active</span>
-          <Link href="/company/tours/new" className="btn btn-primary">+ Add New Tour</Link>
+      </section>
+
+      {/* ── Search & Filters ── */}
+      <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
+        <div className="flex bg-[var(--muted)] p-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] w-full lg:w-auto overflow-x-auto">
+          {["all", "active", "inactive"].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilterStatus(f)}
+              className={`flex-1 lg:flex-none px-8 py-3 rounded-[var(--radius-md)] text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${filterStatus === f ? "bg-[var(--card)] text-[var(--foreground)] shadow-lg" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full lg:max-w-md group">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] group-focus-within:text-emerald-500 transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Search by title or locale..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input !pl-12 !py-4 font-black"
+          />
         </div>
       </div>
 
-      {/* Search + Filter */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div className="input-group" style={{ flex: 1, minWidth: 200 }}>
-            <label className="input-label">🔍 Search Tours</label>
-            <input className="input" placeholder="Search by name or destination..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <div className="tabs" style={{ alignSelf: "flex-end" }}>
-            {["all", "active", "inactive"].map(f => (
-              <button key={f} className={`tab-btn ${filterStatus === f ? "active" : ""}`} onClick={() => setFilterStatus(f)}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
+      {/* ── Tour Grid ── */}
       {filtered.length === 0 ? (
-        <div className="card" style={{ textAlign: "center", padding: "60px 20px" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🏔️</div>
-          <h3 style={{ marginBottom: 8 }}>No tours found</h3>
-          <p style={{ color: "var(--text-muted)", marginBottom: 20 }}>
-            {search ? "Try a different search term." : "Start by adding your first tour package."}
+        <section className="card-premium py-20 text-center flex flex-col items-center">
+          <div className="w-20 h-20 bg-[var(--muted)] rounded-[32px] flex items-center justify-center text-[var(--muted-foreground)] mb-8 shadow-inner border border-[var(--border)]">
+            <Mountain size={40} />
+          </div>
+          <h2 className="text-2xl font-black text-[var(--foreground)] mb-2 tracking-tight">No Expeditions Found</h2>
+          <p className="text-[var(--muted-foreground)] font-medium mb-10 max-w-sm mx-auto leading-relaxed">
+            {search ? "Zero matches found for your current filter parameters." : "Start by adding your first tour package to the platform catalog."}
           </p>
-          <Link href="/company/tours/new" className="btn btn-primary">+ Add First Tour</Link>
-        </div>
+          <Link href="/company/tours/new" className="btn btn-emerald px-10 py-5 !rounded-2xl shadow-xl shadow-emerald-500/20">
+            Create First Package <ArrowRight size={20} className="ml-2" />
+          </Link>
+        </section>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {filtered.map(tour => (
-            <div key={tour.id} className="card" style={{ display: "flex", gap: 0, padding: 0, overflow: "hidden" }}>
-              <img
-                src={getImg(tour)}
-                alt={tour.title}
-                style={{ width: 180, height: 140, objectFit: "cover", flexShrink: 0 }}
-                onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400"; }}
-              />
-              <div style={{ flex: 1, padding: "16px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div className="space-y-8">
+          {filtered.map((tour, idx) => (
+            <article 
+              key={tour.id} 
+              className="card-premium !p-0 overflow-hidden flex flex-col md:flex-row group hover:shadow-2xl transition-all duration-500 border border-[var(--border)] hover:border-emerald-500/30 animate-fade"
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="w-full md:w-80 h-64 md:h-auto overflow-hidden relative">
+                <img
+                  src={tour.image_url || tour.image || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400"}
+                  alt={tour.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute top-6 left-6">
+                  <span className={`badge ${tour.available ? "badge-emerald shadow-lg shadow-emerald-950/40" : "badge-rose shadow-lg shadow-rose-950/40"} !px-4 !py-2 !text-[10px] !font-black !rounded-xl border border-white/20 backdrop-blur-md`}>
+                    {tour.available ? "ACTIVE UNIT" : "OFF-LINE"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 p-8 md:p-10 flex flex-col justify-between">
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
                     <div>
-                      <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 2 }}>{tour.title}</h3>
-                      <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                        📍 {tour.destination} · {tour.duration} days · {tour.difficulty}
+                      <h3 className="text-2xl font-black text-[var(--foreground)] m-0 tracking-tight group-hover:text-emerald-500 transition-colors">{tour.title}</h3>
+                      <div className="flex flex-wrap items-center gap-4 mt-3">
+                        <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
+                          <MapPin size={14} className="text-emerald-500" />
+                          <span className="text-[11px] font-black uppercase tracking-widest">{tour.destination}</span>
+                        </div>
+                        <span className="w-1 h-1 rounded-full bg-[var(--border)]" />
+                        <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
+                          <Clock size={14} className="text-emerald-500" />
+                          <span className="text-[11px] font-black uppercase tracking-widest">{tour.duration} Days</span>
+                        </div>
+                        <span className="w-1 h-1 rounded-full bg-[var(--border)]" />
+                        <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
+                          <Activity size={14} className="text-emerald-500" />
+                          <span className="text-[11px] font-black uppercase tracking-widest capitalize">{tour.difficulty} Grade</span>
+                        </div>
                       </div>
                     </div>
-                    <span className={`badge ${tour.available ? "badge-emerald" : "badge-rose"}`}>
-                      {tour.available ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                    {(tour.tags || []).slice(0, 3).map(t => <span key={t} className="tag">{t}</span>)}
+                    
+                    <div className="flex gap-2">
+                      {(tour.tags || []).slice(0, 3).map(tag => (
+                        <span key={tag} className="px-3 py-1.5 bg-[var(--muted)] text-[var(--muted-foreground)] text-[9px] font-black uppercase tracking-widest rounded-lg border border-[var(--border)] group-hover:bg-[var(--card)] transition-colors">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 20, paddingTop: 12, borderTop: "1px solid var(--border)", marginTop: 8, flexWrap: "wrap" }}>
-                  <span className="price" style={{ fontSize: 16 }}>{formatPKR(tour.price)}</span>
-                  <span style={{ fontSize: 13, color: "var(--gold)" }}>⭐ {tour.rating}</span>
-                  <span style={{ fontSize: 13, color: "var(--emerald)" }}>🛡️ {getSafety(tour)}%</span>
-                  <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 pt-10 border-t border-[var(--border)]">
+                  <div className="flex flex-col">
+                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Starting From</p>
+                    <p className="text-2xl font-black text-emerald-500 tracking-tighter">{formatPKR(tour.price)}</p>
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Rating</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Star size={16} className="text-amber-400 fill-amber-400" />
+                      <span className="text-base font-black text-[var(--foreground)]">{tour.rating}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Safety Integrtiy</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Shield size={16} className="text-emerald-500" />
+                      <span className="text-base font-black text-[var(--foreground)]">{tour.safety_score || 85}%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-end gap-3 lg:col-span-1">
                     <button
-                      className={`btn btn-sm ${tour.available ? "btn-danger" : "btn-primary"}`}
                       onClick={() => handleToggle(tour.id, tour.available)}
                       disabled={updatingId === tour.id}
+                      className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 shadow-lg ${tour.available ? "bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white"}`}
+                      aria-label={tour.available ? "Deactivate package" : "Activate package"}
                     >
-                      {updatingId === tour.id ? "..." : tour.available ? "⏸️ Deactivate" : "▶️ Activate"}
+                      {updatingId === tour.id ? <div className="loading-spinner w-5 h-5 border-current" /> : (tour.available ? <Pause size={20} /> : <Play size={20} />)}
                     </button>
-                    <Link href={`/company/tours/new?edit=${tour.id}`} className="btn btn-secondary btn-sm">✏️ Edit</Link>
-                    <Link href="/company/bookings" className="btn btn-secondary btn-sm">📋 Bookings</Link>
+                    <Link 
+                      href={`/company/tours/new?edit=${tour.id}`} 
+                      className="w-12 h-12 flex items-center justify-center bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-slate-900 hover:text-white rounded-2xl border border-[var(--border)] transition-all shadow-lg"
+                      aria-label="Edit expedition details"
+                    >
+                      <Settings2 size={20} />
+                    </Link>
+                    <Link 
+                      href="/company/bookings" 
+                      className="w-12 h-12 flex items-center justify-center bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-slate-900 hover:text-white rounded-2xl border border-[var(--border)] transition-all shadow-lg"
+                      aria-label="View associated reservations"
+                    >
+                      <ClipboardList size={20} />
+                    </Link>
                   </div>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
+      
+      {/* ── Footer Stats ── */}
+      <div className="flex items-center justify-center gap-6 pt-10 border-t border-[var(--border)] opacity-50 grayscale hover:grayscale-0 transition-all">
+        <div className="flex items-center gap-2">
+          <Info size={14} className="text-[var(--muted-foreground)]" />
+          <p className="text-[10px] font-black uppercase tracking-widest">Operator Portal v2.0</p>
+        </div>
+        <span className="w-1 h-1 rounded-full bg-[var(--border)]" />
+        <p className="text-[10px] font-black uppercase tracking-widest">Real-time ledger sync active</p>
+      </div>
     </div>
   );
 }
