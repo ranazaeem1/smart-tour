@@ -114,6 +114,7 @@ export async function fetchTours(options?: {
   search?: string;
   destination?: string;
   maxPrice?: number;
+  admin?: boolean;
 }) {
   return withRetry(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,7 +124,7 @@ export async function fetchTours(options?: {
       .order('rating', { ascending: false });
 
     // Only filter by availability for public/featured listings
-    if (!options?.companyId) {
+    if (!options?.companyId && !options?.admin) {
       query = query.eq('available', true);
     }
 

@@ -3,22 +3,19 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { 
-  MessageSquare, 
-  Search, 
-  Clock, 
-  User, 
-  Building2, 
-  ChevronRight, 
-  MoreVertical,
-  Activity,
-  ArrowLeft
+import {
+  MessageSquare,
+  Search,
+  Clock,
+  User,
+  Building2,
+  ChevronRight,
+  Activity
 } from "lucide-react";
 
 function formatRelativeTime(date: Date) {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
   if (diffInSeconds < 60) return 'Just now';
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) return `${diffInMinutes}m`;
@@ -35,10 +32,7 @@ interface Conversation {
   company_id: string;
   last_message: string;
   last_message_at: string;
-  unread_user: number;
-  unread_company: number;
-  profiles?: { full_name: string; avatar_url: string };
-  companies?: { name: string; logo: string };
+  otherName: string;
 }
 
 interface InboxProps {
@@ -54,21 +48,70 @@ export function Inbox({ role, currentUserId }: InboxProps) {
   useEffect(() => {
     async function loadConversations() {
       try {
-        const query = supabase
+        const { data: convData, error } = await (supabase as any)
           .from('conversations')
-          .select('*, profiles(full_name, avatar_url), companies(name, logo)')
+          .select('id, user_id, company_id, last_message, last_message_at')
+          .eq(role === 'user' ? 'user_id' : 'company_id', currentUserId)
           .order('last_message_at', { ascending: false });
 
-        if (role === 'user') {
-          query.eq('user_id', currentUserId);
-        } else {
-          query.eq('company_id', currentUserId);
+        if (error) {
+          console.error("[Inbox] Query error:", error?.message || error?.code || JSON.stringify(error));
+          setLoading(false);
+          return;
         }
 
-        const { data, error } = await query;
-        if (!error) setConversations(data as any[]);
+        if (!convData || convData.length === 0) {
+          setConversations([]);
+          setLoading(false);
+          return;
+        }
+
+        const companyIds = [...new Set(convData.map((c: any) => c.company_id).filter(Boolean))];
+        const userIds = [...new Set(convData.map((c: any) => c.user_id).filter(Boolean))];
+
+        const companyNameById = new Map<string, string>();
+        const userNameById = new Map<string, string>();
+
+        if (companyIds.length > 0) {
+          const { data: companies } = await (supabase as any)
+            .from('companies')
+            .select('id, name')
+            .in('id', companyIds);
+          (companies ?? []).forEach((c: { id: string; name: string }) => {
+            if (c.name) companyNameById.set(c.id, c.name);
+          });
+        }
+
+        if (userIds.length > 0) {
+          const { data: profiles } = await (supabase as any)
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds);
+          (profiles ?? []).forEach((p: { id: string; full_name: string | null; email: string }) => {
+            const label = p.full_name?.trim() || p.email?.split('@')[0] || 'Traveller';
+            userNameById.set(p.id, label);
+          });
+        }
+
+        const enriched: Conversation[] = convData.map((conv: any) => {
+          const otherName =
+            role === 'user'
+              ? companyNameById.get(conv.company_id) || 'Company'
+              : userNameById.get(conv.user_id) || 'Traveller';
+
+          return {
+            id: conv.id,
+            user_id: conv.user_id,
+            company_id: conv.company_id,
+            last_message: conv.last_message || '',
+            last_message_at: conv.last_message_at,
+            otherName,
+          };
+        });
+
+        setConversations(enriched);
       } catch (err) {
-        console.error("[Inbox] Load error:", err);
+        console.error("[Inbox] Unexpected error:", err);
       } finally {
         setLoading(false);
       }
@@ -76,8 +119,8 @@ export function Inbox({ role, currentUserId }: InboxProps) {
 
     loadConversations();
 
-    const channel = supabase
-      .channel('inbox-updates')
+    const channel = (supabase as any)
+      .channel(`inbox-${currentUserId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
         loadConversations();
       })
@@ -86,143 +129,110 @@ export function Inbox({ role, currentUserId }: InboxProps) {
     return () => { channel.unsubscribe(); };
   }, [role, currentUserId]);
 
-  const filtered = conversations.filter(c => {
-    const name = role === 'user' ? (c.companies?.name || '') : (c.profiles?.full_name || '');
-    return name.toLowerCase().includes(search.toLowerCase());
-  });
+  const filtered = conversations.filter(c =>
+    c.otherName.toLowerCase().includes(search.toLowerCase())
+  );
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
       <div className="loading-spinner h-12 w-12" />
-      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Syncing Communication Relays...</p>
+      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">
+        Loading messages...
+      </p>
     </div>
   );
 
   return (
     <div className="animate-fade space-y-10 pb-20" role="main">
-      {/* ── Inbox Hero Header ── */}
-      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1577563906417-45a11b3f9f7c?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
-        
+
+      {/* Header */}
+      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1577563906417-45a11b3f9f7c?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
+
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-500/10 rounded-full mb-4 border border-slate-500/20">
-              <Activity size={12} className="text-slate-400" />
-              <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Signal Hub</span>
+            <div className="panel-hero-kicker panel-hero-kicker-slate inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+              <Activity size={12} className="panel-hero-kicker-icon" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Messages</span>
             </div>
-            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
               Direct Messages
             </h1>
-            <p className="text-slate-400 text-sm md:text-base font-medium">Coordinate your expeditions through our encrypted relay network.</p>
+            <p className="panel-hero-subtitle text-sm md:text-base font-medium">
+              {role === 'company' ? 'Chat with your travellers.' : 'Chat with tour companies.'}
+            </p>
           </div>
 
           <div className="relative w-full md:w-80 group">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search conversations..."
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 panel-hero-search-icon group-focus-within:text-emerald-500 transition-colors" />
+            <input
+              type="text"
+              placeholder={role === 'company' ? "Search travellers..." : "Search companies..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-6 text-white font-bold text-sm focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all placeholder:text-slate-600"
+              className="panel-hero-search w-full rounded-2xl py-4 pl-12 pr-6 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all"
             />
           </div>
         </div>
       </section>
 
-      {/* ── Inbox Ledger ── */}
+      {/* Conversation List */}
       <div className="card-premium !p-0 overflow-hidden border border-[var(--border)] shadow-2xl">
         {filtered.length === 0 ? (
           <div className="py-32 text-center flex flex-col items-center">
             <div className="w-24 h-24 bg-[var(--muted)] rounded-[40px] flex items-center justify-center text-[var(--muted-foreground)] mb-8 shadow-inner border border-[var(--border)] opacity-50">
               <MessageSquare size={44} />
             </div>
-            <h3 className="text-2xl font-black text-[var(--foreground)] mb-2 tracking-tight">Zero Signals Detected</h3>
+            <h3 className="text-2xl font-black text-[var(--foreground)] mb-2 tracking-tight">
+              No Messages Yet
+            </h3>
             <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px] max-w-[240px] mx-auto leading-loose">
-              Initiate a transmission from your expedition ledger to begin coordination.
+              {role === 'company' ? 'No travellers have messaged you yet.' : 'Start a chat from a tour booking.'}
             </p>
           </div>
         ) : (
           <div className="divide-y divide-[var(--border)]">
-            {filtered.map((conv) => {
-              const otherPartyName = role === 'user' ? (conv.companies?.name || 'Tour Company') : (conv.profiles?.full_name || 'Traveler');
-              const unreadCount = role === 'user' ? conv.unread_user : conv.unread_company;
-              const avatarChar = otherPartyName?.[0]?.toUpperCase() || "?";
-              
-              return (
-                <Link 
-                  key={conv.id} 
-                  href={`/${role}/chat/${conv.id}?name=${encodeURIComponent(otherPartyName)}`}
-                  className={`flex items-center gap-6 p-8 transition-all duration-500 hover:bg-[var(--muted)] group relative ${
-                    unreadCount > 0 ? "bg-emerald-500/[0.03]" : ""
-                  }`}
-                >
-                  {/* Status Indicator */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all duration-500 ${unreadCount > 0 ? "bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)] scale-y-100" : "bg-transparent scale-y-0"}`} />
+            {filtered.map((conv) => (
+              <Link
+                key={conv.id}
+                href={`/${role}/chat/${conv.id}?name=${encodeURIComponent(conv.otherName)}`}
+                className="flex items-center gap-5 p-5 transition-all duration-300 hover:bg-[var(--muted)] group relative"
+              >
+                {/* Avatar */}
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-slate-900 text-slate-400 border border-white/5 shadow-lg group-hover:scale-105 transition-transform shrink-0">
+                  {role === 'user' ? <Building2 size={20} /> : <User size={20} />}
+                </div>
 
-                  {/* Avatar Matrix */}
-                  <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center text-2xl font-black transition-all duration-500 group-hover:scale-110 shadow-xl border ${
-                    unreadCount > 0 
-                      ? "bg-emerald-500 text-white border-emerald-400" 
-                      : "bg-slate-900 text-slate-400 border-white/5"
-                  }`}>
-                    {role === 'user' ? <Building2 size={24} /> : <User size={24} />}
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-0.5">
+                    <span className="text-base font-bold text-[var(--foreground)] truncate group-hover:text-emerald-400 transition-colors">
+                      {conv.otherName}
+                    </span>
+                    <span className="text-[10px] text-[var(--muted-foreground)] flex items-center gap-1 shrink-0 ml-3">
+                      <Clock size={10} className="text-emerald-500" />
+                      {formatRelativeTime(new Date(conv.last_message_at))}
+                    </span>
                   </div>
-                  
-                  {/* Transmission Intelligence */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <h4 className={`text-lg tracking-tight transition-colors duration-300 ${
-                        unreadCount > 0 ? "text-[var(--foreground)] font-black" : "text-[var(--muted-foreground)] font-bold group-hover:text-[var(--foreground)]"
-                      }`}>
-                        {otherPartyName}
-                      </h4>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest flex items-center gap-1.5">
-                          <Clock size={12} className="text-emerald-500" />
-                          {formatRelativeTime(new Date(conv.last_message_at))}
-                        </span>
-                        <MoreVertical size={16} className="text-[var(--border)] group-hover:text-[var(--muted-foreground)] transition-colors" />
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center gap-6">
-                      <p className={`text-sm truncate max-w-[80%] ${
-                        unreadCount > 0 ? "text-[var(--foreground)] font-bold italic" : "text-[var(--muted-foreground)] font-medium"
-                      }`}>
-                        {conv.last_message || "Awaiting initial signal..."}
-                      </p>
-                      
-                      {unreadCount > 0 && (
-                        <div className="flex items-center gap-2">
-                          <span className="bg-emerald-500 text-white text-[10px] font-black px-3 py-1 rounded-lg shadow-lg shadow-emerald-500/20 animate-pulse uppercase tracking-widest">
-                            {unreadCount} New
-                          </span>
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,1)]" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Directional Indicator */}
-                  <div className="opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all duration-500 pr-2">
-                    <ChevronRight size={24} className="text-emerald-500" />
-                  </div>
-                </Link>
-              );
-            })}
+                  <p className="text-sm text-[var(--muted-foreground)] truncate">
+                    {conv.last_message || "No messages yet"}
+                  </p>
+                </div>
+
+                {/* Arrow */}
+                <ChevronRight size={16} className="text-slate-600 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all shrink-0" />
+              </Link>
+            ))}
           </div>
         )}
       </div>
-      
-      {/* ── Signals Sync Footer ── */}
-      <div className="flex items-center justify-center gap-6 pt-10 opacity-30 grayscale hover:grayscale-0 transition-all">
+
+      <div className="flex items-center justify-center gap-4 pt-4 opacity-30">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
-          <Activity size={14} className="text-emerald-500" />
-          End-to-End Encryption Protocol Active
+          <Activity size={12} className="text-emerald-500" />
+          End-to-End Encrypted
         </p>
-        <span className="w-1 h-1 rounded-full bg-[var(--border)]" />
-        <p className="text-[10px] font-black uppercase tracking-[0.2em]">Real-time Relay v2.4</p>
       </div>
     </div>
   );

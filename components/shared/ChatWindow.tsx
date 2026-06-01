@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { 
   Send, 
   X, 
   ChevronLeft, 
   CheckCheck, 
-  Clock, 
-  Paperclip, 
-  Smile, 
   MoreVertical,
   Activity,
   ShieldCheck,
@@ -47,13 +45,12 @@ export function ChatWindow({
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { user } = useAuth();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setCurrentUserId(data.user?.id ?? null);
-    });
-  }, []);
+    setCurrentUserId(user?.id ?? null);
+  }, [user?.id]);
 
   useEffect(() => {
     async function loadMessages() {
@@ -148,87 +145,87 @@ export function ChatWindow({
   }
 
   return (
-    <div className={`flex flex-col h-full animate-fade ${!isPage ? 'fixed inset-0 z-[1000] items-center justify-center bg-slate-950/80 backdrop-blur-xl p-4 md:p-10' : ''}`}>
+    <div className={`flex flex-col h-full animate-fade ${!isPage ? 'fixed inset-0 z-[1000] items-center justify-center bg-slate-950/80 backdrop-blur-xl p-3 md:p-6' : ''}`}>
       <div className={`flex flex-col bg-[var(--card)] border border-[var(--border)] shadow-2xl overflow-hidden relative ${
-        isPage ? 'flex-1' : 'w-full max-w-[900px] h-full rounded-[var(--radius-xl)]'
+        isPage ? 'h-full' : 'w-full max-w-[680px] h-[80vh] max-h-[640px] rounded-[var(--radius-xl)]'
       }`}>
         
         {/* ── Chat Header ── */}
-        <header className="px-8 py-6 bg-slate-950 border-b border-white/5 flex items-center justify-between z-20 shrink-0 shadow-2xl shadow-black/40">
-          <div className="flex items-center gap-6">
+        <header className="px-4 py-3 bg-slate-950 border-b border-white/5 flex items-center justify-between z-20 shrink-0 shadow-xl shadow-black/40">
+          <div className="flex items-center gap-3">
             {isPage && (
               <button 
                 onClick={() => window.history.back()}
-                className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-white/5"
+                className="w-8 h-8 flex items-center justify-center bg-white/5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all border border-white/5"
               >
-                <ChevronLeft size={20} />
+                <ChevronLeft size={16} />
               </button>
             )}
             
             <div className="relative">
-              <div className="w-12 h-12 rounded-[18px] bg-emerald-500 flex items-center justify-center text-xl font-black text-white shadow-lg shadow-emerald-500/20">
-                {currentRole === 'user' ? <Building2 size={24} /> : <User size={24} />}
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-base font-black text-white shadow-lg shadow-emerald-500/20">
+                {currentRole === 'user' ? <Building2 size={18} /> : <User size={18} />}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-4 border-slate-950 rounded-full animate-pulse" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-950 rounded-full animate-pulse" />
             </div>
             
             <div className="min-w-0">
-              <h3 className="text-xl font-black text-white truncate m-0 leading-tight tracking-tight uppercase tracking-widest text-xs opacity-50 mb-1">Active Signal</h3>
-              <div className="flex items-center gap-3">
-                <span className="text-base font-black text-white truncate">{otherPartyName}</span>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                   <ShieldCheck size={10} className="text-emerald-500" />
-                   <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Secure</span>
+              <p className="uppercase tracking-widest text-[9px] opacity-40 text-white font-black mb-0.5">Active Signal</p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-white truncate">{otherPartyName}</span>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+                   <ShieldCheck size={8} className="text-emerald-500" />
+                   <span className="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Secure</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-             <button className="hidden md:flex w-10 h-10 items-center justify-center bg-white/5 rounded-xl text-slate-400 hover:text-white transition-all border border-white/5">
-                <MoreVertical size={20} />
+          <div className="flex items-center gap-2">
+             <button className="hidden md:flex w-8 h-8 items-center justify-center bg-white/5 rounded-lg text-slate-400 hover:text-white transition-all border border-white/5">
+                <MoreVertical size={16} />
              </button>
             {!isPage && (
               <button 
                 onClick={onClose} 
-                className="w-10 h-10 flex items-center justify-center bg-rose-500/10 rounded-xl text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20"
+                className="w-8 h-8 flex items-center justify-center bg-rose-500/10 rounded-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20"
               >
-                <X size={20} />
+                <X size={16} />
               </button>
             )}
           </div>
         </header>
 
         {/* ── Message Grid ── */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar relative bg-[#020617]">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar relative bg-[#020617]">
           {/* subtle grid background */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none" />
           
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-50 relative z-10">
-              <div className="loading-spinner h-10 w-10 !border-white/10 !border-t-emerald-500" />
+            <div className="flex flex-col items-center justify-center h-full gap-3 opacity-50 relative z-10">
+              <div className="loading-spinner h-8 w-8 !border-white/10 !border-t-emerald-500" />
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Syncing Relay...</span>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full relative z-10">
-               <div className="w-24 h-24 bg-white/5 rounded-[40px] flex items-center justify-center mb-8 border border-white/5 shadow-inner">
-                <Activity size={40} className="text-emerald-500 opacity-50" />
+               <div className="w-16 h-16 bg-white/5 rounded-[24px] flex items-center justify-center mb-4 border border-white/5 shadow-inner">
+                <Activity size={28} className="text-emerald-500 opacity-50" />
               </div>
-              <h3 className="text-xl font-black text-white mb-2 uppercase tracking-widest text-center">Protocol Initialized</h3>
-              <p className="text-slate-500 text-xs font-medium uppercase tracking-[0.2em] text-center">Awaiting initial transmission from node.</p>
+              <h3 className="text-base font-black text-white mb-1 uppercase tracking-widest text-center">No messages yet</h3>
+              <p className="text-slate-500 text-xs font-medium uppercase tracking-[0.2em] text-center">Send a message to start the conversation.</p>
             </div>
           ) : (
-            <div className="relative z-10 space-y-10">
+            <div className="relative z-10 space-y-4">
               {messages.map((msg, idx) => {
                 const isMine = msg.sender_role === currentRole;
                 const showTime = idx === 0 || new Date(messages[idx-1].created_at).getTime() < new Date(msg.created_at).getTime() - 1800000; // 30 mins
                 
                 return (
-                  <div key={msg.id} className="space-y-4">
+                  <div key={msg.id} className="space-y-2">
                     {showTime && (
-                      <div className="flex items-center justify-center gap-6">
+                      <div className="flex items-center justify-center gap-4">
                         <div className="h-px flex-1 bg-white/5" />
-                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] bg-slate-900 px-4 py-1.5 rounded-full border border-white/5">
+                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] bg-slate-900 px-3 py-1 rounded-full border border-white/5">
                           {new Date(msg.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <div className="h-px flex-1 bg-white/5" />
@@ -236,23 +233,23 @@ export function ChatWindow({
                     )}
                     
                     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} group`}>
-                      <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isMine ? 'items-end' : 'items-start'} gap-2`}>
-                        <div className={`relative px-6 py-4 text-sm leading-loose shadow-2xl transition-all duration-300 ${
+                      <div className={`max-w-[75%] md:max-w-[65%] flex flex-col ${isMine ? 'items-end' : 'items-start'} gap-1`}>
+                        <div className={`relative px-4 py-2.5 text-sm leading-relaxed shadow-lg transition-all duration-300 ${
                           isMine 
-                            ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white rounded-[24px] rounded-tr-none border border-emerald-500/20' 
-                            : 'bg-white/5 backdrop-blur-md border border-white/10 text-slate-200 rounded-[24px] rounded-tl-none group-hover:bg-white/10'
+                            ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white rounded-2xl rounded-tr-none border border-emerald-500/20' 
+                            : 'bg-white/5 backdrop-blur-md border border-white/10 text-slate-200 rounded-2xl rounded-tl-none group-hover:bg-white/10'
                         }`}>
                           <p className="m-0 font-medium">{msg.content}</p>
                         </div>
                         
-                        <div className={`flex items-center gap-3 px-2 ${isMine ? 'flex-row-reverse' : ''}`}>
+                        <div className={`flex items-center gap-2 px-1 ${isMine ? 'flex-row-reverse' : ''}`}>
                           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest opacity-60">
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {isMine && (
                             <div className="flex items-center gap-1">
                                {msg.is_read ? (
-                                 <CheckCheck size={12} className="text-emerald-500" />
+                                 <CheckCheck size={11} className="text-emerald-500" />
                                ) : (
                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
                                )}
@@ -264,45 +261,35 @@ export function ChatWindow({
                   </div>
                 );
               })}
-              <div ref={bottomRef} className="h-10" />
+              <div ref={bottomRef} className="h-4" />
             </div>
           )}
         </div>
 
         {/* ── Transmission Console ── */}
-        <footer className="px-8 py-8 bg-slate-950 border-t border-white/5 shrink-0 z-20">
-          <div className="flex gap-4 items-end max-w-4xl mx-auto">
-            <div className="flex-1 bg-white/5 border border-white/10 rounded-[24px] focus-within:border-emerald-500/50 focus-within:ring-8 focus-within:ring-emerald-500/5 transition-all duration-500 overflow-hidden relative">
-              <div className="absolute left-4 top-4 text-slate-600">
-                 <Paperclip size={18} />
-              </div>
+        <footer className="px-4 py-3 bg-slate-950 border-t border-white/5 shrink-0 z-20">
+          <div className="flex gap-3 items-end max-w-4xl mx-auto">
+            <div className="flex-1 bg-white/5 border border-white/10 rounded-2xl focus-within:border-emerald-500/50 focus-within:ring-4 focus-within:ring-emerald-500/5 transition-all duration-500 overflow-hidden relative">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
-                placeholder="Compose secure message..."
-                className="w-full min-h-[56px] max-h-[200px] py-4 pl-12 pr-12 bg-transparent border-none text-white outline-none text-sm font-medium resize-none custom-scrollbar placeholder:text-slate-700 placeholder:uppercase placeholder:text-[10px] placeholder:font-black placeholder:tracking-widest"
+                placeholder="Type a message..."
+                className="w-full min-h-[44px] max-h-[120px] py-3 px-4 bg-transparent border-none text-white outline-none text-sm font-medium resize-none custom-scrollbar placeholder:text-slate-600"
               />
-              <div className="absolute right-4 bottom-4 text-slate-600 hover:text-emerald-500 cursor-pointer transition-colors">
-                 <Smile size={18} />
-              </div>
             </div>
             
             <button
               onClick={sendMessage}
               disabled={!input.trim() || sending}
-              className={`w-14 h-14 rounded-[24px] flex items-center justify-center transition-all duration-500 shadow-2xl active:scale-90 ${
+              className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg active:scale-90 ${
                 (!input.trim() || sending) 
                   ? 'bg-white/5 text-slate-700 border border-white/5' 
-                  : 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30 ring-4 ring-emerald-500/10'
+                  : 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30'
               }`}
             >
-              {sending ? <div className="loading-spinner h-5 w-5 !border-white/30 !border-t-white" /> : <Send size={24} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />}
+              {sending ? <div className="loading-spinner h-4 w-4 !border-white/30 !border-t-white" /> : <Send size={18} />}
             </button>
-          </div>
-          
-          <div className="mt-4 text-center">
-             <p className="text-[9px] font-black text-slate-700 uppercase tracking-[0.4em]">Node Connection Stability: Optimized</p>
           </div>
         </footer>
       </div>

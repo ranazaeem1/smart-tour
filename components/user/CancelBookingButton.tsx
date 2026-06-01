@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 
 interface CancelBookingButtonProps {
@@ -9,11 +10,11 @@ interface CancelBookingButtonProps {
 export function CancelBookingButton({ bookingId }: CancelBookingButtonProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const { user } = useAuth();
 
   async function handleCancel() {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Please log in again.");
 
       const { error } = await (supabase.from('bookings') as any)

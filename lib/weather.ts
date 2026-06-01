@@ -1,95 +1,158 @@
 /**
  * @file weather.ts
- * @description Utility for fetching weather data from OpenWeatherMap API.
- * Uses the JSON structure: { coord: { lon, lat }, weather: [{ main, description, icon }], main: { temp, humidity }, wind: { speed }, name }
+ * @description OpenWeatherMap integration for Northern Pakistan safety & expedition planning.
  */
 
-const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
-const BASE_URL = 'https://api.openweathermap.org/data/2.5';
-
-// Mock data fallback for common Pakistan northern areas
-const MOCK_WEATHER: Record<string, any> = {
-  "Hunza": { temp: 18, condition: "Clear", description: "sunny with light breeze", icon: "01d", city: "Hunza Valley" },
-  "Skardu": { temp: 15, condition: "Clouds", description: "partly cloudy", icon: "02d", city: "Skardu" },
-  "Swat": { temp: 22, condition: "Sunny", description: "clear skies", icon: "01d", city: "Swat Valley" },
-  "Murree": { temp: 16, condition: "Rain", description: "light rain", icon: "10d", city: "Murree" },
-  "Default": { temp: 20, condition: "Clear", description: "clear sky", icon: "01d", city: "Northern Pakistan" }
-};
+const API_KEY =
+  process.env.OPENWEATHER_API_KEY ||
+  process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
+const BASE_URL = "https://api.openweathermap.org/data/2.5";
 
 export interface WeatherData {
   temp: number;
+  feelsLike: number;
   condition: string;
   description: string;
   icon: string;
   city: string;
   humidity: number;
-  windSpeed: number;
+  windSpeedKmh: number;
+  windGustKmh?: number;
+  visibilityKm: number;
+  pressure: number;
+  clouds: number;
+  rainMm1h: number;
+  snowMm1h: number;
+  fetchedAt: string;
+  source: "openweather" | "estimated";
 }
 
-/**
- * Fetches current weather for a specific latitude and longitude.
- * Falls back to mock data if API key is invalid or missing.
- */
-export async function fetchWeather(lat: number, lon: number): Promise<WeatherData | null> {
-  const isKeyInvalid = !API_KEY || API_KEY.startsWith('http') || API_KEY.includes('{');
+export interface ForecastSlot {
+  time: string;
+  temp: number;
+  condition: string;
+  description: string;
+  windSpeedKmh: number;
+  pop: number;
+}
 
-  if (isKeyInvalid) {
-    return getMockWeather(lat, lon);
+function isKeyInvalid() {
+  return !API_KEY || API_KEY.startsWith("http") || API_KEY.includes("{");
+}
+
+function msToKmh(ms: number) {
+  return Math.round(ms * 3.6);
+}
+
+function parseCurrentPayload(data: Record<string, unknown>, fallbackCity: string): WeatherData {
+  const main = data.main as { temp: number; feels_like: number; humidity: number; pressure: number };
+  const weather = (data.weather as { main: string; description: string; icon: string }[])[0];
+  const wind = (data.wind as { speed: number; gust?: number }) || { speed: 0 };
+  const rain = (data.rain as { "1h"?: number })?.["1h"] ?? 0;
+  const snow = (data.snow as { "1h"?: number })?.["1h"] ?? 0;
+  const visibilityM = (data.visibility as number) ?? 10000;
+
+  return {
+    temp: Math.round(main.temp),
+    feelsLike: Math.round(main.feels_like),
+    condition: weather.main,
+    description: weather.description,
+    icon: weather.icon,
+    city: (data.name as string) || fallbackCity,
+    humidity: main.humidity,
+    windSpeedKmh: msToKmh(wind.speed),
+    windGustKmh: wind.gust ? msToKmh(wind.gust) : undefined,
+    visibilityKm: Math.round((visibilityM / 1000) * 10) / 10,
+    pressure: main.pressure,
+    clouds: (data.clouds as { all: number })?.all ?? 0,
+    rainMm1h: rain,
+    snowMm1h: snow,
+    fetchedAt: new Date().toISOString(),
+    source: "openweather",
+  };
+}
+
+function estimateWeather(lat: number, lon: number, city: string): WeatherData {
+  const month = new Date().getMonth();
+  const isWinter = month >= 10 || month <= 2;
+  const highAltitude = lat > 35.2;
+
+  let temp = highAltitude ? (isWinter ? 2 : 16) : isWinter ? 10 : 24;
+  if (lon > 75.5) temp -= 2;
+
+  return {
+    temp,
+    feelsLike: temp - (highAltitude ? 4 : 1),
+    condition: isWinter && highAltitude ? "Snow" : "Clouds",
+    description: "estimated regional conditions (API unavailable)",
+    icon: isWinter && highAltitude ? "13d" : "03d",
+    city,
+    humidity: highAltitude ? 42 : 55,
+    windSpeedKmh: highAltitude ? 18 : 10,
+    visibilityKm: 8,
+    pressure: 1012,
+    clouds: 45,
+    rainMm1h: 0,
+    snowMm1h: isWinter && highAltitude ? 1.2 : 0,
+    fetchedAt: new Date().toISOString(),
+    source: "estimated",
+  };
+}
+
+export async function fetchWeather(lat: number, lon: number, city = "Northern Pakistan"): Promise<WeatherData> {
+  if (isKeyInvalid()) {
+    return estimateWeather(lat, lon, city);
   }
 
   try {
     const response = await fetch(
-      `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`
+      `${BASE_URL}/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`,
+      { cache: "no-store" }
     );
-    
+
     if (!response.ok) {
-      if (response.status === 401) {
-        console.warn("[WeatherAPI] 401 Unauthorized: Falling back to mock data. Please provide a valid NEXT_PUBLIC_OPENWEATHER_API_KEY.");
-        return getMockWeather(lat, lon);
-      }
-      
-      const status = response.status;
-      let errMsg = "Unknown error";
-      try {
-        const errData = await response.json();
-        errMsg = errData.message || JSON.stringify(errData);
-      } catch (e) {
-        errMsg = response.statusText;
-      }
-      
-      console.error(`[WeatherAPI] Fetch failed (${status}): ${errMsg}`);
-      return null;
+      console.warn(`[WeatherAPI] current weather failed (${response.status})`);
+      return estimateWeather(lat, lon, city);
     }
-    
+
     const data = await response.json();
-    
-    return {
-      temp: Math.round(data.main.temp),
-      condition: data.weather[0].main,
-      description: data.weather[0].description,
-      icon: data.weather[0].icon,
-      city: data.name,
-      humidity: data.main.humidity,
-      windSpeed: data.wind.speed
-    };
+    return parseCurrentPayload(data, city);
   } catch (error) {
-    console.error("[WeatherAPI] Network/Parsing Error. Falling back to mock data.", error);
-    return getMockWeather(lat, lon);
+    console.error("[WeatherAPI] Network error", error);
+    return estimateWeather(lat, lon, city);
   }
 }
 
-function getMockWeather(lat: number, lon: number): WeatherData {
-  // Simple heuristic for Pakistan Northern Areas
-  let mock = MOCK_WEATHER.Default;
-  
-  if (lat > 35 && lon > 74) mock = MOCK_WEATHER.Hunza;
-  else if (lat > 35 && lon > 75) mock = MOCK_WEATHER.Skardu;
-  else if (lat > 34 && lon > 72) mock = MOCK_WEATHER.Swat;
-  else if (lat > 33 && lon > 73) mock = MOCK_WEATHER.Murree;
+export async function fetchForecast(lat: number, lon: number): Promise<ForecastSlot[]> {
+  if (isKeyInvalid()) return [];
 
-  return {
-    ...mock,
-    humidity: 45,
-    windSpeed: 12
-  };
+  try {
+    const response = await fetch(
+      `${BASE_URL}/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`,
+      { cache: "no-store" }
+    );
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    const list = (data.list as Record<string, unknown>[]) ?? [];
+
+    return list.slice(0, 8).map((slot) => {
+      const main = slot.main as { temp: number };
+      const weather = (slot.weather as { main: string; description: string }[])[0];
+      const wind = slot.wind as { speed: number };
+      return {
+        time: slot.dt_txt as string,
+        temp: Math.round(main.temp),
+        condition: weather.main,
+        description: weather.description,
+        windSpeedKmh: msToKmh(wind.speed),
+        pop: Math.round(((slot.pop as number) ?? 0) * 100),
+      };
+    });
+  } catch {
+    return [];
+  }
 }
+
+/** @deprecated use windSpeedKmh on WeatherData */
+export type LegacyWeatherData = WeatherData & { windSpeed?: number };

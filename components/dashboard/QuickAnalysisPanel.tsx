@@ -38,16 +38,16 @@ export function QuickAnalysisPanel({ stats }: QuickAnalysisPanelProps) {
           ))}
         </div>
 
-        <div className="p-8 bg-slate-950 rounded-[32px] text-white relative overflow-hidden group mt-4 border border-white/5 shadow-2xl">
+        <div className="panel-hero-mini p-8 rounded-[32px] relative overflow-hidden group mt-4 border shadow-2xl">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform" aria-hidden="true">
             <Zap size={60} className="text-white" />
           </div>
           <div className="relative z-10">
-            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+            <p className="panel-hero-card-kicker text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> AI Intelligence
             </p>
-            <h4 className="text-lg font-black mb-2 leading-tight">Ready for a new adventure?</h4>
-            <p className="text-slate-400 text-xs font-medium mb-6 leading-relaxed">Our algorithms suggest Hunza region based on your preferences. Unlock exclusive group discounts.</p>
+            <h4 className="panel-hero-card-title text-lg font-black mb-2 leading-tight">Ready for a new adventure?</h4>
+            <p className="panel-hero-card-text text-xs font-medium mb-6 leading-relaxed">Our algorithms suggest Hunza region based on your preferences. Unlock exclusive group discounts.</p>
             <Link
               href="/user/planner"
               className="btn btn-emerald w-full !rounded-[16px]"

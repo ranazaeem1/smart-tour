@@ -6,12 +6,11 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, Mail, Phone, MapPin, Send, HelpCircle, Briefcase } from "lucide-react";
+import { Mail, Phone, MapPin, Send, HelpCircle, Briefcase } from "lucide-react";
 import Footer from "@/components/Footer";
+import LandingNav from "@/components/LandingNav";
 
 export default function ContactPage() {
-  const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -27,23 +26,12 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="bg-black min-h-screen text-white font-sans selection:bg-emerald-500/30">
-      {/* Header / Nav Placeholder */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              S
-            </div>
-            <span className="font-bold text-white text-lg tracking-tight uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
-          </Link>
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
-            <ChevronLeft size={16} /> Back
-          </button>
-        </div>
-      </header>
+    <div className="policy-shell contact-page min-h-screen font-sans selection:bg-emerald-500/30">
+      <LandingNav />
 
-      <main className="pt-40 pb-32 px-6">
+      <main data-nav-theme="dark" className="policy-main pt-40 pb-32 px-6">
+        <div className="policy-bg" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=80")' }} />
+        <div className="policy-overlay" />
         <div className="max-w-6xl mx-auto">
           
           {/* Hero Section */}
@@ -55,7 +43,7 @@ export default function ContactPage() {
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none mb-8 uppercase italic">
               Contact <span className="text-emerald-500">Us</span>
             </h1>
-            <p className="text-zinc-500 text-lg font-medium max-w-2xl mx-auto">
+            <p className="policy-muted text-lg font-medium max-w-2xl mx-auto">
               Have questions about your trip, our AI planner, or want to list your company? We are here to help you 24/7.
             </p>
           </div>
@@ -69,23 +57,23 @@ export default function ContactPage() {
                 { icon: <Mail />, title: "Direct Support", content: "support@smarttour.pk | Available 24/7" },
                 { icon: <Phone />, title: "Phone Support", content: "+92 (51) 123-4567 | Mon-Fri 9am-6pm" },
               ].map((item, i) => (
-                <div key={i} className="p-8 bg-zinc-900/40 border border-white/5 rounded-3xl group hover:border-emerald-500/30 transition-all">
+                <div key={i} className="contact-glass-card p-8 rounded-3xl group hover:border-emerald-500/30 transition-all">
                   <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 transition-transform">
                     {item.icon}
                   </div>
-                  <h3 className="text-lg font-black text-white mb-2 uppercase tracking-tighter italic">{item.title}</h3>
-                  <p className="text-zinc-500 text-sm font-medium leading-relaxed">{item.content}</p>
+                  <h3 className="text-lg font-black mb-2 uppercase tracking-tighter italic">{item.title}</h3>
+                  <p className="policy-muted text-sm font-medium leading-relaxed">{item.content}</p>
                 </div>
               ))}
 
-              <div className="p-8 bg-emerald-600/10 border border-emerald-500/20 rounded-3xl relative overflow-hidden group">
+              <div className="contact-glass-card p-8 rounded-3xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full translate-x-1/2 -translate-y-1/2" />
                 <div className="relative z-10">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white mb-6">
                     <Briefcase size={20} />
                   </div>
                   <h3 className="text-lg font-black text-emerald-400 mb-2 uppercase tracking-tighter italic">Partner With Us</h3>
-                  <p className="text-zinc-400 text-sm font-medium leading-relaxed mb-8">
+                  <p className="policy-muted text-sm font-medium leading-relaxed mb-8">
                     Join our trusted network of global travel operators and expand your business with SmartTour intelligence.
                   </p>
                   <Link href="/auth/login" className="inline-flex text-xs font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 transition-colors">
@@ -96,7 +84,7 @@ export default function ContactPage() {
             </div>
 
             {/* Contact Form Column */}
-            <div className="lg:col-span-3 bg-zinc-900/40 border border-white/5 rounded-[48px] p-8 md:p-12 shadow-2xl">
+            <div className="lg:col-span-3 contact-glass-card rounded-[48px] p-8 md:p-12 shadow-2xl">
               <h2 className="text-3xl font-black uppercase italic tracking-tight mb-10">Send us a <span className="text-emerald-500">Message</span></h2>
               
               {success ? (
@@ -104,8 +92,8 @@ export default function ContactPage() {
                   <div className="w-20 h-20 bg-emerald-500/20 border border-emerald-500/30 rounded-full flex items-center justify-center text-emerald-500 mx-auto mb-8">
                     <Send size={32} />
                   </div>
-                  <h4 className="text-2xl font-black text-white uppercase italic">Message Sent!</h4>
-                  <p className="text-zinc-500 font-medium">Thanks for reaching out. Our team will get back to you within 24 hours.</p>
+                  <h4 className="text-2xl font-black uppercase italic">Message Sent!</h4>
+                  <p className="policy-muted font-medium">Thanks for reaching out. Our team will get back to you within 24 hours.</p>
                   <button 
                     className="px-10 py-4 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all"
                     onClick={() => setSuccess(false)}

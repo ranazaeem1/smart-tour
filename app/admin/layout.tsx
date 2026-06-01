@@ -66,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0" style={{ backgroundColor: '#000000', color: '#FFFFFF' }}>
+        <div className="flex-1 flex flex-col min-w-0">
           <TopNav title="Administrator Panel" onMenuClick={() => setIsMobileMenuOpen(true)} />
           <main 
             className="flex-1 p-6 md:p-8 lg:p-10 w-full transition-all duration-500"

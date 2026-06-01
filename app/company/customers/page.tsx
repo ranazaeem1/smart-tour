@@ -87,24 +87,24 @@ export default function CompanyCustomersPage() {
   return (
     <div className="animate-fade space-y-10 pb-20" role="main">
       {/* ── CRM Hero Header ── */}
-      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-500/10 rounded-full mb-4 border border-slate-500/20">
-              <Users size={12} className="text-slate-400" />
-              <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">CRM & Relationship Hub</span>
+            <div className="panel-hero-kicker panel-hero-kicker-slate inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+              <Users size={12} className="panel-hero-kicker-icon" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">CRM & Relationship Hub</span>
             </div>
-            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
               Customer Directory
             </h1>
-            <p className="text-slate-400 text-sm md:text-base font-medium">Manage your relationships with travelers and monitor lifetime value.</p>
+            <p className="panel-hero-subtitle text-sm md:text-base font-medium">Manage your relationships with travelers and monitor lifetime value.</p>
           </div>
 
           <div className="text-right hidden md:block">
-            <span className="badge badge-emerald !bg-emerald-500/20 !text-emerald-400 border border-emerald-500/30 font-black">
+            <span className="panel-hero-badge badge badge-emerald font-black">
               {customers.length} ACTIVE RELATIONSHIPS
             </span>
           </div>
@@ -118,18 +118,21 @@ export default function CompanyCustomersPage() {
           value={customers.length}
           icon={Users}
           color="bg-emerald-500"
+          ariaLabel="Total number of customers"
         />
         <StatCard 
           label="Frequent Travelers"
           value={customers.filter(c => c.tours > 1).length}
           icon={CheckCircle2}
           color="bg-slate-900"
+          ariaLabel="Customers with more than one booking"
         />
         <StatCard 
           label="Lifetime Value"
           value={formatPKR(customers.reduce((s, c) => s + c.spent, 0))}
           icon={Wallet}
           color="bg-amber-500"
+          ariaLabel="Total customer lifetime value"
         />
       </div>
 

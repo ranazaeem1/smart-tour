@@ -60,20 +60,20 @@ export default function CompanyRevenuePage() {
   return (
     <div className="animate-fade space-y-10 pb-20" role="main">
       {/* ── Revenue Hero Header ── */}
-      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1554224155-169641357599?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1554224155-169641357599?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 rounded-full mb-4 border border-amber-500/20">
-              <Wallet size={12} className="text-amber-400" />
-              <span className="text-amber-400 text-[10px] font-black uppercase tracking-[0.2em]">Financial Oversight</span>
+            <div className="panel-hero-kicker panel-hero-kicker-amber inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+              <Wallet size={12} className="panel-hero-kicker-icon" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Financial Oversight</span>
             </div>
-            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
               Revenue Analytics
             </h1>
-            <p className="text-slate-400 text-sm md:text-base font-medium">Track growth trajectories and optimize package profitability.</p>
+            <p className="panel-hero-subtitle text-sm md:text-base font-medium">Track growth trajectories and optimize package profitability.</p>
           </div>
 
           <button 
@@ -93,24 +93,28 @@ export default function CompanyRevenuePage() {
           value={formatPKR(totalRevenue)}
           icon={Wallet}
           color="bg-emerald-500"
+          ariaLabel="Total revenue earned"
         />
         <StatCard 
           label="Total Bookings"
           value={totalBookings}
           icon={ClipboardList}
           color="bg-slate-900"
+          ariaLabel="Total number of bookings"
         />
         <StatCard 
           label="Avg Per Package"
           value={totalBookings > 0 ? formatPKR(Math.round(totalRevenue/totalBookings)) : "PKR 0"}
           icon={PieChart}
           color="bg-amber-500"
+          ariaLabel="Average revenue per package"
         />
         <StatCard 
           label="Current Month"
           value={formatPKR(currentMonthStats.revenue)}
           icon={Activity}
           color="bg-slate-800"
+          ariaLabel="Current month revenue"
         />
       </div>
 

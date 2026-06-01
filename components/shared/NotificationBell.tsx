@@ -84,7 +84,7 @@ export function NotificationBell({ role, userId, companyId }: NotificationBellPr
       <button
         onClick={() => setOpen(o => !o)}
         className="btn btn-secondary btn-icon"
-        style={{ position: 'relative', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+        style={{ position: 'relative', background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.14)', color: '#0A0A0A' }}
         title="Notifications"
       >
         🔔
@@ -109,16 +109,16 @@ export function NotificationBell({ role, userId, companyId }: NotificationBellPr
           {/* Dropdown Panel */}
           <div style={{
             position: 'absolute', right: 0, top: 44,
-            width: 320, background: '#161B27',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16, boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+            width: 320, background: '#FFFFFF',
+            border: '1px solid rgba(15,23,42,0.12)',
+            borderRadius: 16, boxShadow: '0 24px 64px rgba(15,23,42,0.14)',
             zIndex: 50, overflow: 'hidden',
           }}>
             <div style={{
-              padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+              padding: '12px 16px', borderBottom: '1px solid rgba(15,23,42,0.1)',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
-              <p style={{ fontWeight: 700, fontSize: 14, color: '#fff', margin: 0 }}>Notifications</p>
+              <p style={{ fontWeight: 700, fontSize: 14, color: '#0A0A0A', margin: 0 }}>Notifications</p>
               {unread > 0 && (
                 <button
                   onClick={markAllRead}
@@ -131,18 +131,18 @@ export function NotificationBell({ role, userId, companyId }: NotificationBellPr
 
             <div style={{ maxHeight: 280, overflowY: 'auto' }}>
               {notifications.length === 0 ? (
-                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: '#6B7280', fontSize: 14 }}>
                   No notifications yet
                 </div>
               ) : (
                 notifications.map(n => (
                   <div key={n.id} style={{
-                    padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                    background: !n.read ? 'rgba(255,255,255,0.05)' : 'transparent',
+                    padding: '12px 16px', borderBottom: '1px solid rgba(15,23,42,0.08)',
+                    background: !n.read ? '#ECFDF5' : 'transparent',
                     cursor: 'default',
                   }}>
-                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, margin: '0 0 4px' }}>{n.message}</p>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, margin: 0 }}>
+                    <p style={{ color: '#111827', fontSize: 13, margin: '0 0 4px' }}>{n.message}</p>
+                    <p style={{ color: '#6B7280', fontSize: 11, margin: 0 }}>
                       {new Date(n.time).toLocaleDateString('en-PK', {
                         day: 'numeric', month: 'short',
                         hour: '2-digit', minute: '2-digit',

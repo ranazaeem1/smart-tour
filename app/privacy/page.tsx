@@ -6,31 +6,18 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, ShieldCheck, Lock, Eye, FileText } from "lucide-react";
+import { ShieldCheck, Lock, Eye, FileText } from "lucide-react";
 import Footer from "@/components/Footer";
+import LandingNav from "@/components/LandingNav";
 
 export default function PrivacyPage() {
-  const router = useRouter();
-
   return (
-    <div className="bg-black min-h-screen text-white font-sans selection:bg-emerald-500/30">
-      {/* Header / Nav Placeholder */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              S
-            </div>
-            <span className="font-bold text-white text-lg tracking-tight uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
-          </Link>
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
-            <ChevronLeft size={16} /> Back
-          </button>
-        </div>
-      </header>
+    <div className="policy-shell privacy-page min-h-screen font-sans selection:bg-emerald-500/30">
+      <LandingNav />
 
-      <main className="pt-40 pb-32 px-6">
+      <main data-nav-theme="dark" className="policy-main pt-40 pb-32 px-6">
+        <div className="policy-bg" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=80")' }} />
+        <div className="policy-overlay" />
         <div className="max-w-4xl mx-auto">
           
           {/* Hero Section */}
@@ -39,23 +26,23 @@ export default function PrivacyPage() {
               <ShieldCheck size={14} className="text-emerald-500" />
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Trusted Data Protection</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none mb-8 uppercase italic">
-              Privacy <span className="text-emerald-500">Policy</span>
+            <h1 className="privacy-heading text-5xl md:text-7xl font-black tracking-tighter leading-none mb-8 uppercase italic">
+              Privacy <span className="privacy-title-accent">Policy</span>
             </h1>
-            <p className="text-zinc-500 text-sm font-bold uppercase tracking-[0.2em]">
+            <p className="policy-muted text-sm font-bold uppercase tracking-[0.2em]">
               Last updated: May 13, 2026
             </p>
           </div>
 
           {/* Content Card */}
-          <div className="bg-zinc-900/40 border border-white/5 rounded-[48px] p-8 md:p-16 space-y-20 animate-fade-up">
+          <div className="glass-panel rounded-[48px] p-8 md:p-16 space-y-20 animate-fade-up">
             
             <section className="space-y-6">
               <div className="flex items-center gap-4 mb-8">
                 <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
                   <FileText size={24} />
                 </div>
-                <h2 className="text-3xl font-black uppercase italic tracking-tight">1. Introduction</h2>
+                <h2 className="privacy-heading text-3xl font-black uppercase italic tracking-tight">1. Introduction</h2>
               </div>
               <p className="text-zinc-400 text-lg leading-relaxed font-medium">
                 Welcome to Smart Tour. We respect your privacy and want to protect your personal data. 
@@ -69,7 +56,7 @@ export default function PrivacyPage() {
                 <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
                   <Eye size={24} />
                 </div>
-                <h2 className="text-3xl font-black uppercase italic tracking-tight">2. Data We Collect</h2>
+                <h2 className="privacy-heading text-3xl font-black uppercase italic tracking-tight">2. Data We Collect</h2>
               </div>
               <p className="text-zinc-400 text-lg leading-relaxed font-medium mb-8">
                 We may collect, use, store and transfer different kinds of personal data about you which we have grouped together as follows:
@@ -82,8 +69,8 @@ export default function PrivacyPage() {
                   { title: "Usage Data", desc: "Information about how you use our website and services." },
                 ].map((item) => (
                   <div key={item.title} className="p-6 bg-white/5 border border-white/5 rounded-3xl">
-                    <h4 className="text-white font-black mb-2 uppercase text-xs tracking-widest text-emerald-500">{item.title}</h4>
-                    <p className="text-zinc-500 text-sm font-medium">{item.desc}</p>
+                    <h4 className="privacy-data-title font-black mb-2 uppercase text-xs tracking-widest">{item.title}</h4>
+                    <p className="privacy-data-copy text-sm font-medium">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -94,7 +81,7 @@ export default function PrivacyPage() {
                 <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
                   <ShieldCheck size={24} />
                 </div>
-                <h2 className="text-3xl font-black uppercase italic tracking-tight">3. How We Use Data</h2>
+                <h2 className="privacy-heading text-3xl font-black uppercase italic tracking-tight">3. How We Use Data</h2>
               </div>
               <p className="text-zinc-400 text-lg leading-relaxed font-medium">
                 We will only use your personal data when the law allows us to. Most commonly, we will use your personal data to provide the AI-powered tour planning services, manage your account and bookings, and improve our website relationships.
@@ -106,7 +93,7 @@ export default function PrivacyPage() {
                 <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-emerald-500">
                   <Lock size={24} />
                 </div>
-                <h2 className="text-3xl font-black uppercase italic tracking-tight">4. Data Security</h2>
+                <h2 className="privacy-heading text-3xl font-black uppercase italic tracking-tight">4. Data Security</h2>
               </div>
               <p className="text-zinc-400 text-lg leading-relaxed font-medium">
                 We have put in place appropriate security measures to prevent your personal data from being accidentally lost, 
@@ -116,7 +103,7 @@ export default function PrivacyPage() {
 
             {/* Contact Support CTA */}
             <div className="pt-12 mt-12 border-t border-white/5 text-center">
-              <p className="text-zinc-500 text-sm font-black uppercase tracking-widest mb-8">Questions about our Privacy Policy?</p>
+              <p className="policy-muted text-sm font-black uppercase tracking-widest mb-8">Questions about our Privacy Policy?</p>
               <Link href="/contact" className="inline-flex px-12 py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest text-xs transition-all shadow-xl shadow-emerald-500/20 active:scale-95">
                 Contact Support Hub
               </Link>

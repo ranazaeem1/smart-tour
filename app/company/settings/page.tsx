@@ -44,24 +44,24 @@ export default function CompanySettingsPage() {
   return (
     <div className="animate-fade space-y-10 pb-20" role="main">
       {/* ── Settings Hero Header ── */}
-      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1454165833767-027eeed15c3e?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1454165833767-027eeed15c3e?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-500/10 rounded-full mb-4 border border-slate-500/20">
-              <Settings size={12} className="text-slate-400" />
-              <span className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Operational Config</span>
+            <div className="panel-hero-kicker panel-hero-kicker-slate inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+              <Settings size={12} className="panel-hero-kicker-icon" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Operational Config</span>
             </div>
-            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
               Control Panel
             </h1>
-            <p className="text-slate-400 text-sm md:text-base font-medium">Synchronize your corporate identity and security protocols.</p>
+            <p className="panel-hero-subtitle text-sm md:text-base font-medium">Synchronize your corporate identity and security protocols.</p>
           </div>
 
           <div className="text-right hidden md:block">
-            <span className="badge badge-slate !bg-slate-500/20 !text-slate-400 border border-slate-500/30 font-black">
+            <span className="panel-hero-badge panel-hero-badge-slate badge badge-slate font-black">
               SECURE ACCESS ACTIVE
             </span>
           </div>

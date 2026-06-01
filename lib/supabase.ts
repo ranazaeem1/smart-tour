@@ -28,6 +28,101 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const url = supabaseUrl || 'https://placeholder.supabase.co';
 const key = supabaseAnonKey || 'placeholder';
 
+const NETWORK_ERROR_STATUSES = new Set([502, 503, 504, 520, 521, 522, 523, 524, 530]);
+const SESSION_EXPIRY_MARGIN_SECONDS = 60;
+
+function isAuthRequest(input: Parameters<typeof fetch>[0]) {
+  const requestUrl =
+    typeof input === 'string'
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
+
+  return requestUrl.includes('/auth/v1/');
+}
+
+function createSupabaseUnavailableResponse(authRequest: boolean) {
+  if (authRequest) {
+    return new Response(
+      JSON.stringify({
+        code: 'supabase_unavailable',
+        error: 'supabase_unavailable',
+        error_description: 'Supabase Auth is unavailable in this environment.',
+        msg: 'Supabase Auth is unavailable in this environment.',
+      }),
+      {
+        status: 400,
+        statusText: 'Bad Request',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({
+      code: 'SUPABASE_NETWORK_ERROR',
+      message: 'Unable to reach Supabase. Using local fallback data where available.',
+    }),
+    {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
+}
+
+const supabaseFetch: typeof fetch = async (input, init) => {
+  const authRequest = isAuthRequest(input);
+
+  try {
+    const response = await fetch(input, init);
+
+    if (authRequest && NETWORK_ERROR_STATUSES.has(response.status)) {
+      return createSupabaseUnavailableResponse(true);
+    }
+
+    return response;
+  } catch {
+    console.warn('[Supabase] Network request failed. Local fallback data will be used where available.');
+    return createSupabaseUnavailableResponse(authRequest);
+  }
+};
+
+const authStorage = {
+  getItem(key: string) {
+    if (typeof window === 'undefined') return null;
+
+    const value = window.localStorage.getItem(key);
+    if (!value) return value;
+
+    try {
+      const session = JSON.parse(value);
+      const expiresAt = Number(session?.expires_at);
+
+      if (expiresAt && expiresAt - SESSION_EXPIRY_MARGIN_SECONDS <= Math.floor(Date.now() / 1000)) {
+        window.localStorage.removeItem(key);
+        return null;
+      }
+    } catch {
+      window.localStorage.removeItem(key);
+      return null;
+    }
+
+    return value;
+  },
+  setItem(key: string, value: string) {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, value);
+    }
+  },
+  removeItem(key: string) {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(key);
+    }
+  },
+};
+
 // ==========================================
 // Supabase Client Initialization
 // ==========================================
@@ -42,6 +137,10 @@ export const supabase = createClient<Database>(url, key, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true, // Useful for OAuth callbacks and password resets
+    storage: authStorage,
+  },
+  global: {
+    fetch: supabaseFetch,
   },
 });
 

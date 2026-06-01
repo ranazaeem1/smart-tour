@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/AuthProvider";
 import { NotificationBell } from "@/components/shared/NotificationBell";
+import { fetchCompanyByOwner } from "@/lib/db";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { 
@@ -25,6 +26,8 @@ interface TopNavProps {
 export default function TopNav({ title, onMenuClick }: TopNavProps) {
   const { profile, signOut } = useAuth();
   const [greeting, setGreeting] = useState("Good morning");
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -43,8 +46,53 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (profile?.role !== "company" || !profile.id) {
+      setCompanyName(null);
+      setCompanyId(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetchCompanyByOwner(profile.id)
+      .then((company) => {
+        if (!cancelled) {
+          setCompanyName(company?.name || profile.full_name || "Your Company");
+          setCompanyId(company?.id ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCompanyName(profile.full_name || "Your Company");
+          setCompanyId(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id, profile?.role, profile?.full_name]);
+
   const initials = profile?.full_name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U";
   const userName = profile?.full_name?.split(" ")[0] || "Traveler";
+  const showQuickActions = profile?.role === "user";
+
+  const dashboardTitle =
+    profile?.role === "company"
+      ? `Welcome to ${companyName || profile?.full_name || "Your Company"}`
+      : profile?.role === "admin"
+        ? title || "Admin Console"
+        : `${userName}'s Dashboard`;
+
+  const settingsHref =
+    profile?.role === "company"
+      ? "/company/settings"
+      : profile?.role === "admin"
+        ? "/admin/settings"
+        : "/user/settings";
+
+  const notificationRole =
+    profile?.role === "company" ? "company" : profile?.role === "admin" ? "admin" : "user";
 
   return (
     <header className="sticky top-0 z-[100] flex items-center justify-between bg-[var(--card)]/80 backdrop-blur-xl px-4 md:px-6 lg:px-8 h-[80px] border-b border-[var(--border)] shadow-[var(--shadow-sm)] transition-all duration-300">
@@ -63,7 +111,7 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
             {greeting} 👋
           </p>
           <h1 className="text-lg md:text-xl font-black text-[var(--foreground)] m-0 leading-tight tracking-tight truncate">
-            {userName}&apos;s Dashboard
+            {dashboardTitle}
           </h1>
 
         </div>
@@ -72,30 +120,32 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
       {/* Right Section: Actions & Profile */}
       <div className="flex items-center gap-3 md:gap-6">
         {/* Quick Actions */}
-        <div className="hidden sm:flex items-center gap-3">
-          <Link 
-            href="/company/register" 
-            className="btn btn-secondary !px-5 !py-2.5 !text-[10px] hidden xl:flex items-center gap-2"
-            aria-label="Register your company on SmartTour"
-          >
-            <Building2 size={16} aria-hidden="true" />
-            Register Company
-          </Link>
-          <Link 
-            href="/user/planner" 
-            className="btn btn-emerald !px-5 !py-2.5 !text-[10px] flex items-center gap-2 shadow-emerald-500/20"
-            aria-label="Plan a new trip using AI"
-          >
-            <Plus size={16} aria-hidden="true" />
-            <span className="hidden md:inline">Plan New Trip</span>
-            <span className="md:hidden">New Trip</span>
-          </Link>
-        </div>
+        {showQuickActions && (
+          <div className="hidden sm:flex items-center gap-3">
+            <Link 
+              href="/company/register" 
+              className="btn btn-secondary !px-5 !py-2.5 !text-[10px] hidden xl:flex items-center gap-2"
+              aria-label="Register your company on SmartTour"
+            >
+              <Building2 size={16} aria-hidden="true" />
+              Register Company
+            </Link>
+            <Link 
+              href="/user/planner" 
+              className="btn btn-emerald !px-5 !py-2.5 !text-[10px] flex items-center gap-2 shadow-emerald-500/20"
+              aria-label="Plan a new trip using AI"
+            >
+              <Plus size={16} aria-hidden="true" />
+              <span className="hidden md:inline">Plan New Trip</span>
+              <span className="md:hidden">New Trip</span>
+            </Link>
+          </div>
+        )}
 
         <div className="h-8 w-[1px] bg-[var(--border)] mx-1 hidden md:block" aria-hidden="true"></div>
 
         <div className="flex items-center gap-3 md:gap-5">
-          <NotificationBell role="user" userId={profile?.id} />
+          <NotificationBell role={notificationRole} userId={profile?.id} companyId={companyId ?? undefined} />
           
           {/* User Profile Dropdown */}
           <div className="relative" ref={dropdownRef}>
@@ -128,7 +178,7 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
 
                 <div className="space-y-1 px-2">
                   <Link 
-                    href="/user/settings" 
+                    href={settingsHref} 
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-all group"
                     role="menuitem"
                     aria-label="Go to profile settings"
@@ -137,7 +187,7 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
                     <span className="text-sm font-bold">Profile Settings</span>
                   </Link>
                   <Link 
-                    href="/user/settings" 
+                    href={settingsHref} 
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] transition-all group"
                     role="menuitem"
                     aria-label="Go to preferences"

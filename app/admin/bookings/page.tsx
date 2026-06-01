@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchBookings, updateBookingStatus } from "@/lib/db";
-import { BOOKINGS, formatPKR, getStatusColor } from "@/lib/data";
+import { formatPKR, getStatusColor } from "@/lib/data";
 import { ClipboardList, CheckCircle, Clock, CheckCircle2, Search, Filter, MoreVertical, CreditCard, Users, Calendar } from "lucide-react";
 
 interface Booking {
@@ -34,10 +34,8 @@ export default function AdminBookingsPage() {
       setLoading(true);
       try {
         const data = await fetchBookings();
-        if (data && data.length > 0) {
+        if (data) {
           setBookings(data as Booking[]);
-        } else {
-          setBookings(BOOKINGS as unknown as Booking[]);
         }
       } catch (err) {
         console.error("Error fetching bookings:", err);

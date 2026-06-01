@@ -1,15 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchCompanies, updateCompanyStatus } from "@/lib/db";
-import { COMPANIES, formatPKR, getStatusColor } from "@/lib/data";
+import { formatPKR, getStatusColor } from "@/lib/data";
 import { Building2, CheckCircle, Clock, XCircle, Search, Filter, MoreVertical, ExternalLink } from "lucide-react";
 
 interface Company {
   id: string; name: string; email: string; phone?: string | null;
-  city?: string | null; logo?: string | null; status: string;
+  city?: string | null; logo?: string | null; status: CompanyStatus;
   verified: boolean; rating: number; total_tours: number;
   total_bookings: number; total_revenue: number; created_at: string;
 }
+
+type CompanyStatus = "pending" | "approved" | "suspended" | "rejected";
 
 export default function AdminCompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -23,15 +25,8 @@ export default function AdminCompaniesPage() {
       setLoading(true);
       try {
         const data = await fetchCompanies();
-        if (data && data.length > 0) {
+        if (data) {
           setCompanies(data as Company[]);
-        } else {
-          setCompanies(COMPANIES.map(c => ({
-            id: c.id, name: c.name, email: c.email, phone: c.phone,
-            city: c.city, logo: c.logo, status: c.status, verified: c.verified,
-            rating: c.rating, total_tours: c.totalTours, total_bookings: c.totalBookings,
-            total_revenue: c.totalRevenue, created_at: c.joinDate || new Date().toISOString(),
-          })));
         }
       } catch (err) {
         console.error("Error fetching companies:", err);
@@ -42,7 +37,7 @@ export default function AdminCompaniesPage() {
     load();
   }, []);
 
-  const handleStatusUpdate = async (id: string, newStatus: string) => {
+  const handleStatusUpdate = async (id: string, newStatus: CompanyStatus) => {
     setActionId(id);
     try {
       const updated = await updateCompanyStatus(id, newStatus);

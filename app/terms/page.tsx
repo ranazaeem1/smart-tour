@@ -6,31 +6,18 @@
 "use client";
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, Scale, Gavel, UserCheck, AlertTriangle, Globe } from "lucide-react";
+import { Scale, Gavel, UserCheck, AlertTriangle, Globe } from "lucide-react";
 import Footer from "@/components/Footer";
+import LandingNav from "@/components/LandingNav";
 
 export default function TermsPage() {
-  const router = useRouter();
-
   return (
-    <div className="bg-black min-h-screen text-white font-sans selection:bg-emerald-500/30">
-      {/* Header / Nav Placeholder */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              S
-            </div>
-            <span className="font-bold text-white text-lg tracking-tight uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
-          </Link>
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest">
-            <ChevronLeft size={16} /> Back
-          </button>
-        </div>
-      </header>
+    <div className="policy-shell terms-page min-h-screen font-sans selection:bg-emerald-500/30">
+      <LandingNav />
 
-      <main className="pt-40 pb-32 px-6">
+      <main data-nav-theme="dark" className="policy-main pt-40 pb-32 px-6">
+        <div className="policy-bg" style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=80")' }} />
+        <div className="policy-overlay" />
         <div className="max-w-4xl mx-auto">
           
           {/* Hero Section */}
@@ -42,13 +29,13 @@ export default function TermsPage() {
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none mb-8 uppercase italic">
               Terms of <span className="text-emerald-500">Service</span>
             </h1>
-            <p className="text-zinc-500 text-sm font-bold uppercase tracking-[0.2em]">
+            <p className="policy-muted text-sm font-bold uppercase tracking-[0.2em]">
               Last updated: May 13, 2026
             </p>
           </div>
 
           {/* Content Card */}
-          <div className="bg-zinc-900/40 border border-white/5 rounded-[48px] p-8 md:p-16 space-y-20 animate-fade-up">
+          <div className="glass-panel rounded-[48px] p-8 md:p-16 space-y-20 animate-fade-up">
             
             <section className="space-y-6">
               <div className="flex items-center gap-4 mb-8">
@@ -102,7 +89,7 @@ export default function TermsPage() {
 
             {/* Contact Legal CTA */}
             <div className="pt-12 mt-12 border-t border-white/5 text-center">
-              <p className="text-zinc-500 text-sm font-black uppercase tracking-widest mb-8">Have questions about our Terms?</p>
+              <p className="policy-muted text-sm font-black uppercase tracking-widest mb-8">Have questions about our Terms?</p>
               <Link href="/contact" className="inline-flex px-12 py-5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase tracking-widest text-xs transition-all shadow-xl shadow-emerald-500/20 active:scale-95">
                 Consult Legal Team
               </Link>

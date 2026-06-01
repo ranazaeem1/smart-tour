@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchReviews } from "@/lib/db";
-import { REVIEWS, getStatusColor } from "@/lib/data";
+import { getStatusColor } from "@/lib/data";
 
 interface Review {
   id: string; rating: number; comment: string; sentiment: string;
@@ -21,16 +21,8 @@ export default function AdminReviewsPage() {
     async function load() {
       setLoading(true);
       const data = await fetchReviews();
-      if (data.length > 0) {
+      if (data) {
         setReviews(data as Review[]);
-      } else {
-        setReviews(REVIEWS.map(r => ({
-          id: r.id, rating: r.rating, comment: r.comment,
-          sentiment: r.sentiment, created_at: r.date,
-          helpful_count: r.helpful,
-          tours: { title: r.tourTitle, destination: "" },
-          profiles: { full_name: r.userName },
-        })));
       }
       setLoading(false);
     }

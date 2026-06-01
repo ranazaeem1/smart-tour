@@ -98,31 +98,31 @@ export default function CompanyBookingsPage() {
   return (
     <div className="animate-fade space-y-10 pb-20" role="main">
       {/* ── Operations Hero Header ── */}
-      <section className="bg-slate-950 rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border border-white/5 shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-10" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
+      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full mb-4 border border-emerald-500/20">
-              <Activity size={12} className="text-emerald-400" />
-              <span className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em]">Operational Command</span>
+            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+              <Activity size={12} className="panel-hero-kicker-icon" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Operational Command</span>
             </div>
-            <h1 className="text-white text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
+            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
               Bookings Ledger
             </h1>
-            <p className="text-slate-400 text-sm md:text-base font-medium">Manage traveler reservations and mission deployments.</p>
+            <p className="panel-hero-subtitle text-sm md:text-base font-medium">Manage traveler reservations and mission deployments.</p>
           </div>
 
           <div className="flex gap-12">
             <div className="text-right">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Pending Action</p>
-              <p className="text-3xl font-black text-amber-500 tracking-tighter">{bookings.filter(b => b.status === 'pending').length}</p>
+              <p className="panel-hero-stat-label text-[10px] font-black uppercase tracking-widest mb-2">Pending Action</p>
+              <p className="panel-hero-stat-value-amber text-3xl font-black tracking-tighter">{bookings.filter(b => b.status === 'pending').length}</p>
             </div>
             <div className="w-[1px] h-12 bg-white/10 hidden md:block" />
             <div className="text-right">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Active Trips</p>
-              <p className="text-3xl font-black text-emerald-500 tracking-tighter">{bookings.filter(b => b.status === 'confirmed').length}</p>
+              <p className="panel-hero-stat-label text-[10px] font-black uppercase tracking-widest mb-2">Active Trips</p>
+              <p className="panel-hero-stat-value-emerald text-3xl font-black tracking-tighter">{bookings.filter(b => b.status === 'confirmed').length}</p>
             </div>
           </div>
         </div>

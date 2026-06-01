@@ -28,7 +28,7 @@ export default function Footer() {
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-emerald-600/5 blur-[120px] rounded-full translate-x-1/2 translate-y-1/2 pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-20 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 lg:gap-20 mb-16">
           
           {/* Brand Column */}
           <div className="flex flex-col gap-6">
@@ -43,22 +43,11 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-8">Quick Links</h3>
-            <ul className="space-y-4">
-              <li><button onClick={() => handleNavigation('#tours')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Tours</button></li>
-              <li><button onClick={() => handleNavigation('#destinations')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Destinations</button></li>
-              <li><button onClick={() => handleNavigation('/user/dashboard')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Dashboard</button></li>
-            </ul>
-          </div>
-
           {/* Company */}
           <div>
             <h3 className="text-[11px] font-black text-white uppercase tracking-[0.2em] mb-8">Company</h3>
             <ul className="space-y-4">
               <li><button onClick={() => handleNavigation('#about')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">About Us</button></li>
-              <li><button onClick={() => handleNavigation('/company/dashboard')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">For Companies</button></li>
               <li><button onClick={() => handleNavigation('/admin/dashboard')} className="text-slate-400 hover:text-emerald-400 transition-colors text-[13px] font-bold uppercase tracking-widest">Admin</button></li>
             </ul>
           </div>

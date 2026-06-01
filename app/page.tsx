@@ -24,10 +24,96 @@ import {
   ArrowDown
 } from "lucide-react";
 import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabase";
+import { TOURS } from "@/lib/data";
 
 export default function Home() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [tours, setTours] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [navOnDark, setNavOnDark] = useState(true);
+  const navRef = React.useRef<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    const fetchTours = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tours')
+          .select('*')
+          .limit(3);
+        
+        if (error) {
+          console.warn("[Home] Falling back to local tours:", error.message);
+          setTours(TOURS.slice(0, 3));
+          return;
+        }
+
+        setTours(data?.length ? data : TOURS.slice(0, 3));
+      } catch {
+        console.warn("[Home] Unable to fetch remote tours. Showing local tour data.");
+        setTours(TOURS.slice(0, 3));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTours();
+  }, []);
+
+  React.useEffect(() => {
+    const getLuminance = (color: string) => {
+      const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (!match) return null;
+
+      const alpha = match[4] === undefined ? 1 : Number(match[4]);
+      if (alpha === 0) return null;
+
+      const [r, g, b] = [Number(match[1]), Number(match[2]), Number(match[3])].map((value) => {
+        const channel = value / 255;
+        return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+      });
+
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+
+    const updateNavTheme = () => {
+      const nav = navRef.current;
+      const sampleX = window.innerWidth / 2;
+      const sampleY = nav ? nav.getBoundingClientRect().bottom + 8 : 112;
+      const elements = document.elementsFromPoint(sampleX, sampleY) as HTMLElement[];
+
+      const sampledElement = elements.find((element) => !nav?.contains(element));
+      const sectionTheme = sampledElement?.closest<HTMLElement>("[data-nav-theme]")?.dataset.navTheme;
+
+      if (sectionTheme) {
+        setNavOnDark(sectionTheme === "dark");
+        return;
+      }
+
+      let current: HTMLElement | null = sampledElement || document.body;
+      while (current) {
+        const styles = window.getComputedStyle(current);
+        const luminance = getLuminance(styles.backgroundColor);
+
+        if (luminance !== null) {
+          setNavOnDark(luminance < 0.45);
+          return;
+        }
+
+        current = current.parentElement;
+      }
+
+      setNavOnDark(false);
+    };
+
+    updateNavTheme();
+    window.addEventListener("scroll", updateNavTheme, { passive: true });
+    window.addEventListener("resize", updateNavTheme);
+    return () => {
+      window.removeEventListener("scroll", updateNavTheme);
+      window.removeEventListener("resize", updateNavTheme);
+    };
+  }, []);
 
   const handleNavigation = (path: string) => {
     if (path.startsWith('#')) {
@@ -53,52 +139,85 @@ export default function Home() {
         1. NAVBAR
         ================================================================
       */}
-      <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 sm:h-20">
-            
-            {/* LOGO */}
-            <Link href="/" className="flex items-center gap-2 cursor-pointer group">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-                S
-              </div>
-              <span className="font-bold text-white text-lg tracking-tight uppercase italic">Smart<span className="text-emerald-500">Tour</span></span>
-            </Link>
+      <nav ref={navRef} className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 transition-all duration-500">
+        <div className={`landing-nav-shell ${navOnDark ? "nav-on-dark" : "nav-on-light"} rounded-[32px] px-8 sm:px-10 h-20 sm:h-24 flex justify-between items-center shadow-2xl`}>
+          
+          {/* LOGO */}
+          <Link href="/" className="landing-nav-brand flex items-center gap-2 cursor-pointer group">
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-black group-hover:rotate-6 transition-transform">S</div>
+            <span className="text-xl font-black tracking-tighter uppercase italic">
+              <span className="landing-brand-primary">Smart</span><span className="landing-brand-accent">Tour</span>
+            </span>
+          </Link>
 
-            {/* DESKTOP MENU */}
-            <div className="hidden md:flex items-center gap-8">
-              <button onClick={() => scrollToSection('destinations')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">Destinations</button>
-              <button onClick={() => scrollToSection('tours')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">Tours</button>
-              <button onClick={() => scrollToSection('planner')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">AI Planner</button>
-              <button onClick={() => scrollToSection('about')} className="text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest">About</button>
-            </div>
-
-            {/* AUTH BUTTONS */}
-            <div className="hidden sm:flex items-center gap-4">
-              <button onClick={() => handleNavigation('/auth/login')} className="px-6 py-2 text-white/80 hover:text-white transition text-[13px] font-black uppercase tracking-widest border border-white/10 rounded-xl hover:bg-white/5">Login</button>
-              <button onClick={() => handleNavigation('/auth/login')} className="px-8 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.15em] transition shadow-xl shadow-emerald-500/20 active:scale-95">GET STARTED</button>
-            </div>
-
-            {/* MOBILE MENU BUTTON */}
-            <div className="md:hidden">
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white p-2">{mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button>
-            </div>
+          {/* DESKTOP NAV */}
+          <div className="hidden md:flex items-center gap-10">
+            {[
+              { label: "Destinations", href: "#destinations" },
+              { label: "Tours", href: "#tours" },
+              { label: "AI Planner", href: "#planner" },
+              { label: "About", href: "#about" },
+            ].map((item) => (
+              <a 
+                key={item.label} 
+                href={item.href} 
+                className="landing-nav-link text-[10px] font-black hover:text-emerald-500 uppercase tracking-[0.2em] transition-all"
+              >
+                {item.label}
+              </a>
+            ))}
           </div>
 
-          {/* MOBILE MENU */}
-          {mobileMenuOpen && (
-            <div className="md:hidden py-6 space-y-4 border-t border-white/10 animate-fade">
-              <button onClick={() => scrollToSection('destinations')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">Destinations</button>
-              <button onClick={() => scrollToSection('tours')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">Tours</button>
-              <button onClick={() => scrollToSection('planner')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">AI Planner</button>
-              <button onClick={() => scrollToSection('about')} className="block w-full text-left px-4 py-2 text-white/80 hover:text-white text-sm font-bold uppercase tracking-widest">About</button>
-              <div className="pt-4 flex flex-col gap-3 px-4">
-                <button onClick={() => handleNavigation('/auth/login')} className="w-full py-3 text-center text-white/80 border border-white/10 rounded-xl font-bold uppercase tracking-widest text-xs">Login</button>
-                <button onClick={() => handleNavigation('/auth/login')} className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20">GET STARTED</button>
-              </div>
-            </div>
-          )}
+          {/* ACTIONS */}
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => handleNavigation('/auth/login')}
+              className="landing-nav-link hidden sm:block text-[10px] font-black hover:text-emerald-500 uppercase tracking-[0.2em] transition-all"
+            >
+              Login
+            </button>
+            <button 
+              onClick={() => handleNavigation('/auth/login')}
+              className="px-8 py-3.5 btn-neon text-[10px] rounded-2xl"
+            >
+              Get Started
+            </button>
+            {/* MOBILE TOGGLE */}
+            <button 
+              className="landing-nav-link md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
+          </div>
         </div>
+
+        {/* MOBILE MENU (Glassmorphism Pill Extension) */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-4 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 space-y-6 shadow-2xl animate-in slide-in-from-top-4 duration-300">
+            {[
+              { label: "Destinations", href: "#destinations" },
+              { label: "Tours", href: "#tours" },
+              { label: "AI Planner", href: "#planner" },
+              { label: "About", href: "#about" },
+            ].map((item) => (
+              <a 
+                key={item.label} 
+                href={item.href} 
+                className="block text-[10px] font-black text-zinc-400 hover:text-emerald-500 uppercase tracking-[0.2em]"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.label}
+              </a>
+            ))}
+            <button 
+              onClick={() => handleNavigation('/auth/login')}
+              className="w-full py-4 bg-emerald-500 text-white text-[10px] font-black rounded-2xl uppercase tracking-[0.2em]"
+            >
+              Get Started
+            </button>
+          </div>
+        )}
       </nav>
 
       <main className="relative">
@@ -107,7 +226,7 @@ export default function Home() {
           2. HERO SECTION
           ================================================================
         */}
-        <section className="relative w-full h-screen pt-20 flex items-center justify-center overflow-hidden">
+        <section data-nav-theme="dark" className="relative w-full h-screen pt-20 flex items-center justify-center overflow-hidden">
           <div 
             className="absolute inset-0 w-full h-full bg-cover bg-center transition-transform duration-[10s] scale-105"
             style={{
@@ -117,23 +236,24 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/20 rounded-full mb-8 animate-fade">
+            <div className="inline-flex mx-auto items-center justify-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/20 rounded-full mb-8 animate-fade">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Next Gen Travel Intelligence</span>
             </div>
-            <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white mb-6 leading-[0.9] tracking-tighter animate-fade-up italic">
-              DISCOVER THE
-              <br />
-              <span className="text-emerald-500">EXTRAORDINARY</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-white/90 mb-12 max-w-2xl mx-auto font-medium animate-fade-up delay-100">
+            <div className="hero-title-wrap relative mb-6 animate-fade-up">
+              <h1 className="hero-title text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tighter italic m-0">
+                <span className="hero-title-line hero-title-line-left">WANDERLUST</span>
+                <span className="hero-title-line hero-title-line-right">AWAITS</span>
+              </h1>
+            </div>
+            <p className="hero-subtitle text-lg sm:text-xl mb-12 max-w-2xl mx-auto font-medium animate-fade-up delay-100">
               Let's start your journey with us, your dream will come true
             </p>
-            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-[32px] sm:rounded-full p-2 flex flex-col sm:flex-row gap-2 sm:gap-0 max-w-3xl mx-auto mb-8 animate-fade-up delay-200">
-              <input type="text" placeholder="Where to?" className="flex-1 bg-transparent text-white placeholder-white/50 px-6 py-4 sm:py-3 outline-none text-sm font-bold" />
-              <input type="text" placeholder="PKR" className="flex-1 bg-transparent text-white placeholder-white/50 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-white/10" />
-              <input type="text" onFocus={(e) => (e.target.type = "date")} placeholder="Add dates" className="flex-1 bg-transparent text-white placeholder-white/50 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-white/10" />
-              <button onClick={() => scrollToSection('tours')} className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black px-10 py-4 sm:py-3 rounded-full whitespace-nowrap transition shadow-xl shadow-emerald-500/30 text-xs uppercase tracking-widest active:scale-95">EXPLORE NOW</button>
+            <div className="bg-white border border-slate-200 rounded-[32px] sm:rounded-full p-2 grid grid-cols-1 sm:grid-cols-[1fr_0.75fr_1fr_auto] items-stretch gap-2 sm:gap-0 max-w-3xl mx-auto mb-8 animate-fade-up delay-200 shadow-2xl shadow-black/20">
+              <input type="text" placeholder="Where to?" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold rounded-2xl sm:rounded-l-full sm:rounded-r-none" />
+              <input type="text" placeholder="PKR" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
+              <input type="text" onFocus={(e) => (e.target.type = "date")} placeholder="Add dates" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
+              <button onClick={() => scrollToSection('tours')} className="btn btn-emerald w-full sm:w-auto min-h-[52px] px-8 rounded-2xl sm:rounded-full whitespace-nowrap shadow-xl shadow-emerald-500/30 text-xs active:scale-95">EXPLORE NOW</button>
             </div>
           </div>
         </section>
@@ -143,36 +263,92 @@ export default function Home() {
           3. FEATURED EXPERIENCES / TOURS GRID
           ================================================================
         */}
-        <section id="tours" className="py-32 bg-white text-slate-900 scroll-mt-20">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="mb-16">
-              <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900 mb-4 uppercase italic">Featured <span className="text-emerald-600">Experiences</span></h2>
-              <p className="text-lg text-slate-600 font-medium max-w-2xl">Discover amazing destinations and create unforgettable memories with our curated selections.</p>
+        <div id="destinations" className="scroll-mt-20" />
+        <section id="tours" data-nav-theme="dark" className="py-32 bg-black text-white scroll-mt-20 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.05),transparent_70%)] pointer-events-none" />
+          
+          <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div className="mb-24 text-center max-w-3xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Official Expeditions</span>
+              </div>
+              <h2 className="text-6xl md:text-7xl font-black tracking-tighter text-white mb-8 uppercase italic leading-none">Featured <br /><span className="text-emerald-500">Experiences</span></h2>
+              <p className="text-xl text-zinc-400 font-medium leading-relaxed">Discover the untouched beauty of northern Pakistan with our premium, AI-verified tours.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                { img:"https://images.unsplash.com/photo-1525596662741-e94ff9f26de1?w=800&h=600&fit=crop", name:"Indonesia Paradise", price:"$500", dur:"3 Days, 2 Nights", badge:"HOT DEAL" },
-                { img:"https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=600&fit=crop", name:"Japan Adventure", price:"$800", dur:"5 Days, 4 Nights", badge:"PREMIUM" },
-                { img:"https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&h=600&fit=crop", name:"Mountain Escape", price:"$600", dur:"3 Days, 2 Nights", badge:"BESTSELLER" },
-              ].map((d) => (
-                <div key={d.name} className="group bg-white border border-slate-200 rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 cursor-pointer" onClick={() => handleNavigation('/auth/login')}>
-                  <div className="relative h-64 bg-slate-100 overflow-hidden">
-                    <img src={d.img} alt={d.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute top-4 right-4 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase shadow-lg">{d.badge}</div>
-                  </div>
-                  <div className="p-8">
-                    <h3 className="text-2xl font-black text-slate-900 mb-2 leading-tight">{d.name}</h3>
-                    <p className="text-slate-500 text-sm font-bold mb-6 flex items-center gap-2"><CloudSun size={14} className="text-emerald-500" /> {d.dur}</p>
-                    <div className="flex justify-between items-center pt-6 border-t border-slate-100">
-                      <span className="text-3xl font-black text-emerald-600">{d.price}</span>
-                      <button className="flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-black text-xs uppercase tracking-widest group/link">Know More <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" /></button>
+
+            {loading ? (
+              <div className="flex justify-center py-24">
+                <div className="loading-spinner border-t-emerald-500"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                {tours.map((tour) => (
+                  <div key={tour.id} className="group relative bg-[#050505] rounded-[40px] overflow-hidden border border-white/5 hover:border-emerald-500/30 transition-all duration-700 shadow-2xl" onClick={() => handleNavigation('/auth/login')}>
+                    
+                    {/* Image Header with Hero Text */}
+                    <div className="relative h-[320px] overflow-hidden">
+                      <img 
+                        src={tour.image_url || "https://images.unsplash.com/photo-1525596662741-e94ff9f26de1?w=800&h=600&fit=crop"} 
+                        alt={tour.title} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
+                      
+                      {/* Category Badge */}
+                      <div className="absolute top-6 right-6">
+                        <span className="bg-[#10B981] text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.5)]">
+                          {tour.category || 'Adventure'}
+                        </span>
+                      </div>
+
+                      {/* Card Hero Text */}
+                      <div className="absolute bottom-8 left-8 right-8 text-center sm:text-left">
+                        <p className="text-emerald-500 text-[8px] font-black uppercase tracking-[0.4em] mb-2 opacity-80 flex items-center justify-center sm:justify-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> NEXT-GEN TRAVEL INTELLIGENCE
+                        </p>
+                        <h4 className="text-3xl md:text-4xl font-black text-white leading-[0.9] uppercase italic tracking-tighter">
+                          DISCOVER THE <br /> <span className="text-emerald-500">EXTRAORDINARY</span>
+                        </h4>
+                        <p className="text-[9px] text-zinc-400 font-bold mt-4 uppercase tracking-widest hidden sm:block">Let's start your journey with us, your dream will come true</p>
+                        <div className="mt-6 w-full h-px bg-gradient-to-r from-emerald-500/50 to-transparent" />
+                      </div>
+                    </div>
+
+                    {/* Content Section */}
+                    <div className="p-10 space-y-10">
+                      <div>
+                        <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter mb-4">{tour.title}</h3>
+                        <div className="flex items-center gap-6">
+                          <div className="flex items-center gap-2">
+                            <CloudSun size={14} className="text-emerald-500" />
+                            <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">{tour.duration} Days</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin size={14} className="text-emerald-500" />
+                            <span className="text-zinc-500 text-[10px] font-black uppercase tracking-widest">{tour.destination}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-end">
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Investment</p>
+                          <p className="text-3xl font-black text-emerald-500 tracking-tighter">PKR {tour.price.toLocaleString()}</p>
+                        </div>
+                        <button className="w-16 h-16 btn-neon rounded-2xl flex items-center justify-center">
+                          <div className="w-3 h-3 bg-white rounded-full opacity-20 animate-ping absolute" />
+                          <ArrowRight size={24} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="text-center mt-20">
-              <button onClick={() => handleNavigation('/auth/login')} className="px-12 py-5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black rounded-2xl transition-all shadow-2xl shadow-emerald-500/30 uppercase tracking-[0.2em] text-xs active:scale-95">View All Tours</button>
+                ))}
+              </div>
+            )}
+
+            <div className="text-center mt-24">
+              <button onClick={() => handleNavigation('/auth/login')} className="px-14 py-6 btn-neon rounded-[28px] text-xs">View Full Expedition Catalog</button>
             </div>
           </div>
         </section>
@@ -182,7 +358,7 @@ export default function Home() {
           4. AI Planner (The Smart Edge)
           ================================================================
         */}
-        <section id="planner" className="py-32 px-6 bg-black scroll-mt-20">
+        <section id="planner" data-nav-theme="dark" className="landing-dark-section py-32 px-6 scroll-mt-20">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
               <div>
@@ -217,7 +393,7 @@ export default function Home() {
           5. ABOUT SECTION
           ================================================================
         */}
-        <section id="about" className="py-32 bg-slate-50 text-slate-900 scroll-mt-20">
+        <section id="about" data-nav-theme="light" className="py-32 bg-slate-50 text-slate-900 scroll-mt-20">
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
               <div>
@@ -261,17 +437,17 @@ export default function Home() {
           6. CTA SECTION
           ================================================================
         */}
-        <section className="py-32 bg-gradient-to-r from-emerald-500 to-emerald-600 relative overflow-hidden">
+        <section data-nav-theme="dark" className="py-32 bg-gradient-to-r from-emerald-500 to-emerald-600 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2" />
           <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
             <h2 className="text-4xl sm:text-6xl font-black text-white mb-8 tracking-tighter uppercase italic">Ready to Explore?</h2>
             <p className="text-xl text-white/90 mb-12 font-medium">Start planning your next adventure with SmartTour intelligence.</p>
             <div className="flex flex-col sm:flex-row gap-5 justify-center">
               <button 
-                onClick={() => handleNavigation('/auth/login')}
-                className="px-10 py-4 bg-white text-emerald-600 font-black rounded-2xl hover:bg-slate-50 transition-all shadow-xl shadow-black/10 uppercase tracking-widest text-xs active:scale-95"
+                onClick={() => handleNavigation('/auth/login')} 
+                className="px-14 py-5 btn-neon rounded-[24px] text-xs"
               >
-                Get Started Free
+                Start Your Expedition
               </button>
               <button 
                 onClick={() => scrollToSection('tours')}

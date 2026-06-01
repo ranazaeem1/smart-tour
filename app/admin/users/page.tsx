@@ -1,22 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fetchAllUsers } from "@/lib/db";
-import { supabase } from "@/lib/supabase";
 
 interface UserProfile {
   id: string; email: string; full_name: string | null; role: string;
   avatar_url: string | null; phone: string | null; created_at: string;
   status?: string;
 }
-
-const MOCK_USERS = [
-  { id: "1", email: "ali@gmail.com", full_name: "Ali Hassan", role: "user", avatar_url: null, phone: "0300-1234567", created_at: "2023-06-10", status: "active" },
-  { id: "2", email: "sara@gmail.com", full_name: "Sara Khan", role: "user", avatar_url: null, phone: "0311-7654321", created_at: "2023-08-20", status: "active" },
-  { id: "3", email: "umar@gmail.com", full_name: "Umar Farooq", role: "user", avatar_url: null, phone: "0333-9876543", created_at: "2022-12-05", status: "active" },
-  { id: "4", email: "fatima@gmail.com", full_name: "Fatima Malik", role: "user", avatar_url: null, phone: "0321-1111222", created_at: "2023-03-14", status: "active" },
-  { id: "5", email: "bilal@gmail.com", full_name: "Bilal Ahmed", role: "user", avatar_url: null, phone: "0345-5556666", created_at: "2024-01-30", status: "suspended" },
-  { id: "6", email: "ayesha@gmail.com", full_name: "Ayesha Noor", role: "user", avatar_url: null, phone: "0312-3334445", created_at: "2023-10-01", status: "active" },
-];
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -28,10 +18,9 @@ export default function AdminUsersPage() {
     async function load() {
       setLoading(true);
       const data = await fetchAllUsers();
-      if (data && data.length > 0) {
-        setUsers(data as UserProfile[]);
-      } else {
-        setUsers(MOCK_USERS as UserProfile[]);
+      if (data) {
+        const userProfiles = data as Partial<UserProfile>[];
+        setUsers(userProfiles.map(u => ({ ...u, status: u.status || "active" })) as UserProfile[]);
       }
       setLoading(false);
     }

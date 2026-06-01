@@ -41,8 +41,9 @@ export default function Sidebar({ items, role, collapsed, setCollapsed }: Sideba
           </div>
           {!collapsed && (
             <div className="flex flex-col animate-fade">
-              <span className="text-[14px] font-black text-white whitespace-nowrap tracking-tighter leading-tight">
-                SMART<span className="text-emerald-500">TOUR</span>
+              <span className="text-[14px] font-black whitespace-nowrap tracking-tighter leading-tight">
+                <span className="text-black">SMART</span>
+                <span className="text-emerald-500">TOUR</span>
               </span>
               <span className="text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mt-0.5">
                 Enterprise Hub

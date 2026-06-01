@@ -1,36 +1,56 @@
 "use client";
 import { use, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { ChatWindow } from "@/components/shared/ChatWindow";
 
 export default function CompanyChatPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: conversationId } = use(params);
+  const searchParams = useSearchParams();
+  const nameFromUrl = searchParams.get("name");
   const { profile, loading: authLoading } = useAuth();
-  const [otherPartyName, setOtherPartyName] = useState("Loading...");
+  const [otherPartyName, setOtherPartyName] = useState(nameFromUrl || "Loading...");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadConv() {
       if (!profile) return;
-      
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          profiles:user_id (full_name)
-        `)
-        .eq('id', conversationId)
-        .single();
 
-      if (!error && data) {
-        setOtherPartyName((data as any).profiles?.full_name || "Traveler");
+      if (nameFromUrl) {
+        setOtherPartyName(nameFromUrl);
+        setLoading(false);
+        return;
       }
+
+      const { data: conv, error: convError } = await (supabase as any)
+        .from('conversations')
+        .select('user_id')
+        .eq('id', conversationId)
+        .maybeSingle();
+
+      if (convError || !conv) {
+        setOtherPartyName("Traveller");
+        setLoading(false);
+        return;
+      }
+
+      const { data: profileData } = await (supabase as any)
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', conv.user_id)
+        .maybeSingle();
+      setOtherPartyName(
+        profileData?.full_name?.trim() ||
+          profileData?.email?.split('@')[0] ||
+          'Traveller'
+      );
+
       setLoading(false);
     }
-    
+
     if (!authLoading) loadConv();
-  }, [conversationId, profile, authLoading]);
+  }, [conversationId, profile, authLoading, nameFromUrl]);
 
   if (authLoading || loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh" }}>
@@ -39,13 +59,13 @@ export default function CompanyChatPage({ params }: { params: Promise<{ id: stri
   );
 
   return (
-    <div style={{ height: "calc(100vh - 100px)", position: "relative", margin: "-20px" }}>
-      <ChatWindow 
+    <div style={{ height: "calc(100vh - 80px)", position: "relative", margin: "-20px" }}>
+      <ChatWindow
         conversationId={conversationId}
         currentRole="company"
         otherPartyName={otherPartyName}
         onClose={() => window.history.back()}
-        isPage={true} 
+        isPage={true}
       />
     </div>
   );

@@ -119,53 +119,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * and subscribe to auth state changes (login, logout, token refresh).
    */
   useEffect(() => {
-    async function initAuth() {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        // Silently handle expired/missing refresh tokens
-        if (error) {
-          if (error.message.includes("Refresh Token Not Found") || error.status === 400) {
-            console.warn("[Auth] Stale session detected. Clearing storage...");
-            // Force clear storage if refresh token is broken
-            await supabase.auth.signOut();
-            setLoading(false);
-            return;
-          }
-          throw error; // Let other errors be handled by the catch block
-        }
+    let active = true;
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadProfile(session.user);
-        }
-      } catch (err) {
-        // Only log non-routine errors
-        console.error("[Auth] Initialization failed:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    initAuth();
-
-    // Subscribe to ongoing auth state changes
+    // Supabase emits INITIAL_SESSION here, so a separate getSession() call is unnecessary.
+    // Avoiding that parallel auth request prevents browser lock contention in dev.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (_event, session) => {
+        if (!active) return;
+
         setSession(session);
         setUser(session?.user ?? null);
+
         if (session?.user) {
-          await loadProfile(session.user);
+          void loadProfile(session.user).finally(() => {
+            if (active) setLoading(false);
+          });
         } else {
           setProfile(null);
+          setLoading(false);
         }
       }
     );
 
     // Cleanup subscription on unmount
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   /**
