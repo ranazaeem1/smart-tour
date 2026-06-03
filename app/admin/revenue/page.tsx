@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { fetchRevenueStats, fetchPlatformStats } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
-import { DollarSign, Landmark, TrendingUp, BarChart3, ArrowUpRight, Download } from "lucide-react";
+import { DollarSign, Landmark, TrendingUp, BarChart3, ArrowUpRight, Download, Wallet } from "lucide-react";
 
 export default function AdminRevenuePage() {
   const [revenueData, setRevenueData] = useState<{ month: string; revenue: number; bookings: number }[]>([]);
@@ -44,7 +44,7 @@ export default function AdminRevenuePage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight">💰 Financial Analytics</h1>
+          <h1 className="text-2xl font-black tracking-tight inline-flex items-center gap-2"><Wallet size={24} /> Financial Analytics</h1>
           <p className="text-sm text-zinc-500 font-medium">Real-time platform revenue and performance monitoring</p>
         </div>
         <div className="flex items-center gap-3">

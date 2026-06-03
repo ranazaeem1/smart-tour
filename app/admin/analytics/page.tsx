@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { fetchRevenueStats, fetchBookings, fetchAllUsers, fetchTours } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
+import { Calendar, Trophy } from "lucide-react";
 
 interface MonthStat {
   month: string;
@@ -124,7 +125,7 @@ export default function AdminAnalyticsPage() {
       <div className="grid-2" style={{ gap: 24, marginBottom: 24 }}>
         <div className="card">
           <div className="section-header">
-            <h2 className="section-title">📅 Monthly Bookings</h2>
+            <h2 className="section-title inline-flex items-center gap-2"><Calendar size={20} /> Monthly Bookings</h2>
           </div>
           {monthlyStats.every((m) => m.bookings === 0) ? (
             <div
@@ -184,7 +185,7 @@ export default function AdminAnalyticsPage() {
 
         <div className="card">
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>
-            🏆 Top Destinations
+            <Trophy size={20} /> Top Destinations
           </h2>
           {topDestinations.length === 0 ? (
             <div style={{ color: "var(--text-muted)", fontSize: 14, padding: "20px 0" }}>

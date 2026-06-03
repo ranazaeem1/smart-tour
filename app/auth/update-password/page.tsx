@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 
 const bgImage =
   'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=900&fit=crop")';
@@ -50,9 +51,7 @@ export default function UpdatePasswordPage() {
       <div className="relative z-10 w-full max-w-[460px] animate-fade">
         <div className="text-center mb-10">
           <Link href="/" className="auth-brand inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform">
-              <span className="text-white font-black text-xl">S</span>
-            </div>
+            <img src="/logo.svg" alt="Smart Tour logo" className="w-14 h-14 rounded-full object-contain group-hover:scale-105 transition-transform" />
             <span className="text-3xl font-black uppercase italic tracking-tighter">
               <span className="auth-brand-smart">Smart</span>
               <span className="auth-brand-tour">Tour</span>
@@ -76,12 +75,12 @@ export default function UpdatePasswordPage() {
 
           {error && (
             <div className="auth-alert-error px-6 py-4 rounded-2xl text-sm mb-8 animate-fade border">
-              ⚠️ {error}
+              <span className="inline-flex items-center gap-2"><AlertTriangle size={16} /> {error}</span>
             </div>
           )}
           {success && (
             <div className="auth-alert-success px-6 py-4 rounded-2xl text-sm mb-8 animate-fade border">
-              ✅ {success}
+              <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} /> {success}</span>
             </div>
           )}
 
@@ -93,7 +92,7 @@ export default function UpdatePasswordPage() {
               <input
                 className={inputClass}
                 type="password"
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 required
                 minLength={6}
                 value={password}
@@ -109,7 +108,7 @@ export default function UpdatePasswordPage() {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
               ) : (
-                "Update Password →"
+                <span className="inline-flex items-center gap-2">Update Password <ArrowRight size={14} /></span>
               )}
             </button>
           </form>

@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/db";
+import { onlyDigits, stripNumbers, textOnlyPattern } from "@/lib/formValidation";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 
 export default function RegisterCompanyPage() {
   const { profile, loading: authLoading } = useAuth();
@@ -62,7 +64,7 @@ export default function RegisterCompanyPage() {
       // 3. Redirect to company dashboard
       window.location.href = "/company/dashboard";
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to register company.");
+              {loading ? <span className="loading-spinner" /> : <span className="inline-flex items-center gap-2">Register Company <ArrowRight size={14} /></span>}
       setLoading(false);
     }
   };
@@ -80,7 +82,7 @@ export default function RegisterCompanyPage() {
 
         {error && (
           <div className="alert alert-danger" style={{ marginBottom: 20 }}>
-            ⚠️ {error}
+            <span className="inline-flex items-center gap-2"><AlertTriangle size={16} /> {error}</span>
           </div>
         )}
 
@@ -91,8 +93,10 @@ export default function RegisterCompanyPage() {
               className="input" 
               placeholder="e.g. Karakoram Adventures" 
               required 
+              pattern={textOnlyPattern}
+              title="Use letters only."
               value={form.companyName} 
-              onChange={e => setForm(p => ({ ...p, companyName: e.target.value }))} 
+              onChange={e => setForm(p => ({ ...p, companyName: stripNumbers(e.target.value) }))} 
             />
           </div>
 
@@ -101,9 +105,12 @@ export default function RegisterCompanyPage() {
             <input 
               className="input" 
               type="tel" 
-              placeholder="03XX-XXXXXXX" 
+              inputMode="numeric"
+              pattern="[0-9]{9,15}"
+              maxLength={15}
+              placeholder="03XXXXXXXXX" 
               value={form.phone} 
-              onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} 
+              onChange={e => setForm(p => ({ ...p, phone: onlyDigits(e.target.value) }))} 
             />
             <span style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
               If left blank, we will use your personal phone number: {profile.phone || "Not provided"}
@@ -115,7 +122,7 @@ export default function RegisterCompanyPage() {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" style={{ flex: 2, justifyContent: "center" }} disabled={loading}>
-              {loading ? <span className="loading-spinner" /> : "Register Company →"}
+              {loading ? <span className="loading-spinner" /> : <span className="inline-flex items-center gap-2">Register Company <ArrowRight size={14} /></span>}
             </button>
           </div>
         </form>

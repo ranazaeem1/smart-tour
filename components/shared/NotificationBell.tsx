@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Bell } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -87,7 +88,7 @@ export function NotificationBell({ role, userId, companyId }: NotificationBellPr
         style={{ position: 'relative', background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.14)', color: '#0A0A0A' }}
         title="Notifications"
       >
-        🔔
+        <Bell size={16} />
         {unread > 0 && (
           <span style={{
             position: 'absolute', top: -4, right: -4,

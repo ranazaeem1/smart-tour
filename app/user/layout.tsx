@@ -14,9 +14,7 @@ import {
   Mountain, 
   CalendarCheck, 
   Star, 
-  ShieldAlert,
-  Menu,
-  X
+  ShieldAlert
 } from 'lucide-react';
 
 const USER_NAV = [

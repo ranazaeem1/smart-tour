@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function CompanyDashboardError({
   error,
@@ -30,7 +31,7 @@ export default function CompanyDashboardError({
         textAlign: 'center',
         boxShadow: '0 8px 32px rgba(15,23,42,0.12)',
       }}>
-        <div style={{ fontSize: 52, marginBottom: 16 }}>⚠️</div>
+        <AlertTriangle size={52} style={{ marginBottom: 16, color: '#EF4444' }} />
         <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0A0A0A', marginBottom: 8 }}>
           Something went wrong
         </h2>

@@ -5,6 +5,8 @@ import { fetchTours, createBooking } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
 import { BookingSuccessModal } from "@/components/BookingSuccessModal";
+import { onlyDigits } from "@/lib/formValidation";
+import { getTourImage } from "@/lib/tourImages";
 import { 
   Search, 
   MapPin, 
@@ -87,7 +89,7 @@ export default function ToursPage() {
     load();
   }, []);
 
-  const getImg = (t: Tour) => t.image_url || t.image || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800";
+  const getImg = (t: Tour) => getTourImage(t);
   const getSafety = (t: Tour) => t.safety_score || t.safetyScore || 80;
   const getGroup = (t: Tour) => t.max_group || t.maxGroup || 10;
   const getReviews = (t: Tour) => t.review_count || t.reviews || 0;
@@ -108,13 +110,13 @@ export default function ToursPage() {
         : getReviews(b) - getReviews(a)
     );
 
-  const isPhoneValid = (phone: string) => /^\+?[\d\s\-(]{9,16}$/.test(phone.trim());
+  const isPhoneValid = (phone: string) => /^[0-9]{9,15}$/.test(phone.trim());
 
   const handleOpenBooking = (tourId: string) => {
     setBookingTourId(tourId);
     setBookingDate("");
     setBookingGroup(2);
-    setBookingPhone(profile?.phone || "");
+    setBookingPhone(onlyDigits(profile?.phone || ""));
     setBookingNotes("");
     setBookingError(null);
   };
@@ -170,7 +172,7 @@ export default function ToursPage() {
       <div className="space-y-10 animate-fade">
         <div className="flex justify-between items-end mb-8">
           <div className="space-y-4">
-            <div className="skeleton h-4 w-24 rounded-full" />
+            <div className="skeleton h-4 w-24 rounded-md" />
             <div className="skeleton h-12 w-64 rounded-2xl" />
           </div>
         </div>
@@ -271,8 +273,7 @@ export default function ToursPage() {
                   alt={tour.title}
                   className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                   onError={e => {
-                    (e.target as HTMLImageElement).src =
-                      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800";
+                    (e.target as HTMLImageElement).src = getTourImage({ ...tour, image_url: null, image: null });
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -384,10 +385,13 @@ export default function ToursPage() {
                   <input
                     className="input font-black !py-4 !rounded-2xl"
                     type="tel"
-                    placeholder="03XX-XXXXXXX"
+                    inputMode="numeric"
+                    pattern="[0-9]{9,15}"
+                    maxLength={15}
+                    placeholder="03XXXXXXXXX"
                     required
                     value={bookingPhone}
-                    onChange={e => setBookingPhone(e.target.value)}
+                    onChange={e => setBookingPhone(onlyDigits(e.target.value))}
                   />
                 </div>
 

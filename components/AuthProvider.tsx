@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const loadProfile = async (authUser: User) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("profiles")
         .select("*") // Fetch all fields including total_budget, verified, etc.
         .eq("id", authUser.id)

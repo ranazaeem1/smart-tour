@@ -11,6 +11,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/db";
+import { emailPattern, normalizeEmail, onlyDigits, stripNumbers, textOnlyPattern } from "@/lib/formValidation";
 
 function AuthForm() {
   const router = useRouter();
@@ -64,7 +65,7 @@ function AuthForm() {
               else if (determinedRole === "company") router.push("/company/dashboard");
               else router.push("/user/dashboard");
             } else {
-              setSuccess(`✅ Account created as ${determinedRole}! Check your email to confirm, then sign in.`);
+              setSuccess(`Account created as ${determinedRole}. Check your email to confirm, then sign in.`);
             }
           } catch (err) {
             console.error('Error saving profile:', err);
@@ -115,9 +116,7 @@ function AuthForm() {
       <div className="relative z-10 w-full max-w-[460px] animate-fade">
         <div className="text-center mb-10">
           <Link href="/" className="auth-brand inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform">
-              <span className="text-white font-black text-xl">S</span>
-            </div>
+            <img src="/logo.svg" alt="Smart Tour logo" className="w-14 h-14 rounded-full object-contain group-hover:scale-105 transition-transform" />
             <span className="text-3xl font-black uppercase italic tracking-tighter">
               <span className="auth-brand-smart">Smart</span>
               <span className="auth-brand-tour">Tour</span>
@@ -132,10 +131,10 @@ function AuthForm() {
               <span className="auth-panel-tour">Tour</span>
             </span>
           </div>
-          <div className="auth-glass-tabs flex gap-2 p-1 rounded-full mb-10">
+          <div className="auth-glass-tabs flex gap-2 p-1 rounded-2xl mb-10">
             <button
               type="button"
-              className={`flex-1 py-3 px-6 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${
+              className={`flex-1 py-3 px-6 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                 mode === "login"
                   ? "auth-tab-active"
                   : "auth-tab-inactive"
@@ -146,7 +145,7 @@ function AuthForm() {
             </button>
             <button
               type="button"
-              className={`flex-1 py-3 px-6 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${
+              className={`flex-1 py-3 px-6 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                 mode === "register"
                   ? "auth-tab-active"
                   : "auth-tab-inactive"
@@ -158,7 +157,7 @@ function AuthForm() {
           </div>
 
           <h2 className="auth-title text-3xl font-black mb-2 tracking-tighter uppercase italic">
-            {mode === "login" ? "Welcome Back!" : "Create Account"}
+            {mode === "login" ? "Welcome Back" : "Create Account"}
           </h2>
           <p className="auth-muted text-sm font-medium mb-10 leading-relaxed">
             {mode === "login"
@@ -168,7 +167,7 @@ function AuthForm() {
 
           {error && (
             <div className="auth-alert-error px-6 py-4 rounded-2xl text-sm mb-8 animate-fade border">
-              ⚠️ {error}
+              {error}
             </div>
           )}
           {success && (
@@ -187,8 +186,10 @@ function AuthForm() {
                   className={inputClass}
                   placeholder="Ali Hassan"
                   required
+                  pattern={textOnlyPattern}
+                  title="Use letters only."
                   value={form.name}
-                  onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                  onChange={e => setForm(p => ({ ...p, name: stripNumbers(e.target.value) }))}
                 />
               </div>
             )}
@@ -199,10 +200,12 @@ function AuthForm() {
               <input
                 className={inputClass}
                 type="email"
+                inputMode="email"
+                pattern={emailPattern}
                 placeholder="you@example.com"
                 required
                 value={form.email}
-                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                onChange={e => setForm(p => ({ ...p, email: normalizeEmail(e.target.value) }))}
               />
             </div>
             {mode === "register" && (
@@ -213,9 +216,12 @@ function AuthForm() {
                 <input
                   className={inputClass}
                   type="tel"
-                  placeholder="03XX-XXXXXXX"
+                  inputMode="numeric"
+                  pattern="[0-9]{9,15}"
+                  maxLength={15}
+                  placeholder="03XXXXXXXXX"
                   value={form.phone}
-                  onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                  onChange={e => setForm(p => ({ ...p, phone: onlyDigits(e.target.value) }))}
                 />
               </div>
             )}
@@ -226,7 +232,7 @@ function AuthForm() {
               <input
                 className={inputClass}
                 type="password"
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 required
                 minLength={6}
                 value={form.password}
@@ -254,9 +260,9 @@ function AuthForm() {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
               ) : mode === "login" ? (
-                "Sign In →"
+                "Sign In"
               ) : (
-                "Create Account →"
+                "Create Account"
               )}
             </button>
           </form>

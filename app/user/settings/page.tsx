@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
+import { onlyDigits, stripNumbers, textOnlyPattern } from "@/lib/formValidation";
 import { 
   User, 
   Mail, 
@@ -10,16 +11,12 @@ import {
   Bell, 
   Globe, 
   Camera, 
-  CheckCircle2, 
   Save, 
   Lock,
   Eye,
   EyeOff,
   AlertCircle,
   Settings,
-  CreditCard,
-  History,
-  Activity,
   MapPin
 } from "lucide-react";
 
@@ -75,7 +72,7 @@ export default function SettingsPage() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
               <Settings size={12} className="panel-hero-kicker-icon" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Profile Configuration</span>
             </div>
@@ -119,7 +116,7 @@ export default function SettingsPage() {
           <div className="pt-6 border-t border-[var(--border)] mt-6">
              <div className="p-6 bg-[var(--muted)] rounded-[24px] border border-[var(--border)] space-y-4">
                 <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">Storage Status</p>
-                <div className="w-full h-1.5 bg-[var(--card)] rounded-full overflow-hidden border border-[var(--border)]">
+                <div className="w-full h-1.5 bg-[var(--card)] rounded-md overflow-hidden border border-[var(--border)]">
                   <div className="w-[45%] h-full bg-emerald-500" />
                 </div>
                 <p className="text-[9px] font-bold text-[var(--foreground)]">45% of security vault utilized</p>
@@ -158,9 +155,11 @@ export default function SettingsPage() {
                   <input 
                     type="text" 
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => setFullName(stripNumbers(e.target.value))}
                     className="input !font-black !py-4 !rounded-2xl"
                     placeholder="Enter full name"
+                    pattern={textOnlyPattern}
+                    title="Use letters only."
                   />
                 </div>
                 <div className="input-group">
@@ -181,9 +180,12 @@ export default function SettingsPage() {
                   <input 
                     type="tel" 
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(onlyDigits(e.target.value))}
                     className="input !font-black !py-4 !rounded-2xl"
-                    placeholder="03XX-XXXXXXX"
+                    inputMode="numeric"
+                    pattern="[0-9]{9,15}"
+                    maxLength={15}
+                    placeholder="03XXXXXXXXX"
                   />
                 </div>
                 <div className="input-group">
@@ -287,9 +289,9 @@ export default function SettingsPage() {
                     </div>
                     <button 
                       onClick={() => setNotifications(prev => ({ ...prev, [item.id]: !prev[item.id as keyof typeof notifications] }))}
-                      className={`w-14 h-8 rounded-full transition-all duration-500 relative flex items-center p-1 border ${item.value ? "bg-emerald-500 border-emerald-400 shadow-lg shadow-emerald-500/20" : "bg-[var(--card)] border-[var(--border)]"}`}
+                      className={`w-14 h-8 rounded-lg transition-all duration-500 relative flex items-center p-1 border ${item.value ? "bg-emerald-500 border-emerald-400 shadow-lg shadow-emerald-500/20" : "bg-[var(--card)] border-[var(--border)]"}`}
                     >
-                      <div className={`w-6 h-6 rounded-full shadow-lg transition-all duration-500 ${item.value ? "translate-x-6 bg-white" : "translate-x-0 bg-[var(--muted-foreground)]"}`} />
+                      <div className={`w-6 h-6 rounded-md shadow-lg transition-all duration-500 ${item.value ? "translate-x-6 bg-white" : "translate-x-0 bg-[var(--muted-foreground)]"}`} />
                     </button>
                   </div>
                 ))}
@@ -322,11 +324,11 @@ export default function SettingsPage() {
                   <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em] mb-4">Luminance Profile</label>
                   <div className="grid grid-cols-2 gap-4">
                     <button className="flex flex-col items-center gap-4 p-6 bg-slate-950 text-white rounded-[24px] shadow-2xl ring-2 ring-emerald-500 group transition-all">
-                      <div className="w-12 h-1.5 rounded-full bg-emerald-500" />
+                      <div className="w-12 h-1.5 rounded-md bg-emerald-500" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Midnight Paradigm</span>
                     </button>
                     <button className="flex flex-col items-center gap-4 p-6 bg-[var(--muted)] text-[var(--muted-foreground)] rounded-[24px] border border-[var(--border)] hover:bg-[var(--card)] hover:text-[var(--foreground)] transition-all grayscale opacity-40 cursor-not-allowed">
-                      <div className="w-12 h-1.5 rounded-full bg-[var(--border)]" />
+                      <div className="w-12 h-1.5 rounded-md bg-[var(--border)]" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Solaris (Locked)</span>
                     </button>
                   </div>

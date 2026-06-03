@@ -85,9 +85,9 @@ export function SentimentAnalysis({ data, recentReviews }: SentimentAnalysisProp
                 <span className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">{s.label}</span>
                 <span className="text-sm font-black tracking-tighter" style={{ color: s.color }}>{s.value}%</span>
               </div>
-              <div className="h-2 w-full bg-[var(--muted)] rounded-full overflow-hidden p-[1px]">
+              <div className="h-2 w-full bg-[var(--muted)] rounded-md overflow-hidden p-[1px]">
                 <div 
-                  className="h-full rounded-full transition-all duration-1000"
+                  className="h-full rounded-md transition-all duration-1000"
                   style={{ width: `${s.value}%`, backgroundColor: s.color }}
                 />
               </div>

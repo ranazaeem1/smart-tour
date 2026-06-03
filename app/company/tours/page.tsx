@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fetchTours, updateTour, fetchCompanyByOwner } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
+import { getTourImage } from "@/lib/tourImages";
 import { 
   Plus, 
   Search, 
@@ -18,7 +19,6 @@ import {
   Pause, 
   Play,
   Activity,
-  Filter,
   ArrowRight,
   Info
 } from "lucide-react";
@@ -93,7 +93,7 @@ export default function CompanyToursPage() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
               <Mountain size={12} className="panel-hero-kicker-icon" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Package Inventory</span>
             </div>
@@ -170,7 +170,7 @@ export default function CompanyToursPage() {
             >
               <div className="w-full md:w-80 h-64 md:h-auto overflow-hidden relative">
                 <img
-                  src={tour.image_url || tour.image || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400"}
+                  src={getTourImage(tour)}
                   alt={tour.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />

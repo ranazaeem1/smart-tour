@@ -8,6 +8,7 @@ import { formatPKR } from "@/lib/data";
 import { CancelBookingButton } from "@/components/user/CancelBookingButton";
 import { StartChatButton } from "@/components/shared/StartChatButton";
 import { ReviewModal } from "@/components/user/ReviewModal";
+import { getTourImage } from "@/lib/tourImages";
 import { 
   Calendar, 
   Users, 
@@ -147,7 +148,7 @@ export default function BookingsPage() {
               {/* IMAGE SECTION */}
               <div className="relative w-full lg:w-[400px] h-[300px] lg:h-auto overflow-hidden">
                 <img 
-                  src={booking.tours?.image_url || "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80"} 
+                  src={getTourImage(booking.tours || {})} 
                   alt={booking.tours?.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />

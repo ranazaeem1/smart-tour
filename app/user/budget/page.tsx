@@ -27,8 +27,7 @@ import {
   Trash2,
   Edit2,
   AlertCircle,
-  X,
-  ArrowRight
+  X
 } from "lucide-react";
 
 interface Expense {
@@ -178,7 +177,7 @@ export default function BudgetTracker() {
     <div className="space-y-10 animate-fade">
       <div className="flex justify-between items-end mb-8">
         <div className="space-y-4">
-          <div className="skeleton h-4 w-24 rounded-full" />
+          <div className="skeleton h-4 w-24 rounded-md" />
           <div className="skeleton h-12 w-64 rounded-2xl" />
         </div>
         <div className="skeleton h-14 w-40 rounded-2xl" />
@@ -233,9 +232,9 @@ export default function BudgetTracker() {
           <p className="stat-label">Investment So Far</p>
           <p className="stat-number text-rose-500">{formatPKR(totalSpent)}</p>
           <div className="mt-6">
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-slate-100 rounded-md overflow-hidden">
               <div 
-                className="h-full rounded-full transition-all duration-500" 
+                className="h-full rounded-md transition-all duration-500" 
                 style={{ 
                   width: `${spentPercent}%`, 
                   background: spentPercent > 90 ? "#EF4444" : spentPercent > 70 ? "#F97316" : "#10B981" 
@@ -253,12 +252,12 @@ export default function BudgetTracker() {
           </p>
           <div className="mt-6 flex items-center gap-2">
             {remaining < 0 ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 rounded-full">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 rounded-lg">
                 <TrendingDown size={14} className="text-rose-500" /> 
                 <span className="text-[10px] font-black text-rose-600 uppercase">Over Limit</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-full">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-lg">
                 <TrendingUp size={14} className="text-emerald-500" /> 
                 <span className="text-[10px] font-black text-emerald-600 uppercase">Sustainable</span>
               </div>
@@ -384,9 +383,9 @@ export default function BudgetTracker() {
                       <span className="text-[10px] font-bold text-slate-400 ml-2 uppercase">({((cat.amount / totalSpent) * 100).toFixed(0)}%)</span>
                     </div>
                   </div>
-                  <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden p-[2px]">
+                  <div className="w-full h-3 bg-slate-50 rounded-md overflow-hidden p-[2px]">
                     <div 
-                      className="h-full rounded-full shadow-sm transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1)" 
+                      className="h-full rounded-md shadow-sm transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1)" 
                       style={{ 
                         width: `${(cat.amount / totalSpent) * 100}%`, 
                         backgroundColor: cat.color 

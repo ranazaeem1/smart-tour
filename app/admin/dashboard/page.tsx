@@ -15,8 +15,7 @@ import { useState as useStateFilter } from "react";
 import Link from "next/link";
 import { fetchCompanies, fetchBookings, fetchReviews, fetchRevenueStats, fetchPlatformStats, updateCompanyStatus } from "@/lib/db";
 import { formatPKR, getStatusColor } from "@/lib/data";
-import { NotificationBell } from "@/components/shared/NotificationBell";
-import { useAuth } from "@/components/AuthProvider";
+import { AlertTriangle, BarChart3, Building2, Check, ClipboardList, MessageSquare, Mountain, Star, Users, Wallet, X } from "lucide-react";
 
 // ==========================================
 // Constants & Mock Data
@@ -34,7 +33,6 @@ import { useAuth } from "@/components/AuthProvider";
  * @returns {JSX.Element} The rendered admin dashboard
  */
 export default function AdminDashboard() {
-  const { profile } = useAuth();
   // ==========================================
   // State Management
   // ==========================================
@@ -155,10 +153,10 @@ export default function AdminDashboard() {
 
   const pendingCount = companies.filter(c => c.status === "pending").length;
   const ADMIN_STATS = [
-    { value: stats.totalUsers.toLocaleString(), label: "Total Users", color: "var(--teal)", icon: "👥", change: `${stats.totalUsers} registered` },
-    { value: stats.totalCompanies.toString(), label: "Tour Companies", color: "var(--purple-light)", icon: "🏢", change: `${pendingCount} pending` },
-    { value: formatPKR(stats.platformRevenue), label: "Platform Revenue", color: "var(--gold)", icon: "💰", change: "Live total" },
-    { value: stats.activeTours.toString(), label: "Active Tours", color: "var(--emerald)", icon: "🏔️", change: "Approved only" },
+    { value: stats.totalUsers.toLocaleString(), label: "Total Users", color: "var(--teal)", icon: <Users size={24} />, change: `${stats.totalUsers} registered` },
+    { value: stats.totalCompanies.toString(), label: "Tour Companies", color: "var(--purple-light)", icon: <Building2 size={24} />, change: `${pendingCount} pending` },
+    { value: formatPKR(stats.platformRevenue), label: "Platform Revenue", color: "var(--gold)", icon: <Wallet size={24} />, change: "Live total" },
+    { value: stats.activeTours.toString(), label: "Active Tours", color: "var(--emerald)", icon: <Mountain size={24} />, change: "Approved only" },
   ];
 
   // ==========================================
@@ -187,7 +185,7 @@ export default function AdminDashboard() {
         {ADMIN_STATS.map(s => (
           <div key={s.label} className="stat-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 24 }}>{s.icon}</span>
+              <span style={{ color: s.color }}>{s.icon}</span>
               <span className="badge badge-emerald" style={{ fontSize: 10 }}>{s.change}</span>
             </div>
             <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
@@ -204,7 +202,7 @@ export default function AdminDashboard() {
         */}
         <div className="card">
           <div className="section-header">
-            <h2 className="section-title">📈 Platform Revenue 2024</h2>
+            <h2 className="section-title inline-flex items-center gap-2"><BarChart3 size={20} /> Platform Revenue 2024</h2>
             <span className="badge badge-gold">{formatPKR(stats.platformRevenue)}</span>
           </div>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 5, height: 160, paddingBottom: 8 }}>
@@ -228,7 +226,7 @@ export default function AdminDashboard() {
         */}
         <div className="card">
           <div className="section-header">
-            <h2 className="section-title">⚠️ System Alerts</h2>
+            <h2 className="section-title inline-flex items-center gap-2"><AlertTriangle size={20} /> System Alerts</h2>
             <span className="badge badge-teal">{pendingCount > 0 ? `${pendingCount} Pending` : 'All Clear'}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -239,12 +237,12 @@ export default function AdminDashboard() {
             )}
             {bookings.filter(b => b.status === 'pending').length > 0 && (
               <div className="alert alert-info" style={{ fontSize: 13 }}>
-                <div style={{ flex: 1 }}>📋 {bookings.filter(b => b.status === 'pending').length} bookings awaiting confirmation</div>
+                <div className="inline-flex items-center gap-2" style={{ flex: 1 }}><ClipboardList size={16} /> {bookings.filter(b => b.status === 'pending').length} bookings awaiting confirmation</div>
               </div>
             )}
             {pendingCount === 0 && bookings.filter(b => b.status === 'pending').length === 0 && (
               <div className="alert alert-success" style={{ fontSize: 13 }}>
-                <div style={{ flex: 1 }}>✅ All systems operational. No pending actions.</div>
+                <div className="inline-flex items-center gap-2" style={{ flex: 1 }}><Check size={16} /> All systems operational. No pending actions.</div>
               </div>
             )}
           </div>
@@ -258,7 +256,7 @@ export default function AdminDashboard() {
       */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="section-header">
-          <h2 className="section-title">🏢 Tour Companies</h2>
+          <h2 className="section-title inline-flex items-center gap-2"><Building2 size={20} /> Tour Companies</h2>
           <div style={{ display: "flex", gap: 8 }}>
             {(["all", "pending", "approved"] as const).map(f => (
               <button key={f} className={`tab-btn ${companyFilter === f ? "active" : ""}`}
@@ -302,7 +300,7 @@ export default function AdminDashboard() {
                     <td style={{ color: "var(--text-secondary)" }}>{c.total_tours}</td>
                     <td style={{ color: "var(--text-secondary)" }}>{c.total_bookings}</td>
                     <td style={{ color: "var(--teal)", fontWeight: 700 }}>{c.total_revenue > 0 ? formatPKR(c.total_revenue) : "—"}</td>
-                    <td style={{ color: "var(--gold)", fontWeight: 700 }}>{c.rating > 0 ? `⭐ ${c.rating}` : "—"}</td>
+                    <td style={{ color: "var(--gold)", fontWeight: 700 }}>{c.rating > 0 ? <span className="inline-flex items-center gap-1"><Star size={13} fill="currentColor" /> {c.rating}</span> : "—"}</td>
                     <td><span className={`badge ${getStatusColor(c.status)}`}>{c.status}</span></td>
                     <td>
                       <div style={{ display: "flex", gap: 6 }}>
@@ -313,8 +311,8 @@ export default function AdminDashboard() {
                             style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", border: "1px solid rgba(16,185,129,0.3)" }}
                             onClick={() => handleApprove(c.id)}
                             disabled={approvingId === c.id}
-                          >✅ Approve</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleSuspend(c.id)} disabled={approvingId === c.id}>❌</button>
+                          ><Check size={14} /> Approve</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleSuspend(c.id)} disabled={approvingId === c.id} aria-label="Reject company"><X size={14} /></button>
                         </>}
                         {c.status === "suspended" && (
                           <button className="btn btn-sm" style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)" }} onClick={() => handleApprove(c.id)}>Restore</button>
@@ -336,7 +334,7 @@ export default function AdminDashboard() {
       */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="section-header">
-          <h2 className="section-title">📋 Recent Bookings</h2>
+          <h2 className="section-title inline-flex items-center gap-2"><ClipboardList size={20} /> Recent Bookings</h2>
           <Link href="/admin/bookings" className="btn btn-ghost btn-sm">View All</Link>
         </div>
         {bookings.length === 0 ? (
@@ -371,7 +369,7 @@ export default function AdminDashboard() {
       */}
       <div className="card">
         <div className="section-header">
-          <h2 className="section-title">💬 Reviews & Sentiment</h2>
+          <h2 className="section-title inline-flex items-center gap-2"><MessageSquare size={20} /> Reviews & Sentiment</h2>
           <Link href="/admin/reviews" className="btn btn-ghost btn-sm">All Reviews</Link>
         </div>
         {reviews.length === 0 ? (
@@ -387,7 +385,9 @@ export default function AdminDashboard() {
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, flexWrap: "wrap", gap: 8 }}>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{r.profiles?.full_name || "Anonymous"}</span>
-                      <span style={{ color: "var(--gold)", fontSize: 13 }}>{"⭐".repeat(r.rating)}</span>
+                      <span className="inline-flex items-center gap-0.5" style={{ color: "var(--gold)", fontSize: 13 }}>
+                        {Array.from({ length: r.rating }).map((_, index) => <Star key={index} size={13} fill="currentColor" />)}
+                      </span>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                       <span className={`badge ${getStatusColor(r.sentiment)}`}>{r.sentiment}</span>

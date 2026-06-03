@@ -9,16 +9,12 @@ import { StartChatButton } from "@/components/shared/StartChatButton";
 import { 
   ClipboardList, 
   Search, 
-  Filter, 
   User, 
-  MapPin, 
   Calendar, 
   Users, 
-  Wallet, 
   Check, 
   X, 
-  Activity,
-  ArrowRight
+  Activity
 } from "lucide-react";
 
 interface CompanyBooking {
@@ -104,7 +100,7 @@ export default function CompanyBookingsPage() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
               <Activity size={12} className="panel-hero-kicker-icon" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Operational Command</span>
             </div>

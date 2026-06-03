@@ -13,8 +13,6 @@ import {
   Activity, 
   Mail, 
   Phone, 
-  ArrowRight,
-  User,
   Calendar
 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -93,7 +91,7 @@ export default function CompanyCustomersPage() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-slate inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+            <div className="panel-hero-kicker panel-hero-kicker-slate inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
               <Users size={12} className="panel-hero-kicker-icon" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">CRM & Relationship Hub</span>
             </div>

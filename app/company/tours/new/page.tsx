@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { createTour, fetchCompanyByOwner } from "@/lib/db";
 import { DESTINATIONS } from "@/lib/data";
+import { getDefaultTourImage } from "@/lib/tourImages";
 import { 
   ArrowLeft, 
   Rocket, 
@@ -16,9 +17,7 @@ import {
   Image as ImageIcon, 
   CheckCircle2, 
   AlertCircle,
-  BarChart3,
-  Calendar,
-  Users
+  Calendar
 } from "lucide-react";
 
 const INITIAL_HIGHLIGHTS = ["", "", ""];
@@ -35,7 +34,7 @@ export default function AddTourPage() {
   const [form, setForm] = useState({
     title: "", destination: DESTINATIONS[0] || "Hunza Valley", category: "Adventure",
     duration: "", max_group: "", price: "", difficulty: "Moderate",
-    description: "", region: "Northern Pakistan",
+    description: "", region: "Northern Pakistan", image_url: "",
   });
 
   const setField = (key: string, val: string) => setForm(p => ({ ...p, [key]: val }));
@@ -63,6 +62,7 @@ export default function AddTourPage() {
         difficulty: form.difficulty,
         highlights: highlights.filter(Boolean),
         included: INCLUSIONS.filter((_, i) => included[i]),
+        image_url: form.image_url.trim() || getDefaultTourImage(form.destination, form.title),
       });
 
       if (tour) {
@@ -238,6 +238,19 @@ export default function AddTourPage() {
               </p>
               <p className="text-[var(--muted-foreground)] text-[9px] font-black uppercase tracking-[0.2em] mt-8 opacity-40">JPG, PNG, WEBP • Max 10MB per payload</p>
               <input type="file" accept="image/*" multiple className="hidden" />
+            </div>
+
+            <div className="input-group">
+              <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Custom Image URL (Optional)</label>
+              <input
+                className="input font-bold"
+                placeholder={`Default: ${getDefaultTourImage(form.destination, form.title)}`}
+                value={form.image_url}
+                onChange={e => setField("image_url", e.target.value)}
+              />
+              <p className="text-[var(--muted-foreground)] text-xs font-medium mt-3">
+                Leave empty to use the default destination image. Add a hosted image URL only when the company wants its own picture.
+              </p>
             </div>
           </section>
         </div>

@@ -11,7 +11,7 @@
 // ==========================================
 
 import { supabase } from './supabase';
-import { TOURS, BOOKINGS, REVIEWS, COMPANIES, SAFETY_ZONES, MONTHLY_REVENUE } from './data';
+import { getDefaultTourImage } from './tourImages';
 
 // ==========================================
 // Resilient Fetch Helper
@@ -188,7 +188,10 @@ export async function createTour(tour: {
 
   // 2. Proceed with insertion
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from('tours') as any).insert(tour).select().single();
+  const { data, error } = await (supabase.from('tours') as any)
+    .insert({ ...tour, image_url: tour.image_url || getDefaultTourImage(tour.destination, tour.title) })
+    .select()
+    .single();
   if (error) { console.error('[createTour]', error.message); return null; }
   return data;
 }
@@ -506,7 +509,7 @@ export async function deleteUserExpense(id: string, userId: string) {
 }
 
 export async function updateProfileBudget(userId: string, budget: number) {
-  const { data, error } = await (supabase.from('profiles') as any)
+  const { error } = await (supabase.from('profiles') as any)
     .update({ total_budget: budget })
     .eq('id', userId);
 

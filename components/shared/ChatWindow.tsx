@@ -225,7 +225,7 @@ export function ChatWindow({
                     {showTime && (
                       <div className="flex items-center justify-center gap-4">
                         <div className="h-px flex-1 bg-white/5" />
-                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] bg-slate-900 px-3 py-1 rounded-full border border-white/5">
+                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-[0.2em] bg-slate-900 px-3 py-1 rounded-lg border border-white/5">
                           {new Date(msg.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <div className="h-px flex-1 bg-white/5" />

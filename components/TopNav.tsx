@@ -6,16 +6,13 @@ import { fetchCompanyByOwner } from "@/lib/db";
 import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { 
-  Search, 
   ChevronDown, 
   User, 
-  Settings, 
   LogOut, 
-  Bell, 
   Plus,
   Menu,
   Building2,
-  Sparkles
+  Hand
 } from "lucide-react";
 
 interface TopNavProps {
@@ -107,8 +104,8 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
         </button>
 
         <div className="animate-fade min-w-0">
-          <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em] mb-1">
-            {greeting} 👋
+          <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em] mb-1 inline-flex items-center gap-1.5">
+            {greeting} <Hand size={12} className="text-emerald-500" />
           </p>
           <h1 className="text-lg md:text-xl font-black text-[var(--foreground)] m-0 leading-tight tracking-tight truncate">
             {dashboardTitle}
@@ -172,7 +169,7 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
                 aria-label="User account menu"
               >
                 <div className="px-5 py-4 mb-2 border-b border-[var(--border)]">
-                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Authenticated as</p>
+                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em] mb-1">{userName}</p>
                   <p className="text-sm font-bold text-[var(--foreground)] truncate" role="note">{profile?.email}</p>
                 </div>
 
@@ -192,7 +189,8 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
                     role="menuitem"
                     aria-label="Go to preferences"
                   >
-                    <Sparkles size={16} className="text-[var(--muted-foreground)] group-hover:text-emerald-500" aria-hidden="true" />
+  Sparkles,
+  Hand
                     <span className="text-sm font-bold">Preferences</span>
                   </Link>
                 </div>

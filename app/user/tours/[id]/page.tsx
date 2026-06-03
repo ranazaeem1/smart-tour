@@ -6,6 +6,7 @@ import { fetchTourById, createBooking } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
+import { getTourImage } from "@/lib/tourImages";
 import { 
   ArrowLeft, 
   MapPin, 
@@ -75,7 +76,7 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
     </div>
   );
 
-  const getImg = (t: any) => t.image_url || t.image || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200";
+  const getImg = (t: any) => getTourImage(t);
   const getSafety = (t: any) => t.safety_score || t.safetyScore || 85;
   const getGroup = (t: any) => t.max_group || t.maxGroup || 10;
   const getReviews = (t: any) => t.review_count || t.reviews || 0;
@@ -129,10 +130,10 @@ export default function TourDetailPage({ params }: { params: Promise<{ id: strin
           <div className="flex flex-col md:flex-row justify-between items-end gap-6">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="px-4 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/30">
+                <span className="px-4 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-emerald-500/30">
                   {tour.category || "Adventure"}
                 </span>
-                <span className="px-4 py-1.5 bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-full border border-white/20">
+                <span className="px-4 py-1.5 bg-white/10 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest rounded-lg border border-white/20">
                   {tour.difficulty || "Moderate"} Difficulty
                 </span>
               </div>

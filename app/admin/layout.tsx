@@ -4,6 +4,7 @@ import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import RequireAuth from "@/components/RequireAuth";
+import Chatbot from "@/components/Chatbot";
 import { 
   LayoutDashboard, 
   Users, 
@@ -75,6 +76,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {children}
           </main>
         </div>
+
+        <Chatbot />
       </div>
     </RequireAuth>
   );

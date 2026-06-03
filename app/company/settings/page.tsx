@@ -13,11 +13,9 @@ import {
   Shield, 
   Lock, 
   CheckCircle2, 
-  AlertCircle,
-  Activity,
-  ArrowLeft
+  AlertCircle
 } from "lucide-react";
-import Link from "next/link";
+import { emailPattern, normalizeEmail, onlyDigits, stripNumbers, textOnlyPattern } from "@/lib/formValidation";
 
 export default function CompanySettingsPage() {
   const [saved, setSaved] = useState(false);
@@ -50,7 +48,7 @@ export default function CompanySettingsPage() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-slate inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+            <div className="panel-hero-kicker panel-hero-kicker-slate inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
               <Settings size={12} className="panel-hero-kicker-icon" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Operational Config</span>
             </div>
@@ -84,7 +82,7 @@ export default function CompanySettingsPage() {
                 <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Expedition Label</label>
                 <div className="relative">
                   <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
-                  <input className="input !pl-12 font-bold" defaultValue="Northern Trails Co." />
+                  <input className="input !pl-12 font-bold" defaultValue="Northern Trails Co." pattern={textOnlyPattern} title="Use letters only." onInput={e => { e.currentTarget.value = stripNumbers(e.currentTarget.value); }} />
                 </div>
               </div>
 
@@ -93,14 +91,14 @@ export default function CompanySettingsPage() {
                   <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Communication Node</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
-                    <input className="input !pl-12 font-bold" type="email" defaultValue="info@northerntrails.pk" />
+                    <input className="input !pl-12 font-bold" type="email" inputMode="email" pattern={emailPattern} defaultValue="info@northerntrails.pk" onInput={e => { e.currentTarget.value = normalizeEmail(e.currentTarget.value); }} />
                   </div>
                 </div>
                 <div className="input-group">
                   <label className="input-label !text-[10px] !font-black !uppercase !tracking-[0.2em]">Contact Primary</label>
                   <div className="relative">
                     <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
-                    <input className="input !pl-12 font-bold" defaultValue="0300-1234567" />
+                    <input className="input !pl-12 font-bold" type="tel" inputMode="numeric" pattern="[0-9]{9,15}" maxLength={15} defaultValue="03001234567" onInput={e => { e.currentTarget.value = onlyDigits(e.currentTarget.value); }} />
                   </div>
                 </div>
               </div>

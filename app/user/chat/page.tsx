@@ -13,7 +13,6 @@ function ChatRedirect() {
     async function findOrCreateConversation() {
       if (authLoading || !profile) return;
 
-      const bookingId = searchParams.get("bookingId");
       const companyId = searchParams.get("companyId");
       const name = searchParams.get("name");
 
@@ -24,7 +23,7 @@ function ChatRedirect() {
       }
 
       // Try to find an existing conversation between this user and company
-      const { data: existing, error: findError } = await (supabase
+      const { data: existing } = await (supabase
         .from("conversations") as any)
         .select("id")
         .eq("user_id", profile.id)

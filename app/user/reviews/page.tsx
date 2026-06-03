@@ -13,7 +13,6 @@ import {
   MapPin, 
   Calendar,
   Sparkles,
-  Search,
   Quote
 } from "lucide-react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from '@/lib/supabase';
 
@@ -17,11 +17,10 @@ import {
   Plus, 
   BarChart3,
   Search,
-  Star,
-  ChevronLeft,
   ChevronRight,
   Send,
-  MoreVertical
+  MoreVertical,
+  Hand
 } from "lucide-react";
 
 export default function CompanyPanel() {
@@ -85,9 +84,7 @@ export default function CompanyPanel() {
       <aside className="w-[260px] bg-black border-r border-white/5 h-screen fixed left-0 top-0 flex flex-col z-[100]">
         <div className="p-8">
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-emerald-500/20">
-              S
-            </div>
+            <img src="/logo.svg" alt="Smart Tour logo" className="w-12 h-12 rounded-full object-contain" />
             <span className="font-black text-2xl tracking-tighter uppercase italic">
               <span className="text-black">Smart</span>
               <span className="text-emerald-500">Tour</span>
@@ -140,7 +137,7 @@ export default function CompanyPanel() {
         {/* ── Top Bar ── */}
         <header className="h-[90px] bg-black/50 backdrop-blur-xl border-b border-white/5 px-10 flex items-center justify-between sticky top-0 z-[90]">
           <div className="animate-fade">
-            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1.5">{greeting} 👋</p>
+            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1.5 inline-flex items-center gap-1.5">{greeting} <Hand size={12} /></p>
             <h1 className="text-white text-3xl font-black tracking-tighter m-0 uppercase italic">{activeSection === 'Dashboard' ? `${companyName}` : activeSection}</h1>
           </div>
 
@@ -224,7 +221,7 @@ export default function CompanyPanel() {
                             <td className="px-8 py-6 text-xs font-black text-emerald-500">{b.id}</td>
                             <td className="px-8 py-6 text-xs font-bold text-white">{b.name}</td>
                             <td className="px-8 py-6">
-                              <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${b.sColor}`}>{b.status}</span>
+                              <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${b.sColor}`}>{b.status}</span>
                             </td>
                             <td className="px-8 py-6 text-sm font-black text-emerald-400 text-right">{b.rev}</td>
                           </tr>
@@ -277,7 +274,7 @@ export default function CompanyPanel() {
                         <td className="px-8 py-6 text-sm text-zinc-400 font-medium">{t.dur}</td>
                         <td className="px-8 py-6 text-sm text-emerald-400 font-black">{t.price}</td>
                         <td className="px-8 py-6">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${t.sColor}`}>{t.status}</span>
+                          <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${t.sColor}`}>{t.status}</span>
                         </td>
                         <td className="px-8 py-6 text-right space-x-6">
                           <button className="text-emerald-500 text-[10px] font-black uppercase tracking-widest hover:underline decoration-2 underline-offset-4">Modify</button>
@@ -325,7 +322,7 @@ export default function CompanyPanel() {
                         <td className="px-8 py-6 text-[10px] text-zinc-500 font-black uppercase tracking-widest">{b.date}</td>
                         <td className="px-8 py-6 text-sm font-black text-emerald-400 text-right">{b.rev}</td>
                         <td className="px-8 py-6 text-right">
-                          <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${b.sColor}`}>{b.status}</span>
+                          <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${b.sColor}`}>{b.status}</span>
                         </td>
                       </tr>
                     ))}

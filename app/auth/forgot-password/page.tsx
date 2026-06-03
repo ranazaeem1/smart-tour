@@ -7,6 +7,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { emailPattern, normalizeEmail } from "@/lib/formValidation";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 
 const bgImage =
   'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=900&fit=crop")';
@@ -48,9 +50,7 @@ export default function ForgotPasswordPage() {
       <div className="relative z-10 w-full max-w-[460px] animate-fade">
         <div className="text-center mb-10">
           <Link href="/" className="auth-brand inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform">
-              <span className="text-white font-black text-xl">S</span>
-            </div>
+            <img src="/logo.svg" alt="Smart Tour logo" className="w-14 h-14 rounded-full object-contain group-hover:scale-105 transition-transform" />
             <span className="text-3xl font-black uppercase italic tracking-tighter">
               <span className="auth-brand-smart">Smart</span>
               <span className="auth-brand-tour">Tour</span>
@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
 
           {error && (
             <div className="auth-alert-error px-6 py-4 rounded-2xl text-sm mb-8 animate-fade border">
-              ⚠️ {error}
+              <span className="inline-flex items-center gap-2"><AlertTriangle size={16} /> {error}</span>
             </div>
           )}
           {success && (
@@ -91,10 +91,12 @@ export default function ForgotPasswordPage() {
               <input
                 className={inputClass}
                 type="email"
+                inputMode="email"
+                pattern={emailPattern}
                 placeholder="you@example.com"
                 required
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => setEmail(normalizeEmail(e.target.value))}
               />
             </div>
 
@@ -106,7 +108,7 @@ export default function ForgotPasswordPage() {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
               ) : (
-                "Send Reset Link →"
+                <span className="inline-flex items-center gap-2">Send Reset Link <ArrowRight size={14} /></span>
               )}
             </button>
           </form>

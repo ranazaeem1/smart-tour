@@ -4,8 +4,8 @@ import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { DESTINATIONS, BUDGET_BREAKDOWN, SAFETY_ZONES, formatPKR } from "@/lib/data";
-import { useAuth } from "@/components/AuthProvider";
 import { fetchTours } from "@/lib/db";
+import { getTourImage } from "@/lib/tourImages";
 import { 
   Star,
   Compass, 
@@ -58,7 +58,6 @@ function generateDynamicItinerary(dest: string, days: number) {
 
 function PlannerContent() {
   const params = useSearchParams();
-  const { profile } = useAuth();
   const [step, setStep] = useState(1);
   const [dest, setDest] = useState(params.get("dest") || "");
   const [budget, setBudget] = useState(Number(params.get("budget")) || 45000);
@@ -66,7 +65,7 @@ function PlannerContent() {
   const [group, setGroup] = useState<string | number>(params.get("group") || "");
   const [startDate, setStartDate] = useState("");
   const [interests, setInterests] = useState<string[]>(["Trekking", "Photography"]);
-  const [generated, setGenerated] = useState(false);
+  const [, setGenerated] = useState(false);
   const [loading, setLoading] = useState(false);
   
   const [matchingTours, setMatchingTours] = useState<any[] | null>(null);
@@ -117,7 +116,7 @@ function PlannerContent() {
             
             <div className="flex justify-between items-start mb-10 relative z-10">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full mb-3 border border-emerald-500/20">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-lg mb-3 border border-emerald-500/20">
                   <Zap size={12} className="text-emerald-500" />
                   <span className="text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em]">AI Intelligence</span>
                 </div>
@@ -146,7 +145,7 @@ function PlannerContent() {
                   {matchingTours.map((tour, idx) => (
                     <div key={tour.id} className="group flex gap-6 p-6 bg-[var(--muted)] hover:bg-[var(--card)] hover:shadow-xl border border-transparent hover:border-[var(--border)] rounded-[var(--radius-xl)] transition-all duration-500 animate-fade" style={{ animationDelay: `${idx * 100}ms` }}>
                       <div className="w-24 h-24 rounded-[20px] overflow-hidden shadow-lg shrink-0">
-                        <img src={tour.image_url || '/images/tour-placeholder.png'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={tour.title} />
+                        <img src={getTourImage(tour)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={tour.title} />
                       </div>
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
@@ -454,8 +453,8 @@ function PlannerContent() {
                         <span className="text-[11px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">{item.name}</span>
                         <span className="text-sm font-black text-[var(--foreground)]">{formatPKR(item.amount)}</span>
                       </div>
-                      <div className="w-full h-2.5 bg-[var(--muted)] rounded-full overflow-hidden p-[1px] border border-[var(--border)]">
-                        <div className="h-full rounded-full shadow-lg transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1)" style={{ width: `${item.value}%`, backgroundColor: item.color }} />
+                      <div className="w-full h-2.5 bg-[var(--muted)] rounded-md overflow-hidden p-[1px] border border-[var(--border)]">
+                        <div className="h-full rounded-md shadow-lg transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1)" style={{ width: `${item.value}%`, backgroundColor: item.color }} />
                       </div>
                     </div>
                   ))}

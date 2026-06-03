@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -81,7 +81,7 @@ export default function LandingNav() {
     <nav ref={navRef} className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 transition-all duration-500">
       <div className={`landing-nav-shell ${navOnDark ? "nav-on-dark" : "nav-on-light"} rounded-[32px] px-8 sm:px-10 h-20 sm:h-24 flex justify-between items-center shadow-2xl`}>
         <Link href="/" className="landing-nav-brand flex items-center gap-2 cursor-pointer group">
-          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-black group-hover:rotate-6 transition-transform">S</div>
+          <img src="/logo.svg" alt="Smart Tour logo" className="w-11 h-11 rounded-full object-contain group-hover:scale-105 transition-transform" />
           <span className="text-xl font-black tracking-tighter uppercase italic">
             <span className="landing-brand-primary">Smart</span><span className="landing-brand-accent">Tour</span>
           </span>

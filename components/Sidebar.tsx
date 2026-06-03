@@ -36,9 +36,7 @@ export default function Sidebar({ items, role, collapsed, setCollapsed }: Sideba
       {/* Logo Section */}
       <div className="h-[80px] flex items-center px-6 mb-2">
         <div className="flex items-center gap-3.5 overflow-hidden">
-          <div className="h-9 w-9 shrink-0 bg-emerald-600 rounded-[14px] flex items-center justify-center shadow-[0_8px_16px_-4px_rgba(16,185,129,0.5)]">
-            <span className="text-white font-black text-lg tracking-tighter">S</span>
-          </div>
+          <img src="/logo.svg" alt="Smart Tour logo" className="h-11 w-11 shrink-0 rounded-full object-contain" />
           {!collapsed && (
             <div className="flex flex-col animate-fade">
               <span className="text-[14px] font-black whitespace-nowrap tracking-tighter leading-tight">

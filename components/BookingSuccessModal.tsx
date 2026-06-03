@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { Check, PhoneCall } from "lucide-react";
 
 /**
  * @file BookingSuccessModal.tsx
@@ -77,15 +78,13 @@ export function BookingSuccessModal({ onClose, tourTitle }: BookingSuccessModalP
               position: "relative",
             }}
           >
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
+            <Check size={44} color="white" strokeWidth={2.5} />
           </div>
         </div>
 
         {/* Heading */}
         <h2 style={{ fontSize: 26, fontWeight: 900, color: "#fff", marginBottom: 8, lineHeight: 1.2 }}>
-          Booking Confirmed! 🎉
+          Booking Confirmed
         </h2>
 
         {/* Tour name */}
@@ -109,7 +108,9 @@ export function BookingSuccessModal({ onClose, tourTitle }: BookingSuccessModalP
             Your booking has been received successfully.
           </p>
           <p style={{ color: "#10B981", fontWeight: 700, fontSize: 15 }}>
-            📞 The company will contact you soon — Stay Connected!
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <PhoneCall size={16} /> The company will contact you soon. Stay Connected!
+            </span>
           </p>
         </div>
 
@@ -137,7 +138,9 @@ export function BookingSuccessModal({ onClose, tourTitle }: BookingSuccessModalP
           onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.02)")}
           onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
         >
-          ✓ View My Bookings
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <Check size={16} /> View My Bookings
+          </span>
         </button>
       </div>
     </div>

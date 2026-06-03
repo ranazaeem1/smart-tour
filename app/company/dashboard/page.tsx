@@ -81,7 +81,7 @@ export default function CompanyDashboard() {
     { label: "Active Packages", value: activeTours, icon: Mountain, color: "bg-emerald-500", aria: "Total active tour packages" },
     { label: "Total Reservations", value: bookings.length, icon: ClipboardList, color: "bg-slate-900", aria: "Total customer bookings" },
     { label: "Net Revenue", value: formatPKR(totalRevenue), icon: Wallet, color: "bg-slate-900", aria: "Total revenue earned" },
-    { label: "Average Rating", value: `${avgRating} ★`, icon: Star, color: "bg-amber-500", aria: "Average customer rating" },
+    { label: "Average Rating", value: avgRating, icon: Star, color: "bg-amber-500", aria: "Average customer rating" },
   ];
 
   // Sentiment data computation
@@ -105,7 +105,7 @@ export default function CompanyDashboard() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
               <Activity size={12} className="panel-hero-kicker-icon" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Operational Excellence</span>
             </div>

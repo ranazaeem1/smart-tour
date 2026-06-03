@@ -1,9 +1,6 @@
 "use client";
 
-import "mapbox-gl/dist/mapbox-gl.css";
-
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type mapboxgl from "mapbox-gl";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -11,30 +8,28 @@ import {
   Compass,
   Gauge,
   LocateFixed,
-  MapPin,
   Navigation,
   RefreshCw,
   Route,
   Search,
+  ShieldAlert,
   ShieldCheck,
   Signal,
   Thermometer,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { MAPBOX_ACCESS_TOKEN } from "@/config/apis";
-import { configureMapbox, fetchDrivingRoute, geocodeDestination, type GeocodedDestination } from "@/lib/mapbox";
+import { SafetyLeafletRouteMap } from "@/components/shared/SafetyLeafletRouteMap";
+import { fetchDrivingRoute, geocodeDestination, type GeocodedDestination } from "@/lib/osm";
 import { supabase } from "@/lib/supabase";
-import { useLiveLocation, type LiveLocation } from "@/hooks/useLiveLocation";
+import { useLiveLocation } from "@/hooks/useLiveLocation";
 import { useLiveWeather } from "@/hooks/useLiveWeather";
 import { useSafetyScores } from "@/hooks/useSafetyScores";
-import { calculateRouteProgress, routeBounds, type Coordinates, type RouteSummary } from "@/utils/routeCalculation";
-
-const DEFAULT_CENTER: Coordinates = { lat: 33.6844, lng: 73.0479 };
-const ROUTE_SOURCE_ID = "smart-tour-route";
-const ROUTE_LAYER_ID = "smart-tour-route-line";
+import { calculateRouteProgress, type RouteSummary } from "@/utils/routeCalculation";
 
 type TripRecord = {
   id: string;
+  storage: "supabase" | "local";
 };
 
 function formatTime(value?: string | null) {
@@ -77,9 +72,9 @@ function ScoreBar({
         <span className="text-sm font-black text-slate-950">{label}</span>
         <span className="font-mono text-sm font-black text-slate-900">{value}%</span>
       </div>
-      <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+      <div className="h-3 overflow-hidden rounded-md bg-slate-100">
         <div
-          className={`h-full rounded-full bg-gradient-to-r ${scoreColor(tone)} transition-all duration-700`}
+          className={`h-full rounded-md bg-gradient-to-r ${scoreColor(tone)} transition-all duration-700`}
           style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
         />
       </div>
@@ -102,145 +97,6 @@ function StatusMessage({ tone, children }: { tone: "error" | "warning" | "info";
   );
 }
 
-function MapCanvas({
-  userLocation,
-  destination,
-  route,
-}: {
-  userLocation: LiveLocation | null;
-  destination: GeocodedDestination | null;
-  route: RouteSummary | null;
-}) {
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const destinationMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current || !MAPBOX_ACCESS_TOKEN || mapRef.current) return;
-
-    try {
-      const mapbox = configureMapbox();
-      mapRef.current = new mapbox.Map({
-        container: containerRef.current,
-        style: "mapbox://styles/mapbox/light-v11",
-        center: [DEFAULT_CENTER.lng, DEFAULT_CENTER.lat],
-        zoom: 5,
-        attributionControl: false,
-      });
-
-      mapRef.current.addControl(new mapbox.NavigationControl({ visualizePitch: true }), "bottom-right");
-      mapRef.current.on("error", () => setMapError("Mapbox could not load the map tiles."));
-    } catch {
-      setMapError("Mapbox could not initialize.");
-    }
-
-    return () => {
-      userMarkerRef.current?.remove();
-      destinationMarkerRef.current?.remove();
-      mapRef.current?.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !userLocation) return;
-
-    const mapbox = configureMapbox();
-    if (!userMarkerRef.current) {
-      userMarkerRef.current = new mapbox.Marker({ color: "#22C55E" })
-        .setLngLat([userLocation.lng, userLocation.lat])
-        .setPopup(new mapbox.Popup().setText("Your current location"))
-        .addTo(map);
-    } else {
-      userMarkerRef.current.setLngLat([userLocation.lng, userLocation.lat]);
-    }
-
-    if (!destination && !route) {
-      map.easeTo({ center: [userLocation.lng, userLocation.lat], zoom: 11 });
-    }
-  }, [destination, route, userLocation]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !destination) return;
-
-    const mapbox = configureMapbox();
-    if (!destinationMarkerRef.current) {
-      destinationMarkerRef.current = new mapbox.Marker({ color: "#EF4444" })
-        .setLngLat([destination.lng, destination.lat])
-        .setPopup(new mapbox.Popup().setText(destination.placeName))
-        .addTo(map);
-    } else {
-      destinationMarkerRef.current.setLngLat([destination.lng, destination.lat]);
-    }
-  }, [destination]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !route || !userLocation || !destination) return;
-
-    const updateRoute = () => {
-      const source = map.getSource(ROUTE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
-      const data: GeoJSON.Feature<GeoJSON.LineString> = {
-        type: "Feature",
-        properties: {},
-        geometry: route.geometry,
-      };
-
-      if (source) {
-        source.setData(data);
-      } else {
-        map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data });
-        map.addLayer({
-          id: ROUTE_LAYER_ID,
-          type: "line",
-          source: ROUTE_SOURCE_ID,
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: {
-            "line-color": "#16A34A",
-            "line-width": 5,
-            "line-opacity": 0.9,
-          },
-        });
-      }
-
-      const bounds = routeBounds(route.geometry, userLocation, destination);
-      map.fitBounds([bounds.southwest, bounds.northeast], { padding: 70, maxZoom: 13, duration: 900 });
-    };
-
-    if (map.isStyleLoaded()) updateRoute();
-    else map.once("load", updateRoute);
-  }, [destination, route, userLocation]);
-
-  if (!MAPBOX_ACCESS_TOKEN) {
-    return (
-      <div className="flex h-96 items-center justify-center rounded-3xl border border-amber-200 bg-amber-50 p-8 text-center">
-        <div>
-          <MapPin className="mx-auto mb-4 text-amber-700" size={32} />
-          <h2 className="text-xl font-black text-slate-950">Mapbox token missing</h2>
-          <p className="mt-2 max-w-md text-sm font-bold text-amber-900">
-            Add NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN to .env.local, then restart the dev server to enable the interactive map.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative h-96 overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm">
-      <div ref={containerRef} className="h-full w-full" role="application" aria-label="Interactive safety route map" />
-      {mapError && (
-        <div className="absolute left-4 top-4 max-w-sm rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-bold text-red-700 shadow-lg">
-          {mapError}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function SafetyPage() {
   const { user } = useAuth();
   const { location, loading: locationLoading, error: locationError, refresh: refreshLocation } = useLiveLocation();
@@ -253,6 +109,8 @@ export default function SafetyPage() {
   const [trip, setTrip] = useState<TripRecord | null>(null);
   const [savingTrip, setSavingTrip] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [sosOpen, setSosOpen] = useState(false);
+  const [sosLoading, setSosLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date().toISOString());
 
   const weatherTarget = destination ?? location;
@@ -301,7 +159,7 @@ export default function SafetyPage() {
       if (!found) {
         setDestination(null);
         setRoute(null);
-        setRouteError(MAPBOX_ACCESS_TOKEN ? "Destination not found. Try a more specific place name." : "Mapbox token is missing.");
+        setRouteError("Destination not found. Try a more specific place name.");
         return;
       }
 
@@ -330,35 +188,55 @@ export default function SafetyPage() {
     }
   };
 
+  const handleSOS = async () => {
+    setSosLoading(true);
+    try {
+      await refreshLocation().catch(() => null);
+      setSosOpen(true);
+    } finally {
+      setSosLoading(false);
+    }
+  };
+
   const startTracking = async () => {
     if (!location || !destination || !route) return;
 
     setSavingTrip(true);
+    const tripPayload = {
+      user_id: user?.id ?? null,
+      origin_lat: location.lat,
+      origin_lng: location.lng,
+      destination_lat: destination.lat,
+      destination_lng: destination.lng,
+      route_geojson: route.geometry,
+      distance_km: route.distanceKm,
+      estimated_duration_minutes: route.durationMinutes,
+      current_location_lat: location.lat,
+      current_location_lng: location.lng,
+      progress_percentage: progress,
+      status: "active",
+      started_at: new Date().toISOString(),
+    };
+
     try {
       const { data, error } = await (supabase.from("trip_routes") as any)
-        .insert({
-          user_id: user?.id ?? null,
-          origin_lat: location.lat,
-          origin_lng: location.lng,
-          destination_lat: destination.lat,
-          destination_lng: destination.lng,
-          route_geojson: route.geometry,
-          distance_km: route.distanceKm,
-          estimated_duration_minutes: route.durationMinutes,
-          current_location_lat: location.lat,
-          current_location_lng: location.lng,
-          progress_percentage: progress,
-          status: "active",
-          started_at: new Date().toISOString(),
-        })
+        .insert(tripPayload)
         .select("id")
         .single();
 
       if (error) throw error;
-      setTrip(data as TripRecord);
+      setTrip({ id: data.id, storage: "supabase" });
       setTracking(true);
     } catch {
-      setRouteError("Live tracking could not be saved. Check your Supabase trip_routes table and RLS policy.");
+      const localTrip = {
+        id: `local-${Date.now()}`,
+        storage: "local" as const,
+        ...tripPayload,
+      };
+      window.localStorage.setItem("smart-tour-active-trip", JSON.stringify(localTrip));
+      setTrip({ id: localTrip.id, storage: "local" });
+      setTracking(true);
+      setRouteError(null);
     } finally {
       setSavingTrip(false);
     }
@@ -367,16 +245,28 @@ export default function SafetyPage() {
   useEffect(() => {
     if (!tracking || !trip?.id || !location) return;
 
-    void (supabase.from("trip_routes") as any)
-      .update({
-        current_location_lat: location.lat,
-        current_location_lng: location.lng,
-        progress_percentage: progress,
-        status: progress >= 100 ? "completed" : "active",
-        completed_at: progress >= 100 ? new Date().toISOString() : null,
-      })
-      .eq("id", trip.id);
-  }, [location, progress, tracking, trip?.id]);
+    const updatePayload = {
+      current_location_lat: location.lat,
+      current_location_lng: location.lng,
+      progress_percentage: progress,
+      status: progress >= 100 ? "completed" : "active",
+      completed_at: progress >= 100 ? new Date().toISOString() : null,
+    };
+
+    if (trip.storage === "local") {
+      const current = window.localStorage.getItem("smart-tour-active-trip");
+      let parsed = {};
+      try {
+        parsed = current ? JSON.parse(current) : {};
+      } catch {
+        parsed = {};
+      }
+      window.localStorage.setItem("smart-tour-active-trip", JSON.stringify({ ...parsed, ...updatePayload }));
+      return;
+    }
+
+    void (supabase.from("trip_routes") as any).update(updatePayload).eq("id", trip.id);
+  }, [location, progress, tracking, trip?.id, trip?.storage]);
 
   const destinationLabel = destination?.placeName || "Search a destination";
 
@@ -385,10 +275,6 @@ export default function SafetyPage() {
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-800">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Live data
-            </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-5xl">Safety & Risk Map</h1>
             <p className="mt-3 max-w-3xl text-base font-bold leading-relaxed text-slate-700">
               Real-time weather, scores, and risk alerts for your destination - updated from live API data.
@@ -396,6 +282,15 @@ export default function SafetyPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-end">
+            <button
+              type="button"
+              onClick={handleSOS}
+              disabled={sosLoading}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-red-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-red-500/20 transition hover:bg-red-600 disabled:opacity-60"
+            >
+              <ShieldAlert size={16} className={sosLoading ? "animate-pulse" : ""} />
+              {sosLoading ? "Locating" : "SOS alert"}
+            </button>
             <button
               type="button"
               onClick={handleRefresh}
@@ -437,7 +332,6 @@ export default function SafetyPage() {
           {locationError && <StatusMessage tone="warning">{locationError}</StatusMessage>}
           {routeError && <StatusMessage tone="error">{routeError}</StatusMessage>}
           {scoresError && <StatusMessage tone="warning">{scoresError}</StatusMessage>}
-          {!MAPBOX_ACCESS_TOKEN && <StatusMessage tone="warning">Mapbox is not configured yet. Add the token to enable search, map rendering, and routes.</StatusMessage>}
         </div>
       </section>
 
@@ -451,7 +345,7 @@ export default function SafetyPage() {
             {locationLoading ? "Locating you..." : location ? `Accuracy ${location.accuracy ?? 0} m` : "Location pending"}
           </p>
         </div>
-        <MapCanvas userLocation={location} destination={destination} route={route} />
+        <SafetyLeafletRouteMap userLocation={location} destination={destination} route={route} />
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -530,8 +424,8 @@ export default function SafetyPage() {
               </span>
               <span className="font-mono text-sm font-black text-slate-950">{progress}%</span>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-white">
-              <div className="h-full rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${progress}%` }} />
+            <div className="h-3 overflow-hidden rounded-md bg-white">
+              <div className="h-full rounded-md bg-emerald-500 transition-all duration-700" style={{ width: `${progress}%` }} />
             </div>
           </div>
 
@@ -557,6 +451,48 @@ export default function SafetyPage() {
           </div>
         </article>
       </section>
+
+      {sosOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-red-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                  <ShieldAlert size={24} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-950">SOS Alert Ready</h2>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
+                  Your current location has been captured for emergency sharing.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSosOpen(false)}
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                aria-label="Close SOS alert"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-600">Current coordinates</p>
+              <p className="mt-2 font-mono text-lg font-black text-slate-950">
+                {location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : "Location unavailable"}
+              </p>
+              {locationError && <p className="mt-2 text-xs font-bold text-amber-700">{locationError}</p>}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSosOpen(false)}
+              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-red-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-red-600"
+            >
+              Dismiss SOS panel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

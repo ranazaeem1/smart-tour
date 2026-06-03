@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { fetchCompanies, updateCompanyStatus } from "@/lib/db";
 import { formatPKR, getStatusColor } from "@/lib/data";
-import { Building2, CheckCircle, Clock, XCircle, Search, Filter, MoreVertical, ExternalLink } from "lucide-react";
+import { Building2, CheckCircle, Clock, XCircle, Search, Filter, MoreVertical, Star } from "lucide-react";
 
 interface Company {
   id: string; name: string; email: string; phone?: string | null;
@@ -77,7 +77,7 @@ export default function AdminCompaniesPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight">🏢 Company Management</h1>
+          <h1 className="text-2xl font-black tracking-tight inline-flex items-center gap-2"><Building2 size={24} /> Company Management</h1>
           <p className="text-sm text-[var(--muted-foreground)] font-medium">Verify and manage tour operator partnerships</p>
         </div>
         <div className="flex items-center gap-3">
@@ -179,7 +179,7 @@ export default function AdminCompaniesPage() {
                   <td>
                     <div className="flex items-center gap-1">
                       <span className="text-xs font-black">{c.rating || "N/A"}</span>
-                      <span className="text-[var(--gold)]">★</span>
+                      <Star size={14} className="text-[var(--gold)]" fill="currentColor" />
                     </div>
                   </td>
                   <td>

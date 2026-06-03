@@ -34,7 +34,7 @@ function ChatRedirect() {
       const companyId = company.id;
 
       // 2. Try to find an existing conversation
-      const { data: existing, error: findError } = await (supabase.from("conversations") as any)
+      const { data: existing } = await (supabase.from("conversations") as any)
         .select("id")
         .eq("user_id", userId)
         .eq("company_id", companyId)

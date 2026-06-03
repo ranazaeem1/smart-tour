@@ -1,298 +1,695 @@
-/**
- * @file Chatbot.tsx
- * @description Floating AI Chatbot component ("Zia"). Provides instant answers
- * to user queries regarding tours, destinations, safety, and budgets.
- * @author Smart Tour Team
- * @dependencies react, @/lib/data
- */
-
-// ==========================================
-// Imports
-// ==========================================
 "use client";
-import { useState, useRef, useEffect } from "react";
-import { TOURS, SAFETY_ZONES } from "@/lib/data";
 
-// ==========================================
-// Types
-// ==========================================
+import type { ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import {
+  BarChart3,
+  Bot,
+  BriefcaseBusiness,
+  CalendarCheck,
+  Circle,
+  Compass,
+  LifeBuoy,
+  MessageSquare,
+  RefreshCcw,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Wallet,
+  X,
+} from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { BOOKINGS, COMPANIES, REVIEWS, SAFETY_ZONES, TOURS, formatPKR } from "@/lib/data";
 
-/**
- * Defines the structure of a chat message.
- * @interface Message
- */
-interface Message { 
-  id: string; 
-  role: "user" | "bot"; 
-  text: string; 
+interface Message {
+  id: string;
+  role: "user" | "bot";
+  text: string;
 }
 
-// ==========================================
-// Constants
-// ==========================================
+interface QuickAction {
+  label: string;
+  prompt: string;
+  icon: ReactNode;
+}
 
-const QUICK_REPLIES = ["🏔️ Top Destinations", "💰 Budget Guide", "🛡️ Safety Info", "📅 Book a Tour"];
+type Intent =
+  | "greeting"
+  | "farewell"
+  | "booking"
+  | "cancel"
+  | "budget"
+  | "safety"
+  | "weather"
+  | "destination"
+  | "compare"
+  | "itinerary"
+  | "group"
+  | "company"
+  | "admin"
+  | "review"
+  | "auth"
+  | "payment"
+  | "support"
+  | "analytics"
+  | "unknown";
 
-/**
- * Static mapping of keywords to bot responses.
- * @constant
- * @type {Record<string, string>}
- */
-const BOT_RESPONSES: Record<string, string> = {
-  hunza: "🏔️ Hunza Valley is one of Pakistan's most beautiful destinations! Best time to visit: April-October.",
-  skardu: "⛰️ Skardu is the gateway to K2! Expect stunning landscapes and Deosai Plains. Best season: June-September.",
-  murree: "🌲 Murree is a popular hill station near Islamabad, great for quick family getaways.",
-  nathiagali: "🌲 Nathia Gali offers beautiful pine forests and hiking trails like Mukshpuri. Best visited in summer!",
-  swat: "🏞️ Swat Valley, known as the Switzerland of the East! Don't miss Malam Jabba and Kalam.",
-  kalam: "🏞️ Kalam Valley in Swat features dense forests and the beautiful Mahodand Lake. Best in summer.",
-  malamjabba: "⛷️ Malam Jabba is famous for its ski resort and chairlift! Great for winter sports and summer views.",
-  naran: "🌊 Naran is famous for Lake Saif-ul-Malook and Babusar Top. Best time: June to September.",
-  kaghan: "🌊 Kaghan Valley offers lush green landscapes and the Kunhar River. Great for trout fishing!",
-  fairymeadows: "⛺ Fairy Meadows offers stunning views of Nanga Parbat. It's a highly recommended adventure!",
-  chitral: "🏔️ Chitral is home to the Kalash Valley and unique culture. Best visited in late spring or summer.",
-  neelum: "🌊 Neelum Valley in AJK features crystal-clear rivers and lush green mountains.",
-  naltar: "🎿 Naltar Valley is known for its colorful lakes and winter skiing.",
-  shogran: "🌲 Shogran and Siri Paye Meadows are perfect for a weekend retreat with majestic views.",
-  deosai: "🐻 Deosai Plains is the land of giants, a high-altitude plateau famous for brown bears.",
-  phander: "🎣 Phander Valley is renowned for tranquil lakes and excellent trout fishing.",
-  astore: "⛰️ Astore Valley provides rugged landscapes and acts as a gateway to Deosai and Rama Lake.",
-  babusar: "🏔️ Babusar Pass is a spectacular high mountain pass connecting Kaghan Valley to Gilgit-Baltistan.",
-  budget: "💰 For a typical 5-day northern Pakistan tour:\n• Economy: PKR 20,000-30,000\n• Standard: PKR 35,000-55,000\n• Premium: PKR 60,000-100,000+\nAll include transport, accommodation & meals.",
-  weather: "🌤️ Best weather in northern Pakistan:\n• Spring (Apr-May): Blooming apricots in Hunza\n• Summer (Jun-Aug): Best for high altitude treks\n• Autumn (Sep-Oct): Golden foliage, clear skies\n• Winter (Nov-Mar): Snow sports in Naltar & Malam Jabba",
-  book: "📅 To book a tour:\n1. Browse available tours\n2. Select your budget & dates\n3. Choose group size\n4. Confirm & pay securely\nNeed help finding the perfect tour? Tell me your budget!",
-  default: "🤖 I'm your Smart Tour AI assistant! I can help with:\n• Destination recommendations, weather & best time to visit\n• Budget guides and safety scores\n\nNeed to talk to a human? [Chat with a Tour Operator](/user/chat/list)\n\nWhat would you like to know?",
+const destinationAliases: Record<string, string[]> = {
+  hunza: ["hunza", "karimabad", "altit", "baltit", "attabad", "passu", "khunjerab", "rakaposhi"],
+  skardu: ["skardu", "deosai", "shangrila", "satpara", "k2"],
+  swat: ["swat", "kalam", "malam jabba", "malamjabba", "mahodand", "mahudand", "mingora"],
+  naran: ["naran", "kaghan", "saif", "babusar", "shogran", "lulusar"],
+  murree: ["murree", "nathia", "nathiagali", "nathia gali", "ayubia", "patriata"],
+  fairy: ["fairy meadows", "fairymeadows", "nanga parbat", "beyal"],
+  naltar: ["naltar", "ski"],
+  chitral: ["chitral", "kalash"],
+  neelum: ["neelum"],
+  gilgit: ["gilgit"],
 };
 
-// ==========================================
-// Component: Chatbot
-// ==========================================
+const stopWords = new Set(["for", "the", "and", "with", "tour", "tours", "trip", "package", "packages", "price", "cost"]);
 
-/**
- * Chatbot Component
- * A floating widget that provides simulated AI chat assistance using pre-defined intents.
- * 
- * @returns {JSX.Element} The rendered Chatbot widget
- */
+const normalize = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const hasAny = (text: string, words: string[]) => words.some(word => text.includes(word));
+const money = (value: number) => formatPKR(value);
+
+function detectIntent(message: string): Intent {
+  const text = normalize(message);
+
+  if (/^(hi|hello|hey|salam|assalam|aoa|hy)\b/.test(text)) return "greeting";
+  if (hasAny(text, ["thanks", "thank you", "shukriya", "bye", "goodbye", "allah hafiz"])) return "farewell";
+  if (hasAny(text, ["compare", "difference", "better", "best between", "vs", "versus"])) return "compare";
+  if (hasAny(text, ["admin", "approve company", "suspend", "manage users", "all bookings", "platform", "analytics"])) return hasAny(text, ["analytics", "report", "chart", "stats"]) ? "analytics" : "admin";
+  if (hasAny(text, ["company", "operator", "vendor", "business", "add tour", "create tour", "manage bookings", "company panel", "revenue", "customer"])) return "company";
+  if (hasAny(text, ["book", "booking", "reserve", "reservation", "trip status", "my booking", "confirm booking"])) return "booking";
+  if (hasAny(text, ["cancel", "refund", "reschedule", "change date"])) return "cancel";
+  if (hasAny(text, ["payment", "pay", "paid", "invoice", "receipt", "transaction"])) return "payment";
+  if (hasAny(text, ["budget", "price", "cost", "pkr", "expense", "afford", "cheap", "premium", "estimate"])) return "budget";
+  if (hasAny(text, ["safe", "safety", "security", "danger", "risk", "sos", "tracking", "route", "hazard"])) return "safety";
+  if (hasAny(text, ["weather", "season", "best time", "temperature", "snow", "rain", "month"])) return "weather";
+  if (hasAny(text, ["itinerary", "planner", "plan", "schedule", "days", "5 day", "seven day"])) return "itinerary";
+  if (hasAny(text, ["group", "friends", "family", "split", "members", "together"])) return "group";
+  if (hasAny(text, ["review", "rating", "feedback", "sentiment", "complaint"])) return "review";
+  if (hasAny(text, ["login", "register", "signup", "sign up", "forgot", "password", "account"])) return "auth";
+  if (hasAny(text, ["help", "support", "human", "agent", "contact", "problem", "issue"])) return "support";
+  if (hasAny(text, ["destination", "where", "place", "recommend", "hunza", "skardu", "swat", "naran", "murree", "fairy", "naltar", "chitral", "neelum", "kalam"])) return "destination";
+
+  return "unknown";
+}
+
+function getNumbers(message: string) {
+  return normalize(message)
+    .split(" ")
+    .map(part => Number(part))
+    .filter(value => Number.isFinite(value) && value > 0);
+}
+
+function findDestinationKey(message: string) {
+  const text = normalize(message);
+  return Object.entries(destinationAliases).find(([, aliases]) => aliases.some(alias => text.includes(alias)))?.[0] || null;
+}
+
+function findTours(message: string) {
+  const text = normalize(message);
+  const destinationKey = findDestinationKey(message);
+
+  let matches = TOURS.filter(tour => {
+    const haystack = normalize([tour.destination, tour.title, tour.region, tour.category, ...tour.tags, ...tour.highlights].join(" "));
+    if (destinationKey) {
+      return destinationAliases[destinationKey].some(alias => haystack.includes(alias));
+    }
+
+    const queryWords = text.split(" ").filter(word => word.length > 2 && !stopWords.has(word));
+    return queryWords.some(word => haystack.includes(word));
+  });
+
+  if (text.includes("family")) matches = TOURS.filter(tour => tour.category.toLowerCase() === "family" || tour.tags.some(tag => normalize(tag).includes("family")));
+  if (text.includes("trek") || text.includes("adventure")) matches = TOURS.filter(tour => ["trekking", "adventure"].includes(tour.category.toLowerCase()));
+  if (text.includes("ski") || text.includes("snow") || text.includes("winter")) matches = TOURS.filter(tour => normalize([tour.title, tour.category, ...tour.tags].join(" ")).includes("ski"));
+  if (text.includes("cheap") || text.includes("low") || text.includes("budget")) matches = [...(matches.length ? matches : TOURS)].sort((a, b) => a.price - b.price);
+  if (text.includes("premium") || text.includes("best") || text.includes("top")) matches = [...(matches.length ? matches : TOURS)].sort((a, b) => b.rating - a.rating || b.safetyScore - a.safetyScore);
+
+  return (matches.length ? matches : TOURS.filter(tour => tour.featured && tour.available))
+    .filter(tour => tour.available)
+    .slice(0, 4);
+}
+
+function findPrimaryTour(message: string, lastTopic: string | null) {
+  const matches = findTours(message);
+  if (findDestinationKey(message)) return matches[0] || null;
+  if (lastTopic) {
+    return TOURS.find(tour => normalize(tour.destination) === normalize(lastTopic)) || null;
+  }
+  return matches[0] || null;
+}
+
+function getSafetyZone(message: string, lastTopic: string | null) {
+  const text = normalize(message);
+  const topic = lastTopic ? normalize(lastTopic) : "";
+  return SAFETY_ZONES.find(zone => {
+    const area = normalize(zone.area);
+    return text.includes(area) || area.split(" ").some(part => part.length > 3 && text.includes(part)) || (topic && area.includes(topic.split(" ")[0]));
+  }) || null;
+}
+
+function tourLine(tour: (typeof TOURS)[number]) {
+  return `- ${tour.title}: ${tour.destination}, ${tour.duration} days, ${money(tour.price)}, ${tour.difficulty}, rating ${tour.rating}/5, safety ${tour.safetyScore}/100`;
+}
+
+function appSummary() {
+  const activeTours = TOURS.filter(tour => tour.available);
+  const confirmedBookings = BOOKINGS.filter(booking => booking.status === "confirmed").length;
+  const totalRevenue = COMPANIES.reduce((sum, company) => sum + company.totalRevenue, 0);
+  const avgRating = REVIEWS.reduce((sum, review) => sum + review.rating, 0) / REVIEWS.length;
+
+  return {
+    activeTours: activeTours.length,
+    companies: COMPANIES.length,
+    confirmedBookings,
+    totalRevenue,
+    avgRating: avgRating.toFixed(1),
+  };
+}
+
+function weatherAdvice(message: string, lastTopic: string | null) {
+  const tour = findPrimaryTour(message, lastTopic);
+  const place = tour?.destination || lastTopic || "northern Pakistan";
+
+  return `Weather guidance for ${place}:
+
+- Apr-May: mild valleys, blossoms, comfortable sightseeing
+- Jun-Aug: best for Hunza, Skardu, Naran Kaghan, Deosai, and high passes
+- Sep-Oct: clear skies, photography, cooler evenings
+- Nov-Mar: winter trips need snow gear; Naltar and Malam Jabba are stronger picks
+
+Before departure, check route and safety from [Safety Center](/user/safety).`;
+}
+
+function itineraryAdvice(message: string, lastTopic: string | null) {
+  const tour = findPrimaryTour(message, lastTopic);
+  const numbers = getNumbers(message);
+  const days = numbers.find(value => value <= 30) || tour?.duration || 5;
+  const destination = tour?.destination || lastTopic || "Hunza Valley";
+
+  return `A professional ${days}-day plan for ${destination} should cover:
+
+1. Arrival, hotel check-in, local market, light sightseeing
+2. Main viewpoints, heritage sites, and photo stops
+3. Lakes or valley drive with guide-led activity
+4. Adventure day or cultural experience based on difficulty
+5. Buffer time, shopping, and safe return
+
+For a full generated itinerary with budget, group size, date, and interests, open [AI Planner](/user/planner?dest=${encodeURIComponent(destination)}&days=${days}).`;
+}
+
+function safetyReply(message: string, lastTopic: string | null) {
+  const zone = getSafetyZone(message, lastTopic);
+  if (zone) {
+    return `Safety snapshot for ${zone.area}:
+
+- Score: ${zone.score}/100
+- Status: ${zone.status}
+- Travel advice: use verified operators, share route with your group, keep emergency contacts ready, and monitor weather before long drives
+
+Open [Safety Center](/user/safety) for route tracking, safety map, and SOS support.`;
+  }
+
+  const safest = [...SAFETY_ZONES].sort((a, b) => b.score - a.score).slice(0, 4);
+  return `Current safest destination estimates:
+
+${safest.map(zone => `- ${zone.area}: ${zone.score}/100 (${zone.status})`).join("\n")}
+
+For any mountain route, always confirm road status and weather before departure in [Safety Center](/user/safety).`;
+}
+
+function budgetReply(message: string, lastTopic: string | null) {
+  const tour = findPrimaryTour(message, lastTopic);
+  const numbers = getNumbers(message);
+  const groupSize = numbers.find(value => value > 1 && value <= 50) || 1;
+
+  if (tour) {
+    return `Budget estimate for ${tour.destination}:
+
+- Package: ${tour.title}
+- Per person: ${money(tour.price)}
+- Group size detected: ${groupSize}
+- Estimated package total: ${money(tour.price * groupSize)}
+- Included: ${tour.included.join(", ")}
+
+Track full transport, food, activity, and misc spend in [Budget Tracker](/user/budget).`;
+  }
+
+  return `Typical northern Pakistan budget ranges:
+
+- Economy: PKR 20K-30K per person
+- Standard: PKR 35K-55K per person
+- Premium: PKR 60K-100K+ per person
+
+Use [Budget Tracker](/user/budget) for expense control or [AI Planner](/user/planner) for a custom estimate.`;
+}
+
+function companyReply(message: string) {
+  const text = normalize(message);
+
+  if (hasAny(text, ["add tour", "create tour", "package"])) {
+    return `To add a professional tour package:
+
+1. Open [Company Tours](/company/tours)
+2. Choose New Tour
+3. Add title, destination, price, duration, group size, difficulty, highlights, and included services
+4. Publish only after checking safety score and availability
+
+Strong package pages include clear inclusions, route notes, cancellation terms, and realistic images.`;
+  }
+
+  if (hasAny(text, ["booking", "pending", "confirm", "reservation"])) {
+    return `Company booking workflow:
+
+- Review pending requests in [Company Bookings](/company/bookings)
+- Confirm availability, date, group size, and payment status
+- Message the traveler from [Company Chat](/company/chat/list)
+- Keep status updated: pending, confirmed, completed, or cancelled
+
+Fast confirmation improves trust and review quality.`;
+  }
+
+  if (hasAny(text, ["revenue", "earning", "income", "payment"])) {
+    return `Company revenue guidance:
+
+- Track earnings in [Company Revenue](/company/revenue)
+- Compare completed bookings with payment status
+- Watch refunds, cancellations, and high-performing packages
+- Use reviews to improve package pricing and customer retention`;
+  }
+
+  return `For company partners, I can help with:
+
+- Tour catalog: [Company Tours](/company/tours)
+- Reservations: [Company Bookings](/company/bookings)
+- Traveler chat: [Company Messages](/company/chat/list)
+- Revenue: [Company Revenue](/company/revenue)
+- Reviews and customer quality: [Company Reviews](/company/reviews)
+
+New operators can apply from [Register Company](/user/register-company).`;
+}
+
+function adminReply(message: string) {
+  const stats = appSummary();
+  const text = normalize(message);
+
+  if (hasAny(text, ["approve", "company", "operator"])) {
+    return `Admin company moderation:
+
+- Open [Admin Companies](/admin/companies)
+- Review company profile, city, contact details, tour quality, and verification status
+- Approve legitimate operators, reject incomplete applications, or suspend risky accounts
+
+Current platform snapshot: ${stats.companies} companies and ${stats.activeTours} active mock tours.`;
+  }
+
+  return `Admin control areas:
+
+- Dashboard: [Admin Dashboard](/admin/dashboard)
+- Users: [Admin Users](/admin/users)
+- Companies: [Admin Companies](/admin/companies)
+- Tours: [Admin Tours](/admin/tours)
+- Bookings: [Admin Bookings](/admin/bookings)
+- Safety: [Admin Safety](/admin/safety)
+- Analytics: [Admin Analytics](/admin/analytics)
+
+Snapshot: ${stats.activeTours} active tours, ${stats.confirmedBookings} confirmed bookings, ${money(stats.totalRevenue)} company revenue, average review ${stats.avgRating}/5.`;
+}
+
+function professionalReply(message: string, role: string | undefined, lastTopic: string | null, pathname: string) {
+  const intent = detectIntent(message);
+  const tour = findPrimaryTour(message, lastTopic);
+  const tours = findTours(message);
+  const roleName = role === "company" ? "company partner" : role === "admin" ? "administrator" : "traveler";
+  const stats = appSummary();
+
+  switch (intent) {
+    case "greeting":
+      return `Hello. I am Zia, your Smart Tour assistant.
+
+I can help you as a ${roleName} with tour discovery, booking flow, budget estimates, route safety, itinerary planning, company operations, admin controls, and support escalation.`;
+
+    case "farewell":
+      return "You are welcome. I am here whenever you need help with tours, bookings, safety, budgets, company operations, or admin workflows.";
+
+    case "destination":
+      return `Recommended matches:
+
+${tours.map(tourLine).join("\n")}
+
+Browse details in [Tours](/user/tours) or generate a custom route in [AI Planner](/user/planner).`;
+
+    case "compare":
+      return `Quick comparison:
+
+${tours.slice(0, 3).map(t => `- ${t.destination}: ${money(t.price)}, ${t.duration} days, ${t.difficulty}, rating ${t.rating}/5, safety ${t.safetyScore}/100`).join("\n")}
+
+Best value: ${[...tours].sort((a, b) => a.price - b.price)[0]?.title || "Naran Kaghan Family Package"}
+Highest rated: ${[...tours].sort((a, b) => b.rating - a.rating)[0]?.title || "Hunza Valley Explorer"}
+Safest score: ${[...tours].sort((a, b) => b.safetyScore - a.safetyScore)[0]?.title || "Naran Kaghan Family Package"}`;
+
+    case "booking":
+      if (tour) {
+        return `Booking match: ${tour.title}
+
+- Destination: ${tour.destination}
+- Duration: ${tour.duration} days
+- Price: ${money(tour.price)} per person
+- Max group: ${tour.maxGroup}
+- Company: ${tour.company}
+- Safety score: ${tour.safetyScore}/100
+
+Open [Tours](/user/tours) to reserve it. After submission, track status from [My Bookings](/user/bookings).`;
+      }
+
+      return `Booking flow:
+
+1. Open [Tours](/user/tours)
+2. Select a package
+3. Submit date, phone, and group size
+4. Track status in [My Bookings](/user/bookings)
+5. Coordinate details through [Messages](/user/chat/list)`;
+
+    case "cancel":
+      return `Cancellation or reschedule flow:
+
+- Open [My Bookings](/user/bookings)
+- Check booking status and payment status
+- For confirmed trips, message the operator in [Messages](/user/chat/list)
+- Ask for a written confirmation for date changes, cancellation, or refund handling`;
+
+    case "budget":
+      return budgetReply(message, lastTopic);
+
+    case "payment":
+      return `Payment guidance:
+
+- Confirm package price and group size before paying
+- Keep reservation ID and receipt
+- Check payment status in [My Bookings](/user/bookings)
+- Company partners can reconcile revenue in [Company Revenue](/company/revenue)
+
+If payment status looks wrong, contact the operator through chat with booking ID, amount, and payment date.`;
+
+    case "safety":
+      return safetyReply(message, lastTopic);
+
+    case "weather":
+      return weatherAdvice(message, lastTopic);
+
+    case "itinerary":
+      return itineraryAdvice(message, lastTopic);
+
+    case "group":
+      return `Group travel workflow:
+
+- Add members and destination in [Group Planning](/user/group)
+- Align preferred dates
+- Compare individual budgets and total budget
+- Use [AI Planner](/user/planner) for route and itinerary
+- Book only after group size and payment split are clear`;
+
+    case "company":
+      return companyReply(message);
+
+    case "admin":
+    case "analytics":
+      return adminReply(message);
+
+    case "review":
+      return `Reviews and feedback:
+
+- Travelers can submit reviews from [My Reviews](/user/reviews)
+- Companies can monitor sentiment in [Company Reviews](/company/reviews)
+- Admins can moderate platform reviews in [Admin Reviews](/admin/reviews)
+
+Current mock feedback average is ${stats.avgRating}/5 across ${REVIEWS.length} reviews. Clear, specific reviews help operators improve faster.`;
+
+    case "auth":
+      return `Account help:
+
+- Login: [Login](/auth/login)
+- Register: [Register](/auth/register)
+- Forgot password: [Forgot Password](/auth/forgot-password)
+- Update password: [Update Password](/auth/update-password)
+
+For company access, first create a traveler account, then apply through [Register Company](/user/register-company).`;
+
+    case "support":
+      return `Support routing:
+
+- Traveler issue: [User Messages](/user/chat/list)
+- Company issue: [Company Messages](/company/chat/list)
+- Public contact: [Contact](/contact)
+
+Send booking ID, destination, travel date, amount paid, and a short issue summary. That gives support enough context to act quickly.`;
+
+    default:
+      return `I can handle major Smart Tour queries:
+
+- Recommend or compare tours
+- Estimate budget and group cost
+- Explain booking, payment, cancellation, and refunds
+- Check safety scores and route advice
+- Build itinerary guidance
+- Guide company operations
+- Guide admin moderation and analytics
+
+You are currently on ${pathname || "Smart Tour"}. Try: "Compare Hunza and Skardu", "Budget for 4 people in Swat", or "How do I approve a company?"`;
+  }
+}
+
 export default function Chatbot() {
-  // State Management
+  const { profile } = useAuth();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
-  const [lastTopic, setTopic] = useState<string | null>(null);
-  
-  // Refs
+  const [lastTopic, setLastTopic] = useState<string | null>(null);
+  const [recentRecommendations, setRecentRecommendations] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // ==========================================
-  // Hooks & Lifecycle
-  // ==========================================
+  const storageKey = `smart-tour-chat-${profile?.role || "guest"}`;
 
-  // Initialize messages from sessionStorage to maintain history across reloads
+  const quickActions: QuickAction[] = useMemo(() => {
+    if (profile?.role === "admin") {
+      return [
+        { label: "Platform stats", prompt: "Show platform analytics summary", icon: <BarChart3 size={13} /> },
+        { label: "Approve company", prompt: "How do I approve a company?", icon: <BriefcaseBusiness size={13} /> },
+        { label: "Safety admin", prompt: "How do I manage safety alerts?", icon: <ShieldCheck size={13} /> },
+        { label: "Reviews", prompt: "How do I moderate reviews?", icon: <Star size={13} /> },
+      ];
+    }
+
+    if (profile?.role === "company") {
+      return [
+        { label: "Pending bookings", prompt: "How do I manage pending bookings?", icon: <CalendarCheck size={13} /> },
+        { label: "Add tour", prompt: "How can my company add a new tour package?", icon: <Compass size={13} /> },
+        { label: "Revenue", prompt: "How can I track company revenue?", icon: <Wallet size={13} /> },
+        { label: "Customer chat", prompt: "How do I respond to traveler queries professionally?", icon: <LifeBuoy size={13} /> },
+      ];
+    }
+
+    return [
+      { label: "Recommend tour", prompt: "Recommend top tours for northern Pakistan", icon: <Compass size={13} /> },
+      { label: "Compare trips", prompt: "Compare Hunza and Skardu tours", icon: <Sparkles size={13} /> },
+      { label: "Budget help", prompt: "Budget for 4 people in Swat", icon: <Wallet size={13} /> },
+      { label: "Safety", prompt: "Is Hunza safe for travel?", icon: <ShieldCheck size={13} /> },
+    ];
+  }, [profile?.role]);
+
   useEffect(() => {
-    const saved = sessionStorage.getItem("chat_messages");
+    const saved = sessionStorage.getItem(storageKey);
     if (saved) {
       setMessages(JSON.parse(saved));
-    } else {
-      setMessages([{ id: crypto.randomUUID(), role: "bot", text: "👋 Hi! I'm Zia, your Smart Tour AI assistant. Ask me anything about northern Pakistan tours!" }]);
+      return;
     }
-  }, []);
 
-  // Save messages to sessionStorage whenever they change
+    const roleIntro =
+      profile?.role === "admin"
+        ? "I can help with platform users, companies, tours, bookings, reviews, safety, and analytics."
+        : profile?.role === "company"
+          ? "I can help with bookings, packages, traveler chat, reviews, customers, and revenue."
+          : "I can help with destinations, budgets, bookings, group planning, safety, and operator support.";
+
+    setMessages([
+      {
+        id: crypto.randomUUID(),
+        role: "bot",
+        text: `Hello${profile?.full_name ? ` ${profile.full_name}` : ""}. I am Zia, your Smart Tour assistant.
+
+${roleIntro}`,
+      },
+    ]);
+  }, [storageKey, profile?.full_name, profile?.role]);
+
   useEffect(() => {
-    if (messages.length > 0) {
-      sessionStorage.setItem("chat_messages", JSON.stringify(messages));
-    }
-  }, [messages]);
+    if (messages.length > 0) sessionStorage.setItem(storageKey, JSON.stringify(messages));
+  }, [messages, storageKey]);
 
-  // Auto-scroll to the bottom of the chat window
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing, open]);
 
-  // ==========================================
-  // Handlers
-  // ==========================================
+  const sendMessage = async (text: string = input) => {
+    const userText = text.trim();
+    if (!userText || typing) return;
 
-  /**
-   * Processes the user input and generates an appropriate response based on keywords.
-   * 
-   * @param {string} msg - The raw user input string
-   * @returns {Promise<string>} The generated bot response
-   */
-  const getBotReply = async (msg: string): Promise<string> => {
-    const lower = msg.toLowerCase();
-    
-    // 1. Basic Greetings
-    if (/^(hi|hello|hey|salam|assalam)/i.test(lower)) {
-      return "👋 Hello! I'm Zia, your travel assistant. Where would you like to explore in northern Pakistan?";
-    }
+    const tour = findPrimaryTour(userText, lastTopic);
+    if (tour && findDestinationKey(userText)) setLastTopic(tour.destination);
 
-    // 2. Farewells
-    if (/^(thanks|thank you|shukriya|bye|goodbye)/i.test(lower)) {
-      return "😊 You're welcome! Feel free to ask anytime. Happy travels! 🏔️";
-    }
-
-    // Identify topic from destinations
-    let currentTopic = lastTopic;
-    const destKeys = Object.keys(BOT_RESPONSES).filter(k => !["budget", "weather", "book", "default", "safe"].includes(k));
-    
-    // Check if the message mentions a known destination
-    for (const d of destKeys) {
-      if (lower.includes(d) || (d === 'nathiagali' && lower.includes('nathia gali')) || (d === 'malamjabba' && lower.includes('malam jabba')) || (d === 'fairymeadows' && lower.includes('fairy meadows'))) {
-        currentTopic = d;
-        setTopic(d);
-        break;
-      }
-    }
-
-    // 3. Booking intent
-    if (lower.includes("book") || lower.includes("reserve") || lower.includes("buy")) {
-      if (currentTopic) {
-        // Try to dynamically find a real tour for this destination
-        // TODO: Replace this simulated lookup with a real backend semantic search API
-        const tour = TOURS.find(t => t.destination.toLowerCase().replace(/\s+/g, '').includes(currentTopic!) || currentTopic!.includes(t.destination.toLowerCase().replace(/\s+/g, '')));
-        if (tour) {
-          return `📅 I found the perfect tour for you!\n\n**${tour.title}**\nPrice: PKR ${tour.price.toLocaleString()}/person · ${tour.duration} days\n\n[Book Now →](/user/tours)`;
-        }
-      }
-      return BOT_RESPONSES.book;
-    }
-
-    // 4. Budget intent with context
-    if (lower.includes("budget") || lower.includes("price") || lower.includes("cost") || lower.includes("pkr") || lower.includes("how much")) {
-      if (currentTopic) {
-        const tour = TOURS.find(t => t.destination.toLowerCase().replace(/\s+/g, '').includes(currentTopic!) || currentTopic!.includes(t.destination.toLowerCase().replace(/\s+/g, '')));
-        if (tour) {
-          return `💰 For a tour to ${tour.destination}, the starting price is around PKR ${tour.price.toLocaleString()} for ${tour.duration} days.`;
-        }
-      }
-      return BOT_RESPONSES.budget;
-    }
-
-    // 5. Safety Data Integration
-    if (lower.includes("safe") || lower.includes("security") || lower.includes("danger") || lower.includes("risk")) {
-      if (currentTopic) {
-        const zone = SAFETY_ZONES.find(z => z.area.toLowerCase().replace(/\s+/g, '').includes(currentTopic!) || currentTopic!.includes(z.area.toLowerCase().replace(/\s+/g, '')));
-        if (zone) return `🛡️ Safety in ${zone.area}:\nSafety Score: ${zone.score}/100 — ${zone.status}`;
-      }
-      return "🛡️ Northern Pakistan is generally safe for tourists! Hunza, Naran, and Swat have safety scores above 85%. Always check weather forecasts and travel with registered companies.";
-    }
-
-    // 6. Generic inquiries
-    if (lower.includes("weather") || lower.includes("season") || lower.includes("best time")) return BOT_RESPONSES.weather;
-    if (lower.includes("top destinations") || lower.includes("where to go")) return "🏔️ Top destinations include Hunza Valley, Skardu, Swat Valley, Naran, Kaghan, and Fairy Meadows. Which one interests you?";
-
-    // 7. Contextual destination info
-    if (currentTopic && destKeys.includes(currentTopic)) {
-      if (BOT_RESPONSES[currentTopic]) {
-        return BOT_RESPONSES[currentTopic];
-      }
-    }
-
-    return BOT_RESPONSES.default;
-  };
-
-  /**
-   * Handles user submission of a message, updates state, and triggers bot reply.
-   * 
-   * @param {string} text - Message to send
-   */
-  const send = async (text: string = input) => {
-    if (!text.trim()) return;
-    const userMsg = text.trim();
     setInput("");
-    
-    // Optimistic UI update: Add User Msg immediately
-    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "user", text: userMsg }]);
+    setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "user", text: userText }]);
     setTyping(true);
 
     try {
-      const reply = await getBotReply(userMsg);
-      // Simulate network delay for natural feel
-      setTimeout(() => {
+      const response = await fetch("/api/chatbot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userText,
+          role: profile?.role,
+          pathname,
+          lastTopic: tour?.destination || lastTopic,
+          recentRecommendations,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Chatbot API failed");
+
+      const data = await response.json();
+      const reply = typeof data.reply === "string" ? data.reply : professionalReply(userText, profile?.role, tour?.destination || lastTopic, pathname);
+
+      if (Array.isArray(data.recommendedDestinations) && data.recommendedDestinations.length > 0) {
+        setRecentRecommendations(prev => [...prev, ...data.recommendedDestinations.map(String)].slice(-8));
+      }
+
+      if (typeof data.lastTopic === "string" && data.lastTopic) {
+        setLastTopic(data.lastTopic);
+      }
+
+      setTyping(false);
+      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "bot", text: reply }]);
+    } catch {
+      window.setTimeout(() => {
+        const reply = professionalReply(userText, profile?.role, tour?.destination || lastTopic, pathname);
         setTyping(false);
         setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "bot", text: reply }]);
-      }, 600);
-    } catch {
-      setTyping(false);
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "bot", text: "Sorry, I encountered an error. Please try again." }]);
+      }, 300);
     }
   };
 
-  // ==========================================
-  // JSX Return
-  // ==========================================
+  const resetChat = () => {
+    sessionStorage.removeItem(storageKey);
+    setLastTopic(null);
+    setRecentRecommendations([]);
+    setMessages([
+      {
+        id: crypto.randomUUID(),
+        role: "bot",
+        text: "Conversation reset. Tell me what you need help with: tours, bookings, safety, budgets, company operations, or admin workflows.",
+      },
+    ]);
+  };
+
+  const renderMessage = (text: string) =>
+    text.split(/(\[.*?\]\(.*?\))/g).map((part, index) => {
+      const match = part.match(/\[(.*?)\]\((.*?)\)/);
+      if (match) {
+        return (
+          <a key={index} href={match[2]} style={{ color: "var(--teal)", textDecoration: "underline", fontWeight: 800 }}>
+            {match[1]}
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+
   return (
     <>
-      {/* Floating Chat Window */}
       {open && (
-        <div className="chat-window animate-fade">
-          {/* Header */}
+        <div className="chat-window animate-fade" role="dialog" aria-label="Smart Tour assistant">
           <div className="chat-header">
-            <div style={{ width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>🤖</div>
-            <div>
-              <div style={{ fontWeight:700,fontSize:14 }}>Zia — AI Travel Assistant</div>
-              <div style={{ fontSize:12,opacity:0.8 }}>● Online</div>
+            <div className="chat-header-avatar" aria-hidden="true">
+              <Bot size={18} />
             </div>
-            <button onClick={()=>setOpen(false)} style={{ marginLeft:"auto",background:"rgba(255,255,255,0.2)",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",color:"white",fontSize:16 }}>✕</button>
+            <div className="chat-header-copy">
+              <div className="chat-header-title">Zia - Smart Tour Assistant</div>
+              <div className="chat-header-status">
+                <Circle size={8} fill="currentColor" /> Project-aware support online
+              </div>
+            </div>
+            <button onClick={resetChat} className="chat-icon-btn chat-reset-btn" aria-label="Reset chat">
+              <RefreshCcw size={15} />
+            </button>
+            <button onClick={() => setOpen(false)} className="chat-icon-btn" aria-label="Close chat">
+              <X size={16} />
+            </button>
           </div>
-          
-          {/* Body / Messages List */}
-          <div className="chat-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {messages.map((m) => (
-              <div key={m.id} className={`chat-msg ${m.role}`} style={{ whiteSpace:"pre-line" }}>
-                {/* Parse basic markdown like links */}
-                {m.text.split(/(\[.*?\]\(.*?\))/g).map((part, i) => {
-                  const match = part.match(/\[(.*?)\]\((.*?)\)/);
-                  if (match) return <a key={i} href={match[2]} style={{ color: "var(--teal)", textDecoration: "underline" }}>{match[1]}</a>;
-                  return <span key={i}>{part}</span>;
-                })}
+
+          <div className="chat-body custom-scrollbar">
+            {messages.map(message => (
+              <div key={message.id} className={`chat-msg ${message.role}`} style={{ whiteSpace: "pre-line" }}>
+                {renderMessage(message.text)}
               </div>
             ))}
-            
-            {/* Show quick replies if only the initial greeting exists */}
-            {messages.length === 1 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                {QUICK_REPLIES.map(qr => (
-                  <button key={qr} onClick={() => send(qr)} className="badge badge-teal" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)", cursor: "pointer", color: "var(--text-secondary)" }}>
-                    {qr}
+
+            {messages.length <= 1 && (
+              <div className="chat-quick-actions">
+                {quickActions.map(action => (
+                  <button
+                    key={action.label}
+                    onClick={() => sendMessage(action.prompt)}
+                    className="chat-quick-action"
+                  >
+                    {action.icon}
+                    {action.label}
                   </button>
                 ))}
               </div>
             )}
 
-            {/* Typing Indicator */}
             {typing && (
-              <div className="chat-msg bot" style={{ display:"flex",gap:4,alignItems:"center" }}>
-                <span className="loading-spinner" style={{ width:14,height:14 }}/>
-                <span style={{ fontSize:12,color:"var(--text-muted)" }}>Zia is typing...</span>
+              <div className="chat-msg bot chat-typing">
+                <span className="loading-spinner chat-typing-spinner" />
+                <span>Zia is preparing a response...</span>
               </div>
             )}
-            {/* Invisible div to scroll into view */}
             <div ref={bottomRef} style={{ height: 1 }} />
           </div>
 
-          {/* Footer / Input Area */}
           <div className="chat-footer">
             <input
-              className="chat-input" value={input} onChange={e=>setInput(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&send(input)}
-              placeholder="Ask about tours, budget, safety..."
+              className="chat-input"
+              value={input}
+              onChange={event => setInput(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === "Enter") sendMessage(input);
+              }}
+              placeholder={profile?.role === "admin" ? "Ask about platform management..." : profile?.role === "company" ? "Ask about bookings, tours, revenue..." : "Ask about tours, budget, safety..."}
             />
-            <button onClick={() => send(input)} className="btn btn-primary btn-sm" style={{ borderRadius:"50%",padding:"10px",width:40,height:40,flexShrink:0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M2 21L23 12 2 3v7l15 2-15 2v7z"/></svg>
+            <button onClick={() => sendMessage(input)} className="chat-send-btn" aria-label="Send message">
+              <Send size={16} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Floating Action Button (FAB) */}
-      <button className="chatbot-fab animate-glow" onClick={()=>setOpen(!open)}>
-        {open
-          ? <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-          : <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
-        }
+      <button className="chatbot-fab animate-glow" onClick={() => setOpen(!open)} aria-label={open ? "Close assistant" : "Open assistant"}>
+        {open ? <X size={24} /> : <MessageSquare size={24} />}
       </button>
     </>
   );

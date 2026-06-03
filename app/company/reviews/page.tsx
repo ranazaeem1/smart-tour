@@ -13,7 +13,6 @@ import {
   User, 
   Quote, 
   Activity,
-  ArrowRight,
   Reply,
   Calendar
 } from "lucide-react";
@@ -74,7 +73,7 @@ export default function CompanyReviewsPage() {
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
           <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-full mb-4 border">
+            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
               <Activity size={12} className="panel-hero-kicker-icon" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Reputation Management</span>
             </div>
@@ -104,7 +103,7 @@ export default function CompanyReviewsPage() {
             </div>
             <div>
               <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">{s.label} Feedback</p>
-              <div className="w-full h-1.5 bg-[var(--muted)] rounded-full mt-3 overflow-hidden border border-[var(--border)]">
+              <div className="w-full h-1.5 bg-[var(--muted)] rounded-md mt-3 overflow-hidden border border-[var(--border)]">
                 <div className={`h-full ${s.barColor} transition-all duration-1000 ease-out`} style={{ width: `${s.value}%` }} />
               </div>
             </div>

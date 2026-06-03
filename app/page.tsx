@@ -9,56 +9,71 @@ import React, { useState } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { 
-  Menu, 
-  X, 
   ArrowRight, 
-  Star, 
   Brain, 
   Shield, 
   Coins, 
   CloudSun, 
-  Smartphone, 
   MapPin, 
-  ChevronRight, 
-  Play,
-  ArrowDown
+  Check
 } from "lucide-react";
 import Footer from "@/components/Footer";
-import { supabase } from "@/lib/supabase";
-import { TOURS } from "@/lib/data";
+
+const LANDING_FEATURED_TOURS = [
+  {
+    id: "landing-neelum",
+    title: "Neelum Valley Escape",
+    destination: "Neelum Valley",
+    category: "Nature",
+    duration: 5,
+    price: 35000,
+    image_url: "/images/neelum.png",
+  },
+  {
+    id: "landing-fairy-meadows",
+    title: "Fairy Meadows Basecamp",
+    destination: "Fairy Meadows",
+    category: "Adventure",
+    duration: 4,
+    price: 30000,
+    image_url: "/images/fairy-meadows.png",
+  },
+  {
+    id: "landing-hunza",
+    title: "Hunza Valley Explorer",
+    destination: "Hunza Valley",
+    category: "Culture",
+    duration: 7,
+    price: 40000,
+    image_url: "/images/hunza.png",
+  },
+  {
+    id: "landing-malam-jabba",
+    title: "Malam Jabba Ski Safari",
+    destination: "Malam Jabba",
+    category: "Snow",
+    duration: 4,
+    price: 26000,
+    image_url: "/images/malam-jabba.png",
+  },
+  {
+    id: "landing-naran",
+    title: "Naran Kaghan Retreat",
+    destination: "Naran & Kaghan",
+    category: "Family",
+    duration: 4,
+    price: 20000,
+    image_url: "/images/naran.png",
+  },
+];
 
 export default function Home() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [tours, setTours] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const tours = LANDING_FEATURED_TOURS;
+  const loading = false;
   const [navOnDark, setNavOnDark] = useState(true);
   const navRef = React.useRef<HTMLElement | null>(null);
-
-  React.useEffect(() => {
-    const fetchTours = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('tours')
-          .select('*')
-          .limit(3);
-        
-        if (error) {
-          console.warn("[Home] Falling back to local tours:", error.message);
-          setTours(TOURS.slice(0, 3));
-          return;
-        }
-
-        setTours(data?.length ? data : TOURS.slice(0, 3));
-      } catch {
-        console.warn("[Home] Unable to fetch remote tours. Showing local tour data.");
-        setTours(TOURS.slice(0, 3));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTours();
-  }, []);
 
   React.useEffect(() => {
     const getLuminance = (color: string) => {
@@ -144,7 +159,7 @@ export default function Home() {
           
           {/* LOGO */}
           <Link href="/" className="landing-nav-brand flex items-center gap-2 cursor-pointer group">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-black group-hover:rotate-6 transition-transform">S</div>
+            <img src="/logo.svg" alt="Smart Tour logo" className="w-11 h-11 rounded-full object-contain group-hover:scale-105 transition-transform" />
             <span className="text-xl font-black tracking-tighter uppercase italic">
               <span className="landing-brand-primary">Smart</span><span className="landing-brand-accent">Tour</span>
             </span>
@@ -154,7 +169,6 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-10">
             {[
               { label: "Destinations", href: "#destinations" },
-              { label: "Tours", href: "#tours" },
               { label: "AI Planner", href: "#planner" },
               { label: "About", href: "#about" },
             ].map((item) => (
@@ -182,35 +196,27 @@ export default function Home() {
             >
               Get Started
             </button>
-            {/* MOBILE TOGGLE */}
-            <button 
-              className="landing-nav-link md:hidden"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
-            </button>
           </div>
         </div>
 
-        {/* MOBILE MENU (Glassmorphism Pill Extension) */}
+        {/* MOBILE MENU */}
         {mobileMenuOpen && (
           <div className="md:hidden mt-4 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 space-y-6 shadow-2xl animate-in slide-in-from-top-4 duration-300">
             {[
               { label: "Destinations", href: "#destinations" },
-              { label: "Tours", href: "#tours" },
               { label: "AI Planner", href: "#planner" },
               { label: "About", href: "#about" },
             ].map((item) => (
-              <a 
-                key={item.label} 
-                href={item.href} 
+              <a
+                key={item.label}
+                href={item.href}
                 className="block text-[10px] font-black text-zinc-400 hover:text-emerald-500 uppercase tracking-[0.2em]"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.label}
               </a>
             ))}
-            <button 
+            <button
               onClick={() => handleNavigation('/auth/login')}
               className="w-full py-4 bg-emerald-500 text-white text-[10px] font-black rounded-2xl uppercase tracking-[0.2em]"
             >
@@ -236,24 +242,24 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-            <div className="inline-flex mx-auto items-center justify-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/20 rounded-full mb-8 animate-fade">
+            <div className="inline-flex mx-auto items-center justify-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/20 rounded-xl mb-8 animate-fade">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Next Gen Travel Intelligence</span>
             </div>
             <div className="hero-title-wrap relative mb-6 animate-fade-up">
               <h1 className="hero-title text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tighter italic m-0">
-                <span className="hero-title-line hero-title-line-left">WANDERLUST</span>
-                <span className="hero-title-line hero-title-line-right">AWAITS</span>
+                <span className="hero-title-line hero-title-line-left !text-white">WANDERLUST</span>
+                <span className="hero-title-line hero-title-line-right !text-emerald-500">AWAITS</span>
               </h1>
             </div>
             <p className="hero-subtitle text-lg sm:text-xl mb-12 max-w-2xl mx-auto font-medium animate-fade-up delay-100">
               Let's start your journey with us, your dream will come true
             </p>
-            <div className="bg-white border border-slate-200 rounded-[32px] sm:rounded-full p-2 grid grid-cols-1 sm:grid-cols-[1fr_0.75fr_1fr_auto] items-stretch gap-2 sm:gap-0 max-w-3xl mx-auto mb-8 animate-fade-up delay-200 shadow-2xl shadow-black/20">
+            <div className="bg-white border border-slate-200 rounded-[32px] sm:rounded-3xl p-2 grid grid-cols-1 sm:grid-cols-[1fr_0.75fr_1fr_auto] items-stretch gap-2 sm:gap-0 max-w-3xl mx-auto mb-8 animate-fade-up delay-200 shadow-2xl shadow-black/20">
               <input type="text" placeholder="Where to?" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold rounded-2xl sm:rounded-l-full sm:rounded-r-none" />
               <input type="text" placeholder="PKR" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
               <input type="text" onFocus={(e) => (e.target.type = "date")} placeholder="Add dates" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
-              <button onClick={() => scrollToSection('tours')} className="btn btn-emerald w-full sm:w-auto min-h-[52px] px-8 rounded-2xl sm:rounded-full whitespace-nowrap shadow-xl shadow-emerald-500/30 text-xs active:scale-95">EXPLORE NOW</button>
+              <button onClick={() => scrollToSection('tours')} className="btn btn-emerald w-full sm:w-auto min-h-[52px] px-8 rounded-2xl whitespace-nowrap shadow-xl shadow-emerald-500/30 text-xs active:scale-95">EXPLORE NOW</button>
             </div>
           </div>
         </section>
@@ -269,7 +275,7 @@ export default function Home() {
           
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="mb-24 text-center max-w-3xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Official Expeditions</span>
               </div>
@@ -293,25 +299,12 @@ export default function Home() {
                         alt={tour.title} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]" 
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/40 to-transparent" />
                       
                       {/* Category Badge */}
                       <div className="absolute top-6 right-6">
-                        <span className="bg-[#10B981] text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.5)]">
+                        <span className="bg-[#10B981] text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(16,185,129,0.5)]">
                           {tour.category || 'Adventure'}
                         </span>
-                      </div>
-
-                      {/* Card Hero Text */}
-                      <div className="absolute bottom-8 left-8 right-8 text-center sm:text-left">
-                        <p className="text-emerald-500 text-[8px] font-black uppercase tracking-[0.4em] mb-2 opacity-80 flex items-center justify-center sm:justify-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> NEXT-GEN TRAVEL INTELLIGENCE
-                        </p>
-                        <h4 className="text-3xl md:text-4xl font-black text-white leading-[0.9] uppercase italic tracking-tighter">
-                          DISCOVER THE <br /> <span className="text-emerald-500">EXTRAORDINARY</span>
-                        </h4>
-                        <p className="text-[9px] text-zinc-400 font-bold mt-4 uppercase tracking-widest hidden sm:block">Let's start your journey with us, your dream will come true</p>
-                        <div className="mt-6 w-full h-px bg-gradient-to-r from-emerald-500/50 to-transparent" />
                       </div>
                     </div>
 
@@ -336,9 +329,9 @@ export default function Home() {
                           <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Investment</p>
                           <p className="text-3xl font-black text-emerald-500 tracking-tighter">PKR {tour.price.toLocaleString()}</p>
                         </div>
-                        <button className="w-16 h-16 btn-neon rounded-2xl flex items-center justify-center">
-                          <div className="w-3 h-3 bg-white rounded-full opacity-20 animate-ping absolute" />
-                          <ArrowRight size={24} />
+                        <button className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 active:scale-95">
+                          View Tour
+                          <ArrowRight size={15} />
                         </button>
                       </div>
                     </div>
@@ -358,13 +351,13 @@ export default function Home() {
           4. AI Planner (The Smart Edge)
           ================================================================
         */}
-        <section id="planner" data-nav-theme="dark" className="landing-dark-section py-32 px-6 scroll-mt-20">
+        <section id="planner" data-nav-theme="dark" className="planner-dark-section landing-dark-section py-32 px-6 scroll-mt-20">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
               <div>
-                <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-6 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full w-fit">The Future of Travel</p>
-                <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.9] mb-10 uppercase italic">Smarter <br /><span className="text-emerald-500">Adventures</span></h2>
-                <p className="text-zinc-400 text-lg font-medium leading-relaxed mb-12 max-w-lg">Every feature is designed to make your northern Pakistan adventure safer, smarter, and unforgettable using state-of-the-art AI.</p>
+                <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-6 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl w-fit">The Future of Travel</p>
+                <h2 className="planner-dark-title text-5xl md:text-7xl font-black tracking-tighter leading-[0.9] mb-10 uppercase italic">Smarter <br /><span className="text-emerald-500">Adventures</span></h2>
+                <p className="planner-dark-copy text-lg font-medium leading-relaxed mb-12 max-w-lg">Every feature is designed to make your northern Pakistan adventure safer, smarter, and unforgettable using state-of-the-art AI.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   {[
                     { icon:<Brain className="text-emerald-500"/>, title:"AI Itinerary", desc:"Personalized plans based on your budget & time." },
@@ -373,16 +366,15 @@ export default function Home() {
                     { icon:<CloudSun className="text-blue-400"/>, title:"Weather Intel", desc:"Avoid mountain storms with smart alerts." },
                   ].map((item, i) => (
                     <div key={i} className="group">
-                      <div className="w-12 h-12 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:border-emerald-500/30 transition-all">{item.icon}</div>
-                      <h4 className="font-black text-white mb-2">{item.title}</h4>
-                      <p className="text-zinc-500 text-sm leading-snug">{item.desc}</p>
+                      <div className="planner-dark-icon w-12 h-12 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:border-emerald-500/30 transition-all">{item.icon}</div>
+                      <h4 className="planner-dark-card-title font-black mb-2">{item.title}</h4>
+                      <p className="planner-dark-card-copy text-sm leading-snug">{item.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="relative group overflow-hidden rounded-[48px] border border-white/10 shadow-3xl bg-zinc-900">
-                <img src="/images/skardu.png" className="w-full h-full object-cover opacity-60" />
-                <div className="absolute inset-0 flex items-center justify-center"><div className="w-20 h-20 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110"><Play fill="white" size={24} /></div></div>
+                <img src="/images/skardu.png" className="w-full h-full object-cover" alt="Skardu mountain lake" />
               </div>
             </div>
           </div>
@@ -399,9 +391,9 @@ export default function Home() {
               <div>
                 <h2 className="text-4xl sm:text-5xl font-black text-slate-900 mb-8 uppercase italic tracking-tighter">About <span className="text-emerald-600">SmartTour</span></h2>
                 <p className="text-lg text-slate-600 mb-10 leading-relaxed font-medium">
-                  We believe travel is more than just visiting places — it's about creating memories, 
-                  meeting cultures, and discovering yourself. SmartTour makes it easy to plan, book, 
-                  and experience the world on your terms.
+                  Smart Tour is Pakistan&apos;s first AI-powered travel platform dedicated to the northern regions.
+                  Founded by a team of travel enthusiasts and tech innovators, we believe that everyone
+                  deserves a safe, personalized, and unforgettable adventure.
                 </p>
                 <div className="space-y-6">
                   {[
@@ -411,7 +403,7 @@ export default function Home() {
                   ].map((item) => (
                     <div key={item.title} className="flex gap-5 group">
                       <div className="flex-shrink-0">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">✓</div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform"><Check size={18} /></div>
                       </div>
                       <div>
                         <h3 className="font-black text-slate-900 text-lg">{item.title}</h3>
@@ -437,15 +429,15 @@ export default function Home() {
           6. CTA SECTION
           ================================================================
         */}
-        <section data-nav-theme="dark" className="py-32 bg-gradient-to-r from-emerald-500 to-emerald-600 relative overflow-hidden">
+        <section data-nav-theme="dark" className="landing-cta py-32 bg-gradient-to-r from-emerald-500 to-emerald-600 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 blur-[120px] rounded-full translate-x-1/2 -translate-y-1/2" />
           <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-            <h2 className="text-4xl sm:text-6xl font-black text-white mb-8 tracking-tighter uppercase italic">Ready to Explore?</h2>
+            <h2 className="text-4xl sm:text-6xl font-black !text-white mb-8 tracking-tighter uppercase italic">Ready to Explore?</h2>
             <p className="text-xl text-white/90 mb-12 font-medium">Start planning your next adventure with SmartTour intelligence.</p>
             <div className="flex flex-col sm:flex-row gap-5 justify-center">
               <button 
                 onClick={() => handleNavigation('/auth/login')} 
-                className="px-14 py-5 btn-neon rounded-[24px] text-xs"
+                className="px-14 py-5 rounded-[24px] bg-white !text-emerald-600 font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-950/10 transition-all hover:bg-emerald-700 hover:!text-white active:scale-95"
               >
                 Start Your Expedition
               </button>

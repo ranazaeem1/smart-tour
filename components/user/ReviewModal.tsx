@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createReview } from "@/lib/db";
+import { AlertTriangle, ArrowRight, Star, X } from "lucide-react";
 
 interface ReviewModalProps {
   bookingId: string;
@@ -62,12 +63,12 @@ export function ReviewModal({ bookingId, tourId, onClose }: ReviewModalProps) {
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <h2 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>Leave a Review</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", fontSize: 20, cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }} aria-label="Close review modal"><X size={20} /></button>
         </div>
 
         {error && (
           <div className="alert alert-danger" style={{ marginBottom: 20 }}>
-            ⚠️ {error}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><AlertTriangle size={16} /> {error}</span>
           </div>
         )}
 
@@ -89,12 +90,12 @@ export function ReviewModal({ bookingId, tourId, onClose }: ReviewModalProps) {
                     filter: rating >= num ? "grayscale(0)" : "grayscale(1)"
                   }}
                 >
-                  ⭐
+                  <Star size={30} fill="currentColor" />
                 </button>
               ))}
             </div>
             <p style={{ textAlign: "center", marginTop: 10, fontSize: 14, fontWeight: 700, color: "var(--gold)" }}>
-              {rating === 5 ? "Amazing! 😍" : rating === 4 ? "Great! 😊" : rating === 3 ? "Good 😐" : rating === 2 ? "Bad ☹️" : "Terrible 😡"}
+              {rating === 5 ? "Amazing" : rating === 4 ? "Great" : rating === 3 ? "Good" : rating === 2 ? "Bad" : "Terrible"}
             </p>
           </div>
 
@@ -120,7 +121,7 @@ export function ReviewModal({ bookingId, tourId, onClose }: ReviewModalProps) {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" style={{ flex: 2, justifyContent: "center" }} disabled={loading}>
-              {loading ? <span className="loading-spinner" /> : "Submit Review →"}
+              {loading ? <span className="loading-spinner" /> : <span className="inline-flex items-center gap-2">Submit Review <ArrowRight size={14} /></span>}
             </button>
           </div>
         </form>
