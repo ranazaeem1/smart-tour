@@ -14,16 +14,12 @@ export default function PrivacyPage() {
     <div className="legal-light-page privacy-page min-h-screen font-sans selection:bg-emerald-500/30">
       <LandingNav />
 
-      <main data-nav-theme="light" className="legal-light-main pt-40 pb-32 px-6">
+      <main data-nav-theme="light" className="legal-light-main pt-36 pb-24 px-6">
         <div className="max-w-4xl mx-auto">
           
           {/* Hero Section */}
-          <div className="text-center mb-24 animate-fade">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-8">
-              <ShieldCheck size={14} className="text-emerald-500" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Trusted Data Protection</span>
-            </div>
-            <h1 className="legal-light-heading text-5xl md:text-7xl font-black tracking-tighter leading-none mb-8 uppercase italic">
+          <div className="text-center mb-16 animate-fade">
+            <h1 className="legal-light-heading text-4xl md:text-6xl font-black tracking-tight leading-none mb-6 uppercase italic">
               Privacy <span className="text-emerald-500">Policy</span>
             </h1>
             <p className="legal-light-muted text-sm font-bold uppercase tracking-[0.2em]">
@@ -32,16 +28,16 @@ export default function PrivacyPage() {
           </div>
 
           {/* Content Card */}
-          <div className="legal-light-card rounded-[32px] p-8 md:p-16 space-y-20 animate-fade-up">
+          <div className="legal-light-card rounded-[24px] p-7 md:p-12 space-y-14 animate-fade-up">
             
             <section className="space-y-6">
               <div className="flex items-center gap-4 mb-8">
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
                   <FileText size={24} />
                 </div>
-                <h2 className="legal-light-heading text-3xl font-black uppercase italic tracking-tight">1. Introduction</h2>
+                <h2 className="legal-light-heading text-2xl font-black uppercase italic tracking-tight">1. Introduction</h2>
               </div>
-              <p className="legal-light-copy text-lg leading-relaxed font-medium">
+              <p className="legal-light-copy text-base leading-relaxed font-medium">
                 Welcome to Smart Tour. We respect your privacy and want to protect your personal data. 
                 This privacy policy will inform you as to how we look after your personal data when you visit our website 
                 and tell you about your privacy rights and how the law protects you.
@@ -53,9 +49,9 @@ export default function PrivacyPage() {
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
                   <Eye size={24} />
                 </div>
-                <h2 className="legal-light-heading text-3xl font-black uppercase italic tracking-tight">2. Data We Collect</h2>
+                <h2 className="legal-light-heading text-2xl font-black uppercase italic tracking-tight">2. Data We Collect</h2>
               </div>
-              <p className="legal-light-copy text-lg leading-relaxed font-medium mb-8">
+              <p className="legal-light-copy text-base leading-relaxed font-medium mb-8">
                 We may collect, use, store and transfer different kinds of personal data about you which we have grouped together as follows:
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -78,9 +74,9 @@ export default function PrivacyPage() {
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
                   <ShieldCheck size={24} />
                 </div>
-                <h2 className="legal-light-heading text-3xl font-black uppercase italic tracking-tight">3. How We Use Data</h2>
+                <h2 className="legal-light-heading text-2xl font-black uppercase italic tracking-tight">3. How We Use Data</h2>
               </div>
-              <p className="legal-light-copy text-lg leading-relaxed font-medium">
+              <p className="legal-light-copy text-base leading-relaxed font-medium">
                 We will only use your personal data when the law allows us to. Most commonly, we will use your personal data to provide the AI-powered tour planning services, manage your account and bookings, and improve our website relationships.
               </p>
             </section>
@@ -90,9 +86,9 @@ export default function PrivacyPage() {
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
                   <Lock size={24} />
                 </div>
-                <h2 className="legal-light-heading text-3xl font-black uppercase italic tracking-tight">4. Data Security</h2>
+                <h2 className="legal-light-heading text-2xl font-black uppercase italic tracking-tight">4. Data Security</h2>
               </div>
-              <p className="legal-light-copy text-lg leading-relaxed font-medium">
+              <p className="legal-light-copy text-base leading-relaxed font-medium">
                 We have put in place appropriate security measures to prevent your personal data from being accidentally lost, 
                 used or accessed in an unauthorized way, altered or disclosed.
               </p>

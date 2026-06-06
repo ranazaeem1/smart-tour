@@ -5,9 +5,10 @@ import { supabase } from "@/lib/supabase";
 
 interface CancelBookingButtonProps {
   bookingId: string;
+  onCancelled?: () => void;
 }
 
-export function CancelBookingButton({ bookingId }: CancelBookingButtonProps) {
+export function CancelBookingButton({ bookingId, onCancelled }: CancelBookingButtonProps) {
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const { user } = useAuth();
@@ -17,15 +18,19 @@ export function CancelBookingButton({ bookingId }: CancelBookingButtonProps) {
     try {
       if (!user) throw new Error("Please log in again.");
 
-      const { error } = await (supabase.from('bookings') as any)
+      const { data, error } = await (supabase.from('bookings') as any)
         .update({ status: 'cancelled' })
         .eq('id', bookingId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .select()
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error("This booking can no longer be cancelled because the company has already accepted it.");
       
       alert("Booking cancelled successfully.");
-      window.location.reload();
+      onCancelled?.();
     } catch (err: any) {
       alert(err.message || "Failed to cancel booking.");
     } finally {

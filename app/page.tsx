@@ -185,12 +185,14 @@ export default function Home() {
           {/* ACTIONS */}
           <div className="flex items-center gap-6">
             <button 
+              suppressHydrationWarning
               onClick={() => handleNavigation('/auth/login')}
               className="landing-nav-link hidden sm:block text-[10px] font-black hover:text-emerald-500 uppercase tracking-[0.2em] transition-all"
             >
               Login
             </button>
             <button 
+              suppressHydrationWarning
               onClick={() => handleNavigation('/auth/login')}
               className="px-8 py-3.5 btn-neon text-[10px] rounded-2xl"
             >
@@ -217,6 +219,7 @@ export default function Home() {
               </a>
             ))}
             <button
+              suppressHydrationWarning
               onClick={() => handleNavigation('/auth/login')}
               className="w-full py-4 bg-emerald-500 text-white text-[10px] font-black rounded-2xl uppercase tracking-[0.2em]"
             >
@@ -242,24 +245,20 @@ export default function Home() {
           />
           <div className="absolute inset-0 bg-black/40" />
           <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-            <div className="inline-flex mx-auto items-center justify-center gap-2 px-4 py-2 bg-emerald-600/10 border border-emerald-500/20 rounded-xl mb-8 animate-fade">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Next Gen Travel Intelligence</span>
-            </div>
             <div className="hero-title-wrap relative mb-6 animate-fade-up">
               <h1 className="hero-title text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.9] tracking-tighter italic m-0">
-                <span className="hero-title-line hero-title-line-left !text-white">WANDERLUST</span>
-                <span className="hero-title-line hero-title-line-right !text-emerald-500">AWAITS</span>
+                <span className="hero-title-line hero-title-line-left" style={{ color: "#FFFFFF" }}>WANDERLUST</span>
+                <span className="hero-title-line hero-title-line-right" style={{ color: "#10B981" }}>AWAITS</span>
               </h1>
             </div>
             <p className="hero-subtitle text-lg sm:text-xl mb-12 max-w-2xl mx-auto font-medium animate-fade-up delay-100">
               Let's start your journey with us, your dream will come true
             </p>
             <div className="bg-white border border-slate-200 rounded-[32px] sm:rounded-3xl p-2 grid grid-cols-1 sm:grid-cols-[1fr_0.75fr_1fr_auto] items-stretch gap-2 sm:gap-0 max-w-3xl mx-auto mb-8 animate-fade-up delay-200 shadow-2xl shadow-black/20">
-              <input type="text" placeholder="Where to?" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold rounded-2xl sm:rounded-l-full sm:rounded-r-none" />
-              <input type="text" placeholder="PKR" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
-              <input type="text" onFocus={(e) => (e.target.type = "date")} placeholder="Add dates" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
-              <button onClick={() => scrollToSection('tours')} className="btn btn-emerald w-full sm:w-auto min-h-[52px] px-8 rounded-2xl whitespace-nowrap shadow-xl shadow-emerald-500/30 text-xs active:scale-95">EXPLORE NOW</button>
+              <input suppressHydrationWarning type="text" placeholder="Where to?" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold rounded-2xl sm:rounded-l-full sm:rounded-r-none" />
+              <input suppressHydrationWarning type="text" placeholder="PKR" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
+              <input suppressHydrationWarning type="text" onFocus={(e) => (e.target.type = "date")} placeholder="Add dates" className="min-w-0 bg-white text-slate-950 placeholder:text-slate-500 px-6 py-4 sm:py-3 outline-none text-sm font-bold border-t sm:border-t-0 sm:border-l border-slate-200 rounded-2xl sm:rounded-none" />
+              <button suppressHydrationWarning onClick={() => scrollToSection('tours')} className="btn btn-emerald w-full sm:w-auto min-h-[52px] px-8 rounded-2xl whitespace-nowrap shadow-xl shadow-emerald-500/30 text-xs active:scale-95">EXPLORE NOW</button>
             </div>
           </div>
         </section>
@@ -275,10 +274,6 @@ export default function Home() {
           
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             <div className="mb-24 text-center max-w-3xl mx-auto">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl mb-6">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400">Official Expeditions</span>
-              </div>
               <h2 className="text-6xl md:text-7xl font-black tracking-tighter text-white mb-8 uppercase italic leading-none">Featured <br /><span className="text-emerald-500">Experiences</span></h2>
               <p className="text-xl text-zinc-400 font-medium leading-relaxed">Discover the untouched beauty of northern Pakistan with our premium, AI-verified tours.</p>
             </div>
@@ -329,7 +324,7 @@ export default function Home() {
                           <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Investment</p>
                           <p className="text-3xl font-black text-emerald-500 tracking-tighter">PKR {tour.price.toLocaleString()}</p>
                         </div>
-                        <button className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 active:scale-95">
+                        <button suppressHydrationWarning className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-emerald-500/20 transition-all hover:bg-emerald-600 active:scale-95">
                           View Tour
                           <ArrowRight size={15} />
                         </button>
@@ -341,7 +336,6 @@ export default function Home() {
             )}
 
             <div className="text-center mt-24">
-              <button onClick={() => handleNavigation('/auth/login')} className="px-14 py-6 btn-neon rounded-[28px] text-xs">View Full Expedition Catalog</button>
             </div>
           </div>
         </section>
@@ -355,7 +349,6 @@ export default function Home() {
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
               <div>
-                <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-6 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl w-fit">The Future of Travel</p>
                 <h2 className="planner-dark-title text-5xl md:text-7xl font-black tracking-tighter leading-[0.9] mb-10 uppercase italic">Smarter <br /><span className="text-emerald-500">Adventures</span></h2>
                 <p className="planner-dark-copy text-lg font-medium leading-relaxed mb-12 max-w-lg">Every feature is designed to make your northern Pakistan adventure safer, smarter, and unforgettable using state-of-the-art AI.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -436,12 +429,14 @@ export default function Home() {
             <p className="text-xl text-white/90 mb-12 font-medium">Start planning your next adventure with SmartTour intelligence.</p>
             <div className="flex flex-col sm:flex-row gap-5 justify-center">
               <button 
+                suppressHydrationWarning
                 onClick={() => handleNavigation('/auth/login')} 
                 className="px-14 py-5 rounded-[24px] bg-white !text-emerald-600 font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-950/10 transition-all hover:bg-emerald-700 hover:!text-white active:scale-95"
               >
                 Start Your Expedition
               </button>
               <button 
+                suppressHydrationWarning
                 onClick={() => scrollToSection('tours')}
                 className="px-10 py-4 border-2 border-white text-white font-black rounded-2xl hover:bg-white/10 transition-all uppercase tracking-widest text-xs active:scale-95"
               >

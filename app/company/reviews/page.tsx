@@ -2,193 +2,156 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { fetchReviews, fetchCompanyByOwner } from "@/lib/db";
-import { getStatusColor } from "@/lib/data";
-import { 
-  Star, 
-  MessageSquare, 
-  Smile, 
-  Meh, 
-  Frown, 
-  User, 
-  Quote, 
-  Activity,
-  Reply,
-  Calendar
-} from "lucide-react";
+import { fetchCompanyByOwner, fetchReviews } from "@/lib/db";
+import { Calendar, Frown, Meh, MessageSquare, Quote, Reply, Search, Smile, Star, User } from "lucide-react";
+
+function StatCard({ label, value, icon: Icon, tone }: { label: string; value: React.ReactNode; icon: any; tone: string }) {
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all relative overflow-hidden">
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <span className={`absolute top-5 right-5 h-2 w-2 rounded-full ${tone.includes("emerald") ? "bg-emerald-500" : tone.includes("amber") ? "bg-amber-500" : tone.includes("rose") ? "bg-rose-500" : "bg-slate-900"}`} />
+      <p className="mt-7 text-3xl font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function sentimentClass(sentiment: string) {
+  if (sentiment === "positive") return "bg-emerald-50 text-emerald-600 border-emerald-200";
+  if (sentiment === "negative") return "bg-rose-50 text-rose-500 border-rose-200";
+  return "bg-amber-50 text-amber-600 border-amber-200";
+}
 
 export default function CompanyReviewsPage() {
   const { profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     async function load() {
-      if (profile?.id) {
-        setLoading(true);
-        try {
-          const company = await fetchCompanyByOwner(profile.id);
-          if (company) {
-            const data = await fetchReviews({ companyId: company.id });
-            setReviews(data);
-          }
-        } catch (err) {
-          console.error("Failed to load reviews:", err);
-        } finally {
-          setLoading(false);
-        }
+      if (!profile?.id) return;
+      setLoading(true);
+      try {
+        const company = await fetchCompanyByOwner(profile.id);
+        if (company) setReviews(await fetchReviews({ companyId: company.id }));
+      } catch (err) {
+        console.error("Failed to load reviews:", err);
+      } finally {
+        setLoading(false);
       }
     }
     if (!authLoading) load();
   }, [profile, authLoading]);
 
-  const filtered = filter === "all" ? reviews : reviews.filter(r => r.sentiment === filter);
-
-  // Sentiment stats
   const total = reviews.length;
-  const positive = reviews.filter(r => r.sentiment === 'positive').length;
-  const neutral = reviews.filter(r => r.sentiment === 'neutral').length;
-  const negative = reviews.filter(r => r.sentiment === 'negative').length;
+  const positive = reviews.filter(r => r.sentiment === "positive").length;
+  const neutral = reviews.filter(r => r.sentiment === "neutral").length;
+  const negative = reviews.filter(r => r.sentiment === "negative").length;
+  const filtered = reviews.filter(r => {
+    const matchesFilter = filter === "all" || r.sentiment === filter;
+    const text = `${r.profiles?.full_name || ""} ${r.tours?.title || ""} ${r.comment || ""}`.toLowerCase();
+    return matchesFilter && text.includes(search.toLowerCase());
+  });
 
-  const SENTIMENT_STATS = [
-    { label: "Positive", value: total ? Math.round((positive / total) * 100) : 0, color: "text-emerald-500", barColor: "bg-emerald-500", icon: Smile, bgColor: "bg-emerald-500/10" },
-    { label: "Neutral", value: total ? Math.round((neutral / total) * 100) : 0, color: "text-amber-500", barColor: "bg-amber-500", icon: Meh, bgColor: "bg-amber-500/10" },
-    { label: "Negative", value: total ? Math.round((negative / total) * 100) : 0, color: "text-rose-500", barColor: "bg-rose-500", icon: Frown, bgColor: "bg-rose-500/10" },
-  ];
-
-  if (loading || authLoading) return (
-    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-      <div className="loading-spinner h-12 w-12" />
-      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Analyzing Traveler Sentiments...</p>
-    </div>
-  );
+  if (loading || authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading reviews...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade space-y-10 pb-20" role="main">
-      {/* ── Sentiment Hero Header ── */}
-      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516245834210-c4c142787335?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
-          <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
-              <Activity size={12} className="panel-hero-kicker-icon" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Reputation Management</span>
-            </div>
-            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
-              Reviews & Sentiment
-            </h1>
-            <p className="panel-hero-subtitle text-sm md:text-base font-medium">Listen to your travelers and refine your expedition protocol.</p>
+    <div className="animate-fade space-y-8 pb-20" role="main">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
+        <div>
+          <div className="flex items-center gap-2 text-emerald-500 mb-2">
+            <MessageSquare size={14} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Sentiment Intelligence</span>
           </div>
-
-          <div className="text-right hidden md:block">
-            <span className="panel-hero-badge badge badge-emerald font-black">
-              {total} TOTAL SIGNALS
-            </span>
-          </div>
+          <h1 className="text-2xl font-black text-slate-950">Reviews</h1>
         </div>
-      </section>
 
-      {/* ── Sentiment Analysis Overview ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-        {SENTIMENT_STATS.map(s => (
-          <div key={s.label} className="card-premium flex flex-col space-y-4 group">
-            <div className="flex items-center justify-between">
-              <div className={`w-12 h-12 rounded-2xl ${s.bgColor} flex items-center justify-center ${s.color} shadow-lg transition-transform group-hover:scale-110`}>
-                <s.icon size={24} />
-              </div>
-              <p className={`text-2xl font-black tracking-tighter ${s.color}`}>{s.value}%</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">{s.label} Feedback</p>
-              <div className="w-full h-1.5 bg-[var(--muted)] rounded-md mt-3 overflow-hidden border border-[var(--border)]">
-                <div className={`h-full ${s.barColor} transition-all duration-1000 ease-out`} style={{ width: `${s.value}%` }} />
-              </div>
-            </div>
-          </div>
-        ))}
+        <div className="relative w-full xl:w-96">
+          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className="input !pl-12 !py-4 !rounded-2xl !bg-white font-black" placeholder="Search review, traveler, tour..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
       </div>
 
-      {/* ── Filters ── */}
-      <div className="flex bg-[var(--muted)] p-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] w-fit overflow-x-auto">
-        {["all", "positive", "neutral", "negative"].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-8 py-3 rounded-[var(--radius-md)] text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${filter === f ? "bg-[var(--card)] text-[var(--foreground)] shadow-lg" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
-          >
-            {f}
-          </button>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard label="Total Reviews" value={total} icon={MessageSquare} tone="bg-slate-100 text-slate-900" />
+        <StatCard label="Positive" value={positive} icon={Smile} tone="bg-emerald-50 text-emerald-500" />
+        <StatCard label="Neutral" value={neutral} icon={Meh} tone="bg-amber-50 text-amber-500" />
+        <StatCard label="Negative" value={negative} icon={Frown} tone="bg-rose-50 text-rose-500" />
       </div>
 
-      {/* ── Reviews List ── */}
-      <div className="space-y-6">
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="flex w-full overflow-x-auto bg-slate-100 p-1.5 rounded-2xl border border-slate-200 mb-6">
+          {["all", "positive", "neutral", "negative"].map(item => (
+            <button key={item} onClick={() => setFilter(item)} className={`px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === item ? "bg-slate-950 text-white shadow-lg" : "text-slate-500 hover:text-slate-950"}`}>
+              {item}
+            </button>
+          ))}
+        </div>
+
         {filtered.length === 0 ? (
-          <section className="card-premium py-20 text-center flex flex-col items-center">
-            <div className="w-20 h-20 bg-[var(--muted)] rounded-[32px] flex items-center justify-center text-[var(--muted-foreground)] mb-8 shadow-inner border border-[var(--border)]">
-              <MessageSquare size={40} />
-            </div>
-            <h2 className="text-2xl font-black text-[var(--foreground)] mb-2 tracking-tight m-0">Zero Sentiment Detected</h2>
-            <p className="text-[var(--muted-foreground)] font-medium max-w-xs mx-auto leading-relaxed uppercase text-[10px] tracking-widest mt-2">
-              No reviews matched your current filter parameters.
-            </p>
-          </section>
+          <div className="py-24 text-center">
+            <MessageSquare size={42} className="mx-auto text-slate-300 mb-4" />
+            <h2 className="text-xl font-black text-slate-950">No reviews found</h2>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">No traveler feedback matches this view.</p>
+          </div>
         ) : (
-          filtered.map((r, idx) => (
-            <article 
-              key={r.id} 
-              className="card-premium space-y-6 animate-fade"
-              style={{ animationDelay: `${idx * 100}ms` }}
-            >
-              <div className="flex flex-col md:flex-row justify-between items-start gap-6 border-b border-[var(--border)] pb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-[var(--muted)] border border-[var(--border)] flex items-center justify-center text-[var(--foreground)] font-black shadow-lg">
-                    {r.profiles?.full_name?.charAt(0) || <User size={20} />}
+          <div className="space-y-4">
+            {filtered.map(review => (
+              <article key={review.id} className="rounded-3xl border border-slate-200 bg-white p-6 hover:shadow-xl transition-all">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="h-12 w-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-slate-900">
+                      {review.profiles?.full_name?.charAt(0) || <User size={18} />}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-black text-slate-950 truncate">{review.profiles?.full_name || "Guest Traveler"}</h3>
+                      <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">{review.tours?.title || "Tour package"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-base font-black text-[var(--foreground)] m-0 leading-tight">{r.profiles?.full_name || "Guest Traveler"}</h4>
-                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mt-2">
-                      {r.tours?.title} <span className="text-[var(--muted-foreground)] mx-2">•</span> {new Date(r.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={14} className={i < r.rating ? "text-amber-400 fill-amber-400" : "text-[var(--muted)]"} />
-                    ))}
-                  </div>
-                  <span className={`badge ${getStatusColor(r.sentiment)} !px-4 !py-1.5 !rounded-lg !text-[9px] !font-black !uppercase !tracking-widest`}>
-                    {r.sentiment || "NEUTRAL"}
-                  </span>
-                </div>
-              </div>
 
-              <div className="relative">
-                <Quote size={40} className="absolute -top-2 -left-2 text-emerald-500/10 -z-10" />
-                <p className="text-base font-medium text-[var(--foreground)] leading-relaxed italic m-0">
-                  &quot;{r.comment}&quot;
-                </p>
-              </div>
-
-              <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-[var(--border)]">
-                <div className="flex items-center gap-2">
-                  <Calendar size={14} className="text-emerald-500" />
-                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">Travel Deployment: {r.travel_date || "UNDEFINED"}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {[...Array(5)].map((_, index) => (
+                        <Star key={index} size={15} className={index < (review.rating || 0) ? "text-amber-400 fill-amber-400" : "text-slate-200"} />
+                      ))}
+                    </div>
+                    <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${sentimentClass(review.sentiment)}`}>
+                      {review.sentiment || "neutral"}
+                    </span>
+                  </div>
                 </div>
-                <button className="btn btn-secondary !py-3 !px-6 !rounded-xl flex items-center gap-2 group">
-                  <Reply size={16} className="group-hover:-translate-x-1 transition-transform" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Transmit Response</span>
-                </button>
-              </div>
-            </article>
-          ))
+
+                <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-100 p-5 relative">
+                  <Quote size={20} className="text-emerald-500 mb-3" />
+                  <p className="text-sm font-bold leading-relaxed text-slate-700">{review.comment || "No written comment."}</p>
+                </div>
+
+                <div className="mt-5 flex flex-col md:flex-row justify-between gap-4 md:items-center">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Calendar size={14} className="text-emerald-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{review.created_at ? new Date(review.created_at).toLocaleDateString() : "No date"}</span>
+                  </div>
+                  <button className="btn btn-secondary !py-3 !px-5 !rounded-2xl flex items-center gap-2 justify-center">
+                    <Reply size={15} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Respond</span>
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

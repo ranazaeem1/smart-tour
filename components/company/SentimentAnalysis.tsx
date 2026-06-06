@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquare, ArrowRight } from "lucide-react";
+import { ArrowRight, MessageSquare, Star } from "lucide-react";
 import { getStatusColor } from "@/lib/data";
 
 interface Review {
@@ -25,92 +25,61 @@ interface SentimentAnalysisProps {
 }
 
 export function SentimentAnalysis({ data, recentReviews }: SentimentAnalysisProps) {
-  const positivePercent = data.find(d => d.label === 'Positive')?.value || 0;
+  const positivePercent = data.find(item => item.label === "Positive")?.value || 0;
 
   return (
-    <div className="card-premium">
-      <div className="flex items-center justify-between mb-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-            <MessageSquare size={20} />
+    <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <MessageSquare size={16} className="text-emerald-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Traveler Feedback</span>
           </div>
-          <div>
-            <h2 className="text-xl font-black text-[var(--foreground)] m-0">Sentiment Intelligence</h2>
-            <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest mt-1">Global Traveler Feedback</p>
-          </div>
+          <h2 className="text-2xl font-black tracking-tight m-0 text-slate-950">Sentiment Intelligence</h2>
         </div>
-        <Link href="/company/reviews" className="text-xs font-black text-emerald-500 uppercase tracking-widest hover:text-emerald-600 transition-colors flex items-center gap-2">
+        <Link href="/company/reviews" className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-950 hover:text-white transition-all inline-flex items-center gap-2">
           Insights <ArrowRight size={14} />
         </Link>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-12 mb-12">
-        {/* Ring Chart */}
-        <div className="relative w-36 h-36 flex-shrink-0">
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="42" fill="transparent" stroke="var(--muted)" strokeWidth="12" />
-            {(() => {
-              let offset = 0;
-              const circumference = 2 * Math.PI * 42;
-              return data.map((s) => {
-                const dashLen = (s.value / 100) * circumference;
-                const el = (
-                  <circle 
-                    key={s.label} 
-                    cx="50" cy="50" r="42" 
-                    fill="transparent" 
-                    stroke={s.color} 
-                    strokeWidth="12"
-                    strokeDasharray={`${dashLen} ${circumference}`}
-                    strokeDashoffset={-offset}
-                    className="transition-all duration-1000 ease-in-out"
-                  />
-                );
-                offset += dashLen;
-                return el;
-              });
-            })()}
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-black text-[var(--foreground)] leading-none tracking-tighter">{positivePercent}%</span>
-            <span className="text-[8px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mt-1">Positive</span>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 items-center mb-8">
+        <div className="w-36 h-36 rounded-full border-[14px] border-emerald-100 flex flex-col items-center justify-center mx-auto md:mx-0">
+          <span className="text-3xl font-black text-slate-950 leading-none">{positivePercent}%</span>
+          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">Positive</span>
         </div>
-
-        {/* Legend */}
-        <div className="flex-1 w-full space-y-6">
-          {data.map((s) => (
-            <div key={s.label} className="group">
-              <div className="flex justify-between items-end mb-2">
-                <span className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">{s.label}</span>
-                <span className="text-sm font-black tracking-tighter" style={{ color: s.color }}>{s.value}%</span>
+        <div className="space-y-4">
+          {data.map(item => (
+            <div key={item.label} className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{item.label}</span>
+                <span className="text-sm font-black" style={{ color: item.color }}>{item.value}%</span>
               </div>
-              <div className="h-2 w-full bg-[var(--muted)] rounded-md overflow-hidden p-[1px]">
-                <div 
-                  className="h-full rounded-md transition-all duration-1000"
-                  style={{ width: `${s.value}%`, backgroundColor: s.color }}
-                />
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${item.value}%`, backgroundColor: item.color }} />
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Recent Snippets */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-4">Latest Intel</p>
-        {recentReviews.map(r => (
-          <div key={r.id} className="p-5 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius-lg)] hover:bg-[var(--card)] transition-all group">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-[13px] font-black text-[var(--foreground)]">{r.profiles?.full_name || "Verified Traveler"}</p>
-              <span className={`badge ${getStatusColor(r.sentiment)} !text-[8px] !px-2 !py-0.5`}>{r.sentiment}</span>
-            </div>
-            <p className="text-[12px] font-medium text-[var(--muted-foreground)] leading-relaxed italic group-hover:text-[var(--foreground)] transition-colors">
-              &quot;{(r.comment || "").slice(0, 75)}...&quot;
-            </p>
+      <div className="space-y-4">
+        {recentReviews.length === 0 ? (
+          <div className="py-10 text-center">
+            <Star size={24} className="mx-auto mb-3 text-slate-400" />
+            <p className="text-slate-500 font-bold">No recent reviews yet.</p>
           </div>
-        ))}
+        ) : (
+          recentReviews.map(review => (
+            <article key={review.id} className="rounded-3xl border border-slate-200 bg-white p-5 hover:shadow-xl transition-all">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <h3 className="text-base font-black text-slate-950 m-0">{review.profiles?.full_name || "Verified Traveler"}</h3>
+                <span className={`badge ${getStatusColor(review.sentiment)} !rounded-full !px-3 !py-1 !text-[8px]`}>{review.sentiment}</span>
+              </div>
+              <p className="text-sm font-bold leading-relaxed text-slate-600">&quot;{(review.comment || "").slice(0, 90)}...&quot;</p>
+            </article>
+          ))
+        )}
       </div>
-    </div>
+    </section>
   );
 }

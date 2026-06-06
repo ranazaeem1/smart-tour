@@ -1,34 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { formatPKR } from "@/lib/data";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { 
-  fetchUserExpenses, 
-  createUserExpense, 
-  deleteUserExpense, 
-  updateUserExpense, 
-  updateProfileBudget 
-} from "@/lib/db";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  PieChart, 
-  Plus, 
-  Calendar, 
-  Car, 
-  Hotel, 
-  Utensils, 
-  Mountain, 
-  ShoppingBag, 
-  Box,
-  BrainCircuit,
-  Trash2,
-  Edit2,
-  AlertCircle,
-  X
-} from "lucide-react";
+import { createUserExpense, deleteUserExpense, fetchUserExpenses, updateProfileBudget, updateUserExpense } from "@/lib/db";
+import { formatPKR } from "@/lib/data";
+import { AlertCircle, Box, BrainCircuit, Calendar, Car, Edit2, Hotel, Mountain, PieChart, Plus, ShoppingBag, Trash2, TrendingDown, TrendingUp, Utensils, Wallet, X } from "lucide-react";
 
 interface Expense {
   id: string;
@@ -39,13 +15,26 @@ interface Expense {
 }
 
 const CATEGORIES = [
-  { name: "Transport", color: "#1F2937", icon: <Car size={18} /> },
-  { name: "Accommodation", color: "#A855F7", icon: <Hotel size={18} /> },
-  { name: "Food", color: "#F97316", icon: <Utensils size={18} /> },
+  { name: "Transport", color: "#0F172A", icon: <Car size={18} /> },
+  { name: "Accommodation", color: "#8B5CF6", icon: <Hotel size={18} /> },
+  { name: "Food", color: "#F59E0B", icon: <Utensils size={18} /> },
   { name: "Activities", color: "#10B981", icon: <Mountain size={18} /> },
   { name: "Shopping", color: "#EC4899", icon: <ShoppingBag size={18} /> },
-  { name: "Miscellaneous", color: "#6B7280", icon: <Box size={18} /> },
+  { name: "Miscellaneous", color: "#64748B", icon: <Box size={18} /> },
 ];
+
+function StatCard({ label, value, icon: Icon, tone }: { label: string; value: React.ReactNode; icon: any; tone: string }) {
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all relative overflow-hidden">
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <span className={`absolute top-5 right-5 h-2 w-2 rounded-full ${tone.includes("emerald") ? "bg-emerald-500" : tone.includes("amber") ? "bg-amber-500" : tone.includes("rose") ? "bg-rose-500" : "bg-slate-900"}`} />
+      <p className="mt-7 text-3xl font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+    </div>
+  );
+}
 
 export default function BudgetTracker() {
   const { profile } = useAuth();
@@ -54,23 +43,15 @@ export default function BudgetTracker() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const [newExpense, setNewExpense] = useState({
-    category: "Food",
-    amount: "",
-    description: "",
-  });
+  const [newExpense, setNewExpense] = useState({ category: "Food", amount: "", description: "" });
 
   useEffect(() => {
     async function load() {
       if (!profile) return;
       setLoading(true);
       try {
-        const data = await fetchUserExpenses(profile.id);
-        setExpenses(data as Expense[]);
-        
-        if ((profile as any).total_budget) {
-          setTotalBudget((profile as any).total_budget);
-        }
+        setExpenses((await fetchUserExpenses(profile.id)) as Expense[]);
+        if ((profile as any).total_budget) setTotalBudget((profile as any).total_budget);
       } catch (err) {
         console.error("Failed to load expenses:", err);
       } finally {
@@ -80,38 +61,22 @@ export default function BudgetTracker() {
     load();
   }, [profile]);
 
-  const handleUpdateBudget = async (val: number) => {
-    setTotalBudget(val);
-    if (profile) {
-      await updateProfileBudget(profile.id, val);
-    }
+  const handleUpdateBudget = async (value: number) => {
+    setTotalBudget(value);
+    if (profile) await updateProfileBudget(profile.id, value);
   };
 
-  const handleAddOrEditExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddOrEditExpense = async (event: FormEvent) => {
+    event.preventDefault();
     if (!newExpense.amount || !profile) return;
+    const updates = { category: newExpense.category, amount: parseFloat(newExpense.amount), description: newExpense.description };
 
     if (editingExpenseId) {
-      const updates = {
-        category: newExpense.category,
-        amount: parseFloat(newExpense.amount),
-        description: newExpense.description,
-      };
       const updated = await updateUserExpense(editingExpenseId, profile.id, updates);
-      if (updated) {
-        setExpenses(prev => prev.map(exp => exp.id === editingExpenseId ? { ...exp, ...updates } : exp));
-      }
+      if (updated) setExpenses(prev => prev.map(expense => (expense.id === editingExpenseId ? { ...expense, ...updates } : expense)));
     } else {
-      const expense = {
-        user_id: profile.id,
-        category: newExpense.category,
-        amount: parseFloat(newExpense.amount),
-        description: newExpense.description,
-      };
-      const created = await createUserExpense(expense);
-      if (created) {
-        setExpenses([created as Expense, ...expenses]);
-      }
+      const created = await createUserExpense({ user_id: profile.id, ...updates });
+      if (created) setExpenses([created as Expense, ...expenses]);
     }
 
     setNewExpense({ category: "Food", amount: "", description: "" });
@@ -119,337 +84,170 @@ export default function BudgetTracker() {
     setShowAddForm(false);
   };
 
-  const handleEditClick = (exp: Expense) => {
-    setNewExpense({
-      category: exp.category,
-      amount: exp.amount.toString(),
-      description: exp.description,
-    });
-    setEditingExpenseId(exp.id);
+  const handleEditClick = (expense: Expense) => {
+    setNewExpense({ category: expense.category, amount: expense.amount.toString(), description: expense.description });
+    setEditingExpenseId(expense.id);
     setShowAddForm(true);
   };
 
   const handleDelete = async (id: string) => {
     if (!profile) return;
-    if (confirm("Are you sure you want to delete this expense?")) {
-      const ok = await deleteUserExpense(id, profile.id);
-      if (ok) {
-        setExpenses(prev => prev.filter(exp => exp.id !== id));
-      }
-    }
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+    const ok = await deleteUserExpense(id, profile.id);
+    if (ok) setExpenses(prev => prev.filter(expense => expense.id !== id));
   };
 
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const remaining = totalBudget - totalSpent;
   const spentPercent = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
-
-  const getCategoryStats = () => {
-    return CATEGORIES.map(cat => {
-      const amount = expenses.filter(e => e.category === cat.name).reduce((sum, e) => sum + e.amount, 0);
-      return { ...cat, amount };
-    }).filter(c => c.amount > 0);
-  };
-
-  const getAIInsights = () => {
-    const insights = [];
-    if (spentPercent > 90) {
-      insights.push({ type: "danger", text: "Critical: You have used over 90% of your budget. Immediate spending reduction recommended." });
-    } else if (spentPercent > 70) {
-      insights.push({ type: "warning", text: "Warning: You're approaching your budget limit. Review upcoming activities." });
-    }
-
-    const foodExpense = expenses.filter(e => e.category === "Food").reduce((sum, e) => sum + e.amount, 0);
-    if (foodExpense > totalBudget * 0.4) {
-      insights.push({ type: "info", text: "Insight: Food accounts for over 40% of your budget. Consider local eateries to save." });
-    }
-
-    if (remaining > 0 && spentPercent < 50) {
-      insights.push({ type: "success", text: "Great job! You're well within your budget. You might have extra for premium activities." });
-    }
-
-    if (insights.length === 0) {
-      insights.push({ type: "info", text: "Analyzing your spending patterns... Start logging more expenses for deeper insights." });
-    }
-    return insights;
-  };
-
-  if (loading) return (
-    <div className="space-y-10 animate-fade">
-      <div className="flex justify-between items-end mb-8">
-        <div className="space-y-4">
-          <div className="skeleton h-4 w-24 rounded-md" />
-          <div className="skeleton h-12 w-64 rounded-2xl" />
-        </div>
-        <div className="skeleton h-14 w-40 rounded-2xl" />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[1, 2, 3, 4].map(i => <div key={i} className="card h-40 skeleton" />)}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="card h-[500px] skeleton" />
-        <div className="card h-[500px] skeleton" />
-      </div>
-    </div>
+  const categoryStats = useMemo(
+    () => CATEGORIES.map(category => ({ ...category, amount: expenses.filter(expense => expense.category === category.name).reduce((sum, expense) => sum + expense.amount, 0) })).filter(category => category.amount > 0),
+    [expenses]
   );
+  const topCategory = [...categoryStats].sort((a, b) => b.amount - a.amount)[0];
+
+  const insight = spentPercent > 90 ? "Critical: you have used over 90% of your budget." : spentPercent > 70 ? "You are approaching your budget limit." : remaining > 0 ? "You are within budget. Keep logging expenses for better insights." : "Start logging expenses to unlock budget insights.";
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading budget...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade space-y-10 pb-20">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+    <div className="animate-fade space-y-8 pb-20">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
         <div>
-          <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-2">Financial Analysis</p>
-          <h1 className="m-0">Budget Tracker</h1>
+          <div className="flex items-center gap-2 text-emerald-500 mb-2">
+            <Wallet size={14} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Financial Analysis</span>
+          </div>
+          <h1 className="text-2xl font-black text-slate-950">Budget Tracker</h1>
         </div>
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="flex items-center gap-4 bg-white border border-gray-100 rounded-2xl px-6 py-3 shadow-sm">
-            <Wallet size={20} className="text-emerald-500" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Budget</span>
-              <input 
-                type="number" 
-                value={totalBudget} 
-                onChange={e => handleUpdateBudget(Number(e.target.value))}
-                className="bg-transparent border-none text-slate-900 font-black text-lg focus:outline-none w-28 mt-1 p-0 h-auto leading-none"
-              />
+
+        <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+          <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm">
+            <Wallet size={18} className="text-emerald-500" />
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Budget</p>
+              <input type="number" value={totalBudget} onChange={event => handleUpdateBudget(Number(event.target.value))} className="bg-transparent border-none text-slate-950 font-black text-lg focus:outline-none w-32 p-0 h-auto" />
             </div>
           </div>
-          <button 
-            className="btn btn-emerald py-4 px-6 flex-1 md:flex-none"
-            onClick={() => {
-              setNewExpense({ category: "Food", amount: "", description: "" });
-              setEditingExpenseId(null);
-              setShowAddForm(true);
-            }}
-          >
-            <Plus size={18} className="mr-2" /> Add Expense
+          <button className="btn btn-emerald !rounded-2xl !py-4 !px-6 flex items-center justify-center gap-2" onClick={() => { setNewExpense({ category: "Food", amount: "", description: "" }); setEditingExpenseId(null); setShowAddForm(true); }}>
+            <Plus size={18} />
+            <span className="text-xs font-black uppercase tracking-widest">Add Expense</span>
           </button>
         </div>
       </div>
 
-      {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="stat-card">
-          <p className="stat-label">Investment So Far</p>
-          <p className="stat-number text-rose-500">{formatPKR(totalSpent)}</p>
-          <div className="mt-6">
-            <div className="w-full h-2 bg-slate-100 rounded-md overflow-hidden">
-              <div 
-                className="h-full rounded-md transition-all duration-500" 
-                style={{ 
-                  width: `${spentPercent}%`, 
-                  background: spentPercent > 90 ? "#EF4444" : spentPercent > 70 ? "#F97316" : "#10B981" 
-                }} 
-              />
-            </div>
-            <p className="text-[11px] font-black text-slate-400 uppercase tracking-tighter mt-3">{spentPercent.toFixed(1)}% of budget utilized</p>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <p className="stat-label">Available Balance</p>
-          <p className={`stat-number ${remaining < 0 ? "text-rose-500" : "text-emerald-500"}`}>
-            {formatPKR(remaining)}
-          </p>
-          <div className="mt-6 flex items-center gap-2">
-            {remaining < 0 ? (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 rounded-lg">
-                <TrendingDown size={14} className="text-rose-500" /> 
-                <span className="text-[10px] font-black text-rose-600 uppercase">Over Limit</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 rounded-lg">
-                <TrendingUp size={14} className="text-emerald-500" /> 
-                <span className="text-[10px] font-black text-emerald-600 uppercase">Sustainable</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <p className="stat-label">Major Outflow</p>
-          {expenses.length > 0 ? (
-            (() => {
-              const top = getCategoryStats().sort((a,b) => b.amount - a.amount)[0];
-              return (
-                <>
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-700 shadow-sm border border-slate-100">
-                      {top.icon}
-                    </div>
-                    <p className="text-lg font-black text-slate-900 leading-tight">{top.name}</p>
-                  </div>
-                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-tighter mt-6">
-                    {formatPKR(top.amount)} in this category
-                  </p>
-                </>
-              );
-            })()
-          ) : (
-            <p className="stat-number text-slate-200">—</p>
-          )}
-        </div>
-
-        {/* AI Insight Card */}
-        <div className="card-premium bg-slate-900 border-none relative overflow-hidden group p-8">
-          <div className="absolute -top-6 -right-6 p-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <BrainCircuit size={100} className="text-emerald-400" />
-          </div>
-          <p className="stat-label text-slate-500">AI Intelligence</p>
-          <div className="mt-4 space-y-3 relative z-10">
-            {getAIInsights().map((insight, i) => (
-              <div key={i} className="flex gap-3 items-start animate-fade" style={{ animationDelay: `${i * 100}ms` }}>
-                <div className="mt-1 shrink-0">
-                  <AlertCircle size={14} className={
-                    insight.type === 'danger' ? 'text-rose-400' : 
-                    insight.type === 'warning' ? 'text-orange-400' : 'text-emerald-400'
-                  } />
-                </div>
-                <p className="text-[12px] font-bold leading-relaxed text-slate-300">{insight.text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard label="Spent" value={formatPKR(totalSpent)} icon={TrendingDown} tone="bg-rose-50 text-rose-500" />
+        <StatCard label="Remaining" value={formatPKR(remaining)} icon={TrendingUp} tone="bg-emerald-50 text-emerald-500" />
+        <StatCard label="Top Category" value={topCategory?.name || "-"} icon={PieChart} tone="bg-amber-50 text-amber-500" />
+        <StatCard label="Transactions" value={expenses.length} icon={Calendar} tone="bg-slate-100 text-slate-900" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Expenses List */}
-        <div className="card">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
-              <Calendar size={22} className="text-emerald-500" />
-              Transaction Log
-            </h2>
-            <button className="text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors">Export Data</button>
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div>
+            <h2 className="text-xl font-black text-slate-950">Budget Usage</h2>
+            <p className="text-xs font-bold text-slate-500">{spentPercent.toFixed(1)}% of budget utilized</p>
           </div>
-          <div className="space-y-3 custom-scrollbar max-h-[500px] overflow-y-auto pr-2">
-            {expenses.length === 0 ? (
-              <div className="py-20 text-center flex flex-col items-center gap-4 opacity-30">
-                <Box size={48} />
-                <p className="text-sm font-bold uppercase tracking-widest">No entries recorded</p>
-              </div>
-            ) : (
-              expenses.map(exp => {
-                const cat = CATEGORIES.find(c => c.name === exp.category);
+          <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-emerald-700">
+            <BrainCircuit size={16} />
+            <span className="text-[10px] font-black uppercase tracking-widest">{insight}</span>
+          </div>
+        </div>
+        <div className="h-3 overflow-hidden rounded-md bg-slate-100">
+          <div className="h-full rounded-md bg-emerald-500 transition-all duration-700" style={{ width: `${spentPercent}%` }} />
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-5">
+            <Calendar size={18} className="text-emerald-500" />
+            <h2 className="text-xl font-black text-slate-950">Transaction Log</h2>
+          </div>
+          {expenses.length === 0 ? (
+            <div className="py-20 text-center">
+              <Box size={42} className="mx-auto text-slate-300 mb-4" />
+              <h3 className="text-xl font-black text-slate-950">No expenses yet</h3>
+              <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">Add your first travel expense.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+              {expenses.map(expense => {
+                const cat = CATEGORIES.find(category => category.name === expense.category);
                 return (
-                  <div key={exp.id} className="group flex items-center gap-4 p-5 bg-white hover:bg-slate-50 border border-gray-100 rounded-2xl transition-all duration-300">
-                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center transition-colors shadow-sm ring-1 ring-slate-100" style={{ backgroundColor: `${cat?.color}10`, color: cat?.color }}>
-                      {cat?.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-slate-900 font-bold truncate">{exp.description || exp.category}</p>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                        {exp.category} • {new Date(exp.date).toLocaleDateString([], { month: 'long', day: 'numeric' })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-black text-slate-900">{formatPKR(exp.amount)}</p>
-                      <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity mt-2 justify-end">
-                        <button onClick={() => handleEditClick(exp)} className="text-slate-400 hover:text-emerald-500 transition-colors">
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={() => handleDelete(exp.id)} className="text-slate-400 hover:text-rose-500 transition-colors">
-                          <Trash2 size={16} />
-                        </button>
+                  <div key={expense.id} className="rounded-3xl border border-slate-200 bg-white p-5 hover:shadow-xl transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center border border-slate-100" style={{ backgroundColor: `${cat?.color}12`, color: cat?.color }}>
+                        {cat?.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-slate-950 truncate">{expense.description || expense.category}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{expense.category} | {new Date(expense.date).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-black text-slate-950">{formatPKR(expense.amount)}</p>
+                        <div className="mt-2 flex justify-end gap-2">
+                          <button onClick={() => handleEditClick(expense)} className="h-9 w-9 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-950 hover:text-white transition-all" aria-label="Edit expense"><Edit2 size={15} className="mx-auto" /></button>
+                          <button onClick={() => handleDelete(expense.id)} className="h-9 w-9 rounded-xl bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-500 hover:text-white transition-all" aria-label="Delete expense"><Trash2 size={15} className="mx-auto" /></button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 );
-              })
-            )}
-          </div>
-        </div>
+              })}
+            </div>
+          )}
+        </section>
 
-        {/* Category Breakdown Chart Area */}
-        <div className="card">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-xl font-black text-slate-900 flex items-center gap-3">
-              <PieChart size={22} className="text-emerald-500" />
-              Resource Allocation
-            </h2>
+        <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-5">
+            <PieChart size={18} className="text-emerald-500" />
+            <h2 className="text-xl font-black text-slate-950">Category Breakdown</h2>
           </div>
-          <div className="space-y-8">
-            {getCategoryStats().length === 0 ? (
-              <div className="py-20 text-center opacity-30 italic font-bold">Sync your expenses to unlock visualization.</div>
-            ) : (
-              getCategoryStats().map((cat, idx) => (
-                <div key={cat.name} className="animate-fade" style={{ animationDelay: `${idx * 50}ms` }}>
-                  <div className="flex justify-between items-end mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
-                      <span className="text-sm font-black text-slate-700 uppercase tracking-widest">{cat.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-sm font-black text-slate-900">{formatPKR(cat.amount)}</span>
-                      <span className="text-[10px] font-bold text-slate-400 ml-2 uppercase">({((cat.amount / totalSpent) * 100).toFixed(0)}%)</span>
-                    </div>
+          {categoryStats.length === 0 ? (
+            <div className="py-20 text-center text-xs font-black uppercase tracking-widest text-slate-400">Add expenses to unlock visualization.</div>
+          ) : (
+            <div className="space-y-6">
+              {categoryStats.map(category => (
+                <div key={category.name}>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-600">{category.name}</span>
+                    <span className="text-sm font-black text-slate-950">{formatPKR(category.amount)}</span>
                   </div>
-                  <div className="w-full h-3 bg-slate-50 rounded-md overflow-hidden p-[2px]">
-                    <div 
-                      className="h-full rounded-md shadow-sm transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1)" 
-                      style={{ 
-                        width: `${(cat.amount / totalSpent) * 100}%`, 
-                        backgroundColor: cat.color 
-                      }} 
-                    />
+                  <div className="h-3 overflow-hidden rounded-md bg-slate-100">
+                    <div className="h-full rounded-md transition-all duration-700" style={{ width: `${(category.amount / totalSpent) * 100}%`, backgroundColor: category.color }} />
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-
-          <div className="mt-12 p-6 rounded-3xl bg-slate-900/5 border border-dashed border-slate-200">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-emerald-500 shadow-sm">
-                <BrainCircuit size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-black text-slate-900">Optimization Goal</p>
-                <p className="text-xs text-slate-500 font-medium">Targeting 15% reduction in Transport next month.</p>
-              </div>
+              ))}
             </div>
-          </div>
-        </div>
+          )}
+        </section>
       </div>
 
-      {/* Modal Form */}
       {showAddForm && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-fade" onClick={() => setShowAddForm(false)}>
-          <div className="bg-white border border-gray-100 rounded-[32px] p-10 shadow-2xl w-full max-w-[500px] relative animate-scale" onClick={e => e.stopPropagation()}>
-            <button className="absolute top-8 right-8 p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400" onClick={() => setShowAddForm(false)}>
-              <X size={20} />
-            </button>
-            
-            <h2 className="text-2xl font-black text-slate-900 mb-8">
-              {editingExpenseId ? "Edit Outflow" : "New Transaction"}
-            </h2>
-            
-            <form onSubmit={handleAddOrEditExpense} className="space-y-6">
-              <div className="input-group">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Category</label>
-                <select 
-                  className="input appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C/polyline%3E%3C/svg%3E')] bg-[length:16px] bg-[right_20px_center] bg-no-repeat" 
-                  value={newExpense.category} 
-                  onChange={e => setNewExpense({...newExpense, category: e.target.value})}
-                >
-                  {CATEGORIES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                </select>
-              </div>
-              
-              <div className="input-group">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Amount (PKR)</label>
-                <input className="input font-black text-lg" type="number" placeholder="0.00" required value={newExpense.amount} onChange={e => setNewExpense({...newExpense, amount: e.target.value})} />
-              </div>
-              
-              <div className="input-group">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Reference / Description</label>
-                <input className="input" placeholder="What was this for?" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
-              </div>
-              
-              <div className="flex gap-4 pt-6">
-                <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowAddForm(false)}>Dismiss</button>
-                <button type="submit" className="btn btn-emerald flex-1 shadow-lg shadow-emerald-500/30">
-                  {editingExpenseId ? "Confirm Update" : "Log Transaction"}
-                </button>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-fade" onClick={() => setShowAddForm(false)}>
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-[520px]" onClick={event => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <h2 className="text-2xl font-black text-slate-950">{editingExpenseId ? "Edit Expense" : "New Expense"}</h2>
+              <button className="h-10 w-10 rounded-2xl hover:bg-slate-100 text-slate-400" onClick={() => setShowAddForm(false)} aria-label="Close expense form"><X size={20} className="mx-auto" /></button>
+            </div>
+            <form onSubmit={handleAddOrEditExpense} className="space-y-5">
+              <select className="input !rounded-2xl !bg-white font-black" value={newExpense.category} onChange={event => setNewExpense({ ...newExpense, category: event.target.value })}>
+                {CATEGORIES.map(category => <option key={category.name} value={category.name}>{category.name}</option>)}
+              </select>
+              <input className="input !rounded-2xl !bg-white font-black" type="number" placeholder="Amount (PKR)" required value={newExpense.amount} onChange={event => setNewExpense({ ...newExpense, amount: event.target.value })} />
+              <input className="input !rounded-2xl !bg-white font-black" placeholder="Description" value={newExpense.description} onChange={event => setNewExpense({ ...newExpense, description: event.target.value })} />
+              <div className="flex gap-3 pt-2">
+                <button type="button" className="btn btn-secondary flex-1 !rounded-2xl !py-4" onClick={() => setShowAddForm(false)}>Dismiss</button>
+                <button type="submit" className="btn btn-emerald flex-1 !rounded-2xl !py-4">{editingExpenseId ? "Update" : "Log"}</button>
               </div>
             </form>
           </div>

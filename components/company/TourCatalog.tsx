@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Mountain, MapPin, Star, Settings2 } from "lucide-react";
+import { MapPin, Mountain, Settings2, Star, Wallet } from "lucide-react";
 import { formatPKR } from "@/lib/data";
 
 interface Tour {
@@ -20,75 +20,61 @@ interface TourCatalogProps {
 
 export function TourCatalog({ tours }: TourCatalogProps) {
   return (
-    <div className="card-premium !p-0 overflow-hidden">
-      <div className="flex items-center justify-between p-8 border-b border-[var(--border)]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-            <Mountain size={20} />
+    <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Mountain size={16} className="text-emerald-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Tour Catalog</span>
           </div>
-          <h2 className="text-xl font-black text-[var(--foreground)] m-0">Expedition Catalog</h2>
+          <h2 className="text-2xl font-black tracking-tight m-0 text-slate-950">Expedition Catalog</h2>
         </div>
-        <Link 
-          href="/company/tours" 
-          className="btn btn-secondary !py-2 !px-5 !text-[10px]"
-          aria-label="View full expedition catalog"
-        >
+        <Link href="/company/tours" className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-950 hover:text-white transition-all">
           Manage Catalog
         </Link>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-[var(--muted)] border-b border-[var(--border)]">
-              <th className="px-8 py-4 text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Package</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Locale</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Investment</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Health</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Status</th>
-              <th className="px-8 py-4 text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em] text-right">Ops</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border)]">
-            {tours.slice(0, 5).map((t) => (
-              <tr key={t.id} className="hover:bg-[var(--muted)] transition-colors group">
-                <td className="px-8 py-5">
-                  <p className="text-[13px] font-black text-[var(--foreground)] group-hover:text-emerald-500 transition-colors">{t.title}</p>
-                  <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest mt-1">{t.duration} Days</p>
-                </td>
-                <td className="px-8 py-5">
-                  <p className="text-[12px] font-bold text-[var(--foreground)] flex items-center gap-2">
-                    <MapPin size={12} className="text-emerald-500" /> {t.destination}
-                  </p>
-                </td>
-                <td className="px-8 py-5">
-                  <p className="text-[12px] font-black text-emerald-500">{formatPKR(t.price)}</p>
-                </td>
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-1.5">
-                    <Star size={12} className="text-amber-400 fill-amber-400" />
-                    <span className="text-[12px] font-black text-[var(--foreground)]">{t.rating}</span>
-                  </div>
-                </td>
-                <td className="px-8 py-5">
-                  <span className={`badge ${t.available ? "badge-emerald" : "badge-rose"}`}>
-                    {t.available ? "Active" : "Inactive"}
+      <div className="space-y-5">
+        {tours.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="text-slate-500 font-bold">No tour packages yet.</p>
+          </div>
+        ) : (
+          tours.slice(0, 5).map(tour => (
+            <article key={tour.id} className="rounded-3xl border border-slate-200 bg-white p-6 md:p-7 hover:shadow-xl transition-all">
+              <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_2fr_auto] gap-6 xl:items-center">
+                <div className="min-w-0">
+                  <h3 className="text-xl font-black text-slate-950 truncate m-0">{tour.title}</h3>
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">{tour.duration} days</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <InfoTile icon={<MapPin size={16} />} label="Destination" value={tour.destination} />
+                  <InfoTile icon={<Wallet size={16} />} label="Price" value={formatPKR(tour.price)} />
+                  <InfoTile icon={<Star size={16} />} label="Rating" value={tour.rating ? tour.rating.toString() : "N/A"} />
+                </div>
+                <div className="flex xl:flex-col items-center xl:items-end gap-3">
+                  <span className={`badge ${tour.available ? "badge-emerald" : "badge-rose"} !rounded-full !px-4 !py-1.5 !text-[9px]`}>
+                    {tour.available ? "Active" : "Inactive"}
                   </span>
-                </td>
-                <td className="px-8 py-5 text-right">
-                  <Link 
-                    href={`/company/tours/new?edit=${t.id}`} 
-                    className="w-9 h-9 inline-flex items-center justify-center bg-[var(--muted)] hover:bg-slate-900 hover:text-white rounded-lg transition-all"
-                    aria-label={`Edit ${t.title}`}
-                  >
+                  <Link href={`/company/tours/new?edit=${tour.id}`} className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-600 border border-slate-200 inline-flex items-center justify-center hover:bg-slate-950 hover:text-white transition-all" aria-label={`Edit ${tour.title}`}>
                     <Settings2 size={16} />
                   </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </article>
+          ))
+        )}
       </div>
+    </section>
+  );
+}
+
+function InfoTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 min-w-0">
+      <div className="text-emerald-500 mb-2">{icon}</div>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-sm font-bold text-slate-700 truncate">{value}</p>
     </div>
   );
 }

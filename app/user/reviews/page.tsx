@@ -3,18 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import { fetchReviews, deleteReview } from "@/lib/db";
-import { 
-  Star, 
-  Trash2, 
-  Edit3, 
-  ThumbsUp, 
-  MessageSquare, 
-  MapPin, 
-  Calendar,
-  Sparkles,
-  Quote
-} from "lucide-react";
+import { deleteReview, fetchReviews } from "@/lib/db";
+import { Calendar, Edit3, MapPin, MessageSquare, Quote, Sparkles, Star, ThumbsUp, Trash2 } from "lucide-react";
 
 interface Review {
   id: string;
@@ -25,6 +15,25 @@ interface Review {
   helpful_count: number;
   tours: { title: string; destination: string } | null;
   profiles: { full_name: string | null } | null;
+}
+
+function StatCard({ label, value, icon: Icon, tone }: { label: string; value: React.ReactNode; icon: any; tone: string }) {
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all relative overflow-hidden">
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <span className={`absolute top-5 right-5 h-2 w-2 rounded-full ${tone.includes("emerald") ? "bg-emerald-500" : tone.includes("amber") ? "bg-amber-500" : tone.includes("rose") ? "bg-rose-500" : "bg-slate-900"}`} />
+      <p className="mt-7 text-3xl font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function sentimentClass(sentiment: string) {
+  if (sentiment?.toLowerCase() === "positive") return "bg-emerald-50 text-emerald-600 border-emerald-200";
+  if (sentiment?.toLowerCase() === "negative") return "bg-rose-50 text-rose-500 border-rose-200";
+  return "bg-amber-50 text-amber-600 border-amber-200";
 }
 
 export default function UserReviewsPage() {
@@ -50,135 +59,97 @@ export default function UserReviewsPage() {
 
   const handleDelete = async (id: string) => {
     if (!profile) return;
-    if (!confirm("Are you sure you want to delete this memory? This action cannot be undone.")) return;
+    if (!confirm("Are you sure you want to delete this review?")) return;
     setDeleting(id);
     const ok = await deleteReview(id, profile.id);
-    if (ok) setReviews(prev => prev.filter(r => r.id !== id));
+    if (ok) setReviews(prev => prev.filter(review => review.id !== id));
     setDeleting(null);
   };
 
-  const getSentimentBadge = (sentiment: string) => {
-    switch(sentiment.toLowerCase()) {
-      case 'positive': return <span className="badge badge-emerald">Positive Sentiment</span>;
-      case 'neutral': return <span className="badge badge-slate">Neutral Feedback</span>;
-      case 'negative': return <span className="badge badge-rose">Constructive Feedback</span>;
-      default: return <span className="badge badge-slate">{sentiment}</span>;
-    }
-  };
+  const helpful = reviews.reduce((sum, review) => sum + (review.helpful_count || 0), 0);
+  const avgRating = reviews.length ? (reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / reviews.length).toFixed(1) : "0.0";
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] space-y-4 animate-fade">
         <div className="loading-spinner h-12 w-12" />
-        <p className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Retrieving Your Reviews...</p>
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading reviews...</p>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade space-y-10 pb-20">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-        <div>
-          <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-2">Member Feedback</p>
-          <h1 className="m-0 tracking-tight">My Reviews</h1>
+    <div className="animate-fade space-y-8 pb-20">
+      <div>
+        <div className="flex items-center gap-2 text-emerald-500 mb-2">
+          <MessageSquare size={14} />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Member Feedback</span>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Total Shared</p>
-            <p className="text-3xl font-black text-slate-900 leading-none">{reviews.length}</p>
-          </div>
-          <div className="w-px h-10 bg-slate-200" />
-          <div className="text-right">
-            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Impact Factor</p>
-            <p className="text-3xl font-black text-emerald-600 leading-none">
-              {reviews.reduce((acc, r) => acc + (r.helpful_count || 0), 0)}
-            </p>
-          </div>
-        </div>
+        <h1 className="text-2xl font-black text-slate-950">My Reviews</h1>
       </div>
 
-      {reviews.length === 0 ? (
-        <div className="card-premium py-32 flex flex-col items-center justify-center text-center">
-          <div className="w-24 h-24 bg-slate-50 rounded-[40px] flex items-center justify-center text-slate-200 mb-8 shadow-inner ring-1 ring-slate-100">
-            <Sparkles size={48} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard label="Total Shared" value={reviews.length} icon={MessageSquare} tone="bg-emerald-50 text-emerald-500" />
+        <StatCard label="Average Rating" value={avgRating} icon={Star} tone="bg-amber-50 text-amber-500" />
+        <StatCard label="Helpful Votes" value={helpful} icon={ThumbsUp} tone="bg-slate-100 text-slate-900" />
+        <StatCard label="Positive" value={reviews.filter(r => r.sentiment === "positive").length} icon={Sparkles} tone="bg-emerald-50 text-emerald-500" />
+      </div>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        {reviews.length === 0 ? (
+          <div className="py-24 text-center">
+            <Sparkles size={42} className="mx-auto text-slate-300 mb-4" />
+            <h2 className="text-xl font-black text-slate-950">No reviews shared yet</h2>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">After a trip, share feedback from your bookings.</p>
+            <Link href="/user/bookings" className="mt-8 inline-flex btn btn-emerald !rounded-2xl !py-4 !px-7">View Bookings</Link>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-2">No reviews shared yet</h2>
-          <p className="text-slate-500 font-medium max-w-sm mx-auto">
-            Your voice matters. After completing an expedition, share your experiences to help other members find the perfect journey.
-          </p>
-          <Link href="/user/bookings" className="mt-10 btn btn-emerald px-10 py-4">View Completed Bookings</Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-6">
-          {reviews.map((r, idx) => (
-            <div key={r.id} className="card p-10 hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500 group animate-fade" style={{ animationDelay: `${idx * 50}ms` }}>
-              <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Expedition Review</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-200" />
-                    <div className="flex items-center gap-1">
-                      <Star size={12} className="text-amber-400 fill-amber-400" />
-                      <span className="text-[11px] font-black text-slate-900">{r.rating}.0</span>
+        ) : (
+          <div className="space-y-4">
+            {reviews.map(review => (
+              <article key={review.id} className="rounded-3xl border border-slate-200 bg-white p-6 hover:shadow-xl transition-all">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                      <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${sentimentClass(review.sentiment)}`}>{review.sentiment || "neutral"}</span>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, index) => (
+                          <Star key={index} size={15} className={index < review.rating ? "text-amber-400 fill-amber-400" : "text-slate-200"} />
+                        ))}
+                      </div>
+                    </div>
+                    <h3 className="text-xl font-black text-slate-950 truncate">{review.tours?.title || "Anonymous Expedition"}</h3>
+                    <div className="mt-2 flex flex-wrap gap-4 text-xs font-bold text-slate-500">
+                      <span className="flex items-center gap-1.5"><MapPin size={13} className="text-emerald-500" />{review.tours?.destination || "Destination"}</span>
+                      <span className="flex items-center gap-1.5"><Calendar size={13} className="text-emerald-500" />{new Date(review.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight group-hover:text-emerald-600 transition-colors m-0">
-                    {r.tours?.title || "Anonymous Expedition"}
-                  </h3>
-                  <div className="flex items-center gap-4 mt-3 text-slate-500 font-bold text-sm">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin size={14} className="text-rose-400" />
-                      {r.tours?.destination || "Global"}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar size={14} className="text-slate-400" />
-                      {new Date(r.created_at).toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" })}
-                    </div>
+                  <div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 py-3 flex items-center gap-2 text-slate-700">
+                    <ThumbsUp size={14} className="text-emerald-500" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{review.helpful_count || 0} Helpful</span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-3 shrink-0">
-                  {getSentimentBadge(r.sentiment)}
-                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                    <ThumbsUp size={14} className="text-slate-400" />
-                    <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight">{r.helpful_count} Helpful Votes</span>
-                  </div>
-                </div>
-              </div>
 
-              <div className="relative p-8 bg-slate-50 rounded-[28px] border border-slate-100 italic">
-                <Quote size={32} className="absolute -top-4 -left-4 text-slate-200 fill-white" />
-                <p className="text-slate-600 text-lg font-medium leading-relaxed m-0 relative z-10">
-                  &ldquo;{r.comment}&rdquo;
-                </p>
-              </div>
+                <div className="mt-6 rounded-2xl bg-slate-50 border border-slate-100 p-5">
+                  <Quote size={20} className="text-emerald-500 mb-3" />
+                  <p className="text-sm font-bold leading-relaxed text-slate-700">{review.comment}</p>
+                </div>
 
-              <div className="mt-10 pt-8 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-6">
-                <div className="flex gap-4 w-full sm:w-auto">
-                  <button 
-                    className="btn btn-secondary !px-6 py-4 flex items-center gap-2 group/edit"
-                    onClick={() => alert('Editing review protocol is temporarily offline for maintenance.')}
-                  >
-                    <Edit3 size={18} className="group-hover/edit:rotate-12 transition-transform" /> Modify
-                  </button>
-                  <button
-                    className="btn btn-rose !px-6 py-4 flex items-center gap-2 group/del"
-                    onClick={() => handleDelete(r.id)}
-                    disabled={deleting === r.id}
-                  >
-                    <Trash2 size={18} className="group-hover/del:scale-110 transition-transform" /> 
-                    {deleting === r.id ? "Purging..." : "Delete Review"}
-                  </button>
+                <div className="mt-5 flex flex-col md:flex-row justify-between gap-4 md:items-center">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Contribution #{review.id.slice(0, 8)}</span>
+                  <div className="flex gap-2">
+                    <button className="btn btn-secondary !px-5 !py-3 !rounded-2xl flex items-center gap-2" onClick={() => alert("Review editing is temporarily unavailable.")}>
+                      <Edit3 size={15} /> Modify
+                    </button>
+                    <button className="btn btn-rose !px-5 !py-3 !rounded-2xl flex items-center gap-2" onClick={() => handleDelete(review.id)} disabled={deleting === review.id}>
+                      <Trash2 size={15} /> {deleting === review.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <MessageSquare size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Public Contribution #{r.id.slice(0, 8)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

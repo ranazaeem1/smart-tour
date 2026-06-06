@@ -200,6 +200,19 @@ export async function updateTour(id: string, updates: Partial<{
   title: string; price: number; available: boolean; featured: boolean;
   safety_score: number; tags: string[]; image_url: string;
 }>) {
+  if (updates.available === true) {
+    const { data: tour, error: tourError } = await (supabase.from('tours') as any)
+      .select('company_id, companies(status)')
+      .eq('id', id)
+      .maybeSingle();
+
+    const companyStatus = Array.isArray(tour?.companies) ? tour.companies[0]?.status : tour?.companies?.status;
+    if (tourError || companyStatus !== 'approved') {
+      console.error('[updateTour] Unauthorized: Company not approved', companyStatus);
+      return null;
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('tours') as any).update(updates).eq('id', id).select().single();
   if (error) { console.error('[updateTour]', error.message); return null; }
@@ -254,11 +267,15 @@ export async function createBooking(booking: {
 }
 
 export async function updateBookingStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') {
-  const { data, error } = await (supabase.from('bookings') as any)
+  let query: any = (supabase.from('bookings') as any)
     .update({ status })
-    .eq('id', id)
-    .select()
-    .single();
+    .eq('id', id);
+
+  if (status === 'confirmed') query = query.eq('status', 'pending');
+  if (status === 'cancelled') query = query.in('status', ['pending', 'confirmed']);
+  if (status === 'completed') query = query.eq('status', 'confirmed');
+
+  const { data, error } = await query.select().maybeSingle();
   if (error) { console.error('[updateBookingStatus]', error.message); return null; }
   return data;
 }
@@ -341,11 +358,27 @@ export async function fetchCompanyByOwner(ownerId: string): Promise<{ id: string
 
 export async function updateCompanyStatus(id: string, status: 'pending' | 'approved' | 'suspended' | 'rejected') {
   const { data, error } = await (supabase.from('companies') as any)
-    .update({ status })
+    .update({ status, verified: status === 'approved' })
     .eq('id', id)
     .select()
     .single();
   if (error) { console.error('[updateCompanyStatus]', error.message); return null; }
+
+  if (data?.owner_id) {
+    const role = status === 'approved' ? 'company' : 'user';
+    const { error: profileError } = await (supabase.from('profiles') as any)
+      .update({ role })
+      .eq('id', data.owner_id);
+    if (profileError) console.error('[updateCompanyStatus:profile]', profileError.message);
+  }
+
+  if (status !== 'approved') {
+    const { error: toursError } = await (supabase.from('tours') as any)
+      .update({ available: false, featured: false })
+      .eq('company_id', id);
+    if (toursError) console.error('[updateCompanyStatus:tours]', toursError.message);
+  }
+
   return data;
 }
 
@@ -393,33 +426,73 @@ export async function dismissSafetyAlert(id: string) {
 
 // ---- Analytics / Revenue ----
 
-export async function fetchRevenueStats(companyId?: string) {
-  let query = supabase
-    .from('bookings')
-    .select('total_price, created_at');
+export type MonthlyRevenueStat = { month: string; revenue: number; bookings: number };
 
-  if (companyId) {
-    query = query.eq('company_id', companyId);
-  }
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  const { data: bookings, error } = await query;
+export function isRevenueBooking(booking: { status?: string | null }) {
+  return booking.status === 'confirmed' || booking.status === 'completed';
+}
 
-  if (error || !bookings || bookings.length === 0) return [];
+export function buildMonthlyRevenueStats(bookings: Array<{
+  total_price?: number | string | null;
+  travel_date?: string | null;
+  created_at?: string | null;
+  status?: string | null;
+}>): MonthlyRevenueStat[] {
+  const monthly: Record<string, MonthlyRevenueStat> = {};
 
-  // Aggregate by month
-  const monthly: Record<string, { month: string; revenue: number; bookings: number }> = {};
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  bookings.forEach((booking) => {
+    if (booking.status && !isRevenueBooking(booking)) return;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (bookings as any[]).forEach((b: any) => {
-    const d = new Date(b.created_at);
-    const key = months[d.getMonth()];
-    if (!monthly[key]) monthly[key] = { month: key, revenue: 0, bookings: 0 };
-    monthly[key].revenue += b.total_price || 0;
-    monthly[key].bookings += 1;
+    const rawDate = booking.travel_date || booking.created_at;
+    if (!rawDate) return;
+
+    const date = new Date(rawDate);
+    if (Number.isNaN(date.getTime())) return;
+
+    const month = MONTH_LABELS[date.getMonth()];
+    if (!monthly[month]) monthly[month] = { month, revenue: 0, bookings: 0 };
+
+    monthly[month].revenue += Number(booking.total_price || 0);
+    monthly[month].bookings += 1;
   });
 
-  return months.map(m => monthly[m] || { month: m, revenue: 0, bookings: 0 });
+  return MONTH_LABELS.map(month => monthly[month] || { month, revenue: 0, bookings: 0 });
+}
+
+export async function fetchRevenueStats(companyId?: string) {
+  try {
+    const bookings = await fetchBookings(companyId ? { companyId } : undefined);
+    return buildMonthlyRevenueStats(bookings as Array<{
+      total_price?: number | string | null;
+      travel_date?: string | null;
+      created_at?: string | null;
+      status?: string | null;
+    }>);
+  } catch (err) {
+    console.error('[fetchRevenueStats]', err);
+  }
+
+  let query = supabase
+    .from('bookings')
+    .select('total_price, travel_date, created_at, status')
+    .in('status', ['confirmed', 'completed']);
+
+  if (companyId) query = query.eq('company_id', companyId);
+
+  const { data: bookings, error } = await query;
+  if (error) {
+    console.error('[fetchRevenueStats:fallback]', error.message);
+    return buildMonthlyRevenueStats([]);
+  }
+
+  return buildMonthlyRevenueStats((bookings || []) as Array<{
+    total_price?: number | string | null;
+    travel_date?: string | null;
+    created_at?: string | null;
+    status?: string | null;
+  }>);
 }
 
 export async function fetchPlatformStats() {
@@ -427,7 +500,7 @@ export async function fetchPlatformStats() {
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('companies').select('id', { count: 'exact', head: true }),
     supabase.from('tours').select('id', { count: 'exact', head: true }).eq('available', true),
-    supabase.from('bookings').select('total_price'),
+    supabase.from('bookings').select('total_price, status').in('status', ['confirmed', 'completed']),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

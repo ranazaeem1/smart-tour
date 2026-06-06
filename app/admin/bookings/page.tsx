@@ -12,7 +12,6 @@ import {
   ClipboardList,
   Clock,
   Filter,
-  MoreVertical,
   Search,
   User,
   Users,
@@ -290,9 +289,6 @@ export default function AdminBookingsPage() {
                         <ArrowRight size={14} />
                       </button>
 
-                      <button className="w-12 h-12 flex items-center justify-center rounded-2xl border border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-950 transition-colors" aria-label="More operations">
-                        <MoreVertical size={18} />
-                      </button>
                     </div>
                   </div>
                 </article>

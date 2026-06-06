@@ -1,279 +1,235 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { fetchTours, updateTour, fetchCompanyByOwner } from "@/lib/db";
+import { fetchCompanyByOwner, fetchTours, updateTour } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
-import { useAuth } from "@/components/AuthProvider";
 import { getTourImage } from "@/lib/tourImages";
-import { 
-  Plus, 
-  Search, 
-  MapPin, 
-  Clock, 
-  Mountain, 
-  Star, 
-  Shield, 
-  Settings2, 
-  ClipboardList, 
-  Pause, 
-  Play,
+import { useAuth } from "@/components/AuthProvider";
+import {
   Activity,
-  ArrowRight,
-  Info
+  CalendarDays,
+  ClipboardList,
+  MapPin,
+  Mountain,
+  Pause,
+  Play,
+  Plus,
+  Search,
+  Settings2,
+  Shield,
+  Star,
+  Wallet,
 } from "lucide-react";
 
 interface Tour {
-  id: string; title: string; destination: string; price: number;
-  duration: number; rating: number; safety_score?: number; safetyScore?: number;
-  available: boolean; category: string; difficulty: string;
-  companies?: { name: string } | null; company?: string;
-  image_url?: string | null; image?: string;
-  tags?: string[]; review_count?: number; reviews?: number;
+  id: string;
+  title: string;
+  destination: string;
+  price: number;
+  duration: number;
+  rating: number;
+  safety_score?: number;
+  safetyScore?: number;
+  available: boolean;
+  category: string;
+  difficulty: string;
+  image_url?: string | null;
+  image?: string;
+  tags?: string[];
+}
+
+function StatCard({ label, value, icon: Icon, tone }: { label: string; value: React.ReactNode; icon: any; tone: string }) {
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all relative overflow-hidden">
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <span className={`absolute top-5 right-5 h-2 w-2 rounded-full ${tone.includes("emerald") ? "bg-emerald-500" : tone.includes("amber") ? "bg-amber-500" : tone.includes("rose") ? "bg-rose-500" : "bg-slate-900"}`} />
+      <p className="mt-7 text-3xl font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function InfoTile({ icon: Icon, label, value }: { icon: any; label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 min-w-0">
+      <Icon size={15} className="text-emerald-500 mb-3" />
+      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-black text-slate-800 truncate">{value}</p>
+    </div>
+  );
 }
 
 export default function CompanyToursPage() {
   const { profile } = useAuth();
   const [tours, setTours] = useState<Tour[]>([]);
+  const [companyStatus, setCompanyStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      if (profile?.id) {
-        setLoading(true);
-        try {
-          const company = await fetchCompanyByOwner(profile.id);
-          if (company && company.id) {
-            const raw = await fetchTours({ companyId: company.id });
-            setTours(raw as Tour[]);
-          }
-        } catch (err) {
-          console.error("Failed to load tours:", err);
-        } finally {
-          setLoading(false);
-        }
+      if (!profile?.id) return;
+      setLoading(true);
+      try {
+        const company = await fetchCompanyByOwner(profile.id);
+        setCompanyStatus(typeof company?.status === "string" ? company.status : null);
+        if (company?.id) setTours((await fetchTours({ companyId: company.id })) as Tour[]);
+      } catch (err) {
+        console.error("Failed to load tours:", err);
+      } finally {
+        setLoading(false);
       }
     }
     load();
   }, [profile]);
 
   const handleToggle = async (id: string, current: boolean) => {
+    setNotice(null);
+    if (!current && companyStatus !== "approved") {
+      setNotice("Your company must be approved by admin before publishing tours.");
+      return;
+    }
+
     setUpdatingId(id);
     try {
-      await updateTour(id, { available: !current });
-      setTours(prev => prev.map(t => t.id === id ? { ...t, available: !current } : t));
+      const updated = await updateTour(id, { available: !current });
+      if (!updated) {
+        setNotice("Tour could not be published because this company is not approved.");
+        return;
+      }
+      setTours(prev => prev.map(t => (t.id === id ? { ...t, available: !current } : t)));
     } finally {
       setUpdatingId(null);
     }
   };
 
-  const filtered = tours
-    .filter(t => filterStatus === "all" || (filterStatus === "active" ? t.available : !t.available))
-    .filter(t =>
-      t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.destination.toLowerCase().includes(search.toLowerCase())
-    );
-
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
-      <div className="loading-spinner h-12 w-12" />
-      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Syncing Expedition Ledger...</p>
-    </div>
+  const filtered = useMemo(
+    () =>
+      tours
+        .filter(t => filterStatus === "all" || (filterStatus === "active" ? t.available : !t.available))
+        .filter(t => `${t.title} ${t.destination}`.toLowerCase().includes(search.toLowerCase())),
+    [tours, filterStatus, search]
   );
 
+  const avgRating = tours.length ? (tours.reduce((sum, tour) => sum + (tour.rating || 0), 0) / tours.length).toFixed(1) : "0.0";
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading tours...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="animate-fade space-y-10 pb-20" role="main">
-      {/* ── Expedition Hero Header ── */}
-      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
-          <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
-              <Mountain size={12} className="panel-hero-kicker-icon" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Package Inventory</span>
-            </div>
-            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
-              Expedition Catalog
-            </h1>
-            <p className="panel-hero-subtitle text-sm md:text-base font-medium">Manage your regional offerings and deployment status.</p>
+    <div className="animate-fade space-y-8 pb-20" role="main">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
+        <div>
+          <div className="flex items-center gap-2 text-emerald-500 mb-2">
+            <Mountain size={14} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Package Inventory</span>
           </div>
-
-          <div className="flex flex-col items-center md:items-end gap-6">
-            <div className="text-right hidden md:block">
-              <span className="panel-hero-badge badge badge-emerald">
-                {tours.filter(t => t.available).length} Active Units
-              </span>
-            </div>
-            <Link
-              href="/company/tours/new"
-              className="btn btn-emerald min-h-[56px] px-10 rounded-2xl shadow-2xl shadow-emerald-500/20 flex items-center gap-3 active:scale-95 transition-all"
-            >
-              <Plus size={20} />
-              <span className="text-sm font-black tracking-widest uppercase">Add New Tour</span>
-            </Link>
-          </div>
+          <h1 className="text-2xl font-black text-slate-950">My Tours</h1>
         </div>
-      </section>
 
-      {/* ── Search & Filters ── */}
-      <div className="flex flex-col lg:flex-row justify-between items-center gap-6">
-        <div className="flex bg-[var(--muted)] p-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] w-full lg:w-auto overflow-x-auto">
-          {["all", "active", "inactive"].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilterStatus(f)}
-              className={`flex-1 lg:flex-none px-8 py-3 rounded-[var(--radius-md)] text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${filterStatus === f ? "bg-[var(--card)] text-[var(--foreground)] shadow-lg" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}
-            >
-              {f}
+        <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+          <div className="relative w-full md:w-80">
+            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input className="input !pl-12 !py-4 !rounded-2xl !bg-white font-black" placeholder="Search tour or destination..." value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          {companyStatus === "approved" ? (
+            <Link href="/company/tours/new" className="btn btn-emerald !rounded-2xl !py-4 !px-6 flex items-center justify-center gap-2">
+              <Plus size={18} />
+              <span className="text-xs font-black uppercase tracking-widest">Add Tour</span>
+            </Link>
+          ) : (
+            <button type="button" className="btn btn-secondary !rounded-2xl !py-4 !px-6 flex items-center justify-center gap-2 opacity-70 cursor-not-allowed" onClick={() => setNotice("Your company must be approved by admin before adding tours.")}>
+              <Plus size={18} />
+              <span className="text-xs font-black uppercase tracking-widest">Add Tour</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {(companyStatus !== "approved" || notice) && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-700">
+          {notice || "Your company is not approved right now. Tour publishing is disabled until admin approves the company."}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard label="Total Packages" value={tours.length} icon={Mountain} tone="bg-emerald-50 text-emerald-500" />
+        <StatCard label="Active Tours" value={tours.filter(t => t.available).length} icon={Activity} tone="bg-slate-100 text-slate-900" />
+        <StatCard label="Inactive Tours" value={tours.filter(t => !t.available).length} icon={Pause} tone="bg-rose-50 text-rose-500" />
+        <StatCard label="Average Rating" value={avgRating} icon={Star} tone="bg-amber-50 text-amber-500" />
+      </div>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="flex w-full overflow-x-auto bg-slate-100 p-1.5 rounded-2xl border border-slate-200 mb-6">
+          {["all", "active", "inactive"].map(item => (
+            <button key={item} onClick={() => setFilterStatus(item)} className={`px-7 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterStatus === item ? "bg-slate-950 text-white shadow-lg" : "text-slate-500 hover:text-slate-950"}`}>
+              {item}
             </button>
           ))}
         </div>
 
-        <div className="relative w-full lg:max-w-md group">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] group-focus-within:text-emerald-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search by title or locale..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input !pl-12 !py-4 font-black"
-          />
-        </div>
-      </div>
-
-      {/* ── Tour Grid ── */}
-      {filtered.length === 0 ? (
-        <section className="card-premium py-20 text-center flex flex-col items-center">
-          <div className="w-20 h-20 bg-[var(--muted)] rounded-[32px] flex items-center justify-center text-[var(--muted-foreground)] mb-8 shadow-inner border border-[var(--border)]">
-            <Mountain size={40} />
+        {filtered.length === 0 ? (
+          <div className="py-24 text-center">
+            <Mountain size={42} className="mx-auto text-slate-300 mb-4" />
+            <h2 className="text-xl font-black text-slate-950">No tours found</h2>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">Try another search or add a new package.</p>
           </div>
-          <h2 className="text-2xl font-black text-[var(--foreground)] mb-2 tracking-tight">No Expeditions Found</h2>
-          <p className="text-[var(--muted-foreground)] font-medium mb-10 max-w-sm mx-auto leading-relaxed">
-            {search ? "Zero matches found for your current filter parameters." : "Start by adding your first tour package to the platform catalog."}
-          </p>
-          <Link href="/company/tours/new" className="btn btn-emerald px-10 py-5 !rounded-2xl shadow-xl shadow-emerald-500/20">
-            Create First Package <ArrowRight size={20} className="ml-2" />
-          </Link>
-        </section>
-      ) : (
-        <div className="space-y-8">
-          {filtered.map((tour, idx) => (
-            <article 
-              key={tour.id} 
-              className="card-premium !p-0 overflow-hidden flex flex-col md:flex-row group hover:shadow-2xl transition-all duration-500 border border-[var(--border)] hover:border-emerald-500/30 animate-fade"
-              style={{ animationDelay: `${idx * 100}ms` }}
-            >
-              <div className="w-full md:w-80 h-64 md:h-auto overflow-hidden relative">
-                <img
-                  src={getTourImage(tour)}
-                  alt={tour.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute top-6 left-6">
-                  <span className={`badge ${tour.available ? "badge-emerald shadow-lg shadow-emerald-950/40" : "badge-rose shadow-lg shadow-rose-950/40"} !px-4 !py-2 !text-[10px] !font-black !rounded-xl border border-white/20 backdrop-blur-md`}>
-                    {tour.available ? "ACTIVE UNIT" : "OFF-LINE"}
-                  </span>
-                </div>
-              </div>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map(tour => (
+              <article key={tour.id} className="rounded-3xl border border-slate-200 bg-white p-4 md:p-5 hover:shadow-xl transition-all">
+                <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr_auto] gap-5 items-center">
+                  <img src={getTourImage(tour)} alt={tour.title} className="h-40 lg:h-32 w-full rounded-2xl object-cover border border-slate-100" />
 
-              <div className="flex-1 p-8 md:p-10 flex flex-col justify-between">
-                <div>
-                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
-                    <div>
-                      <h3 className="text-2xl font-black text-[var(--foreground)] m-0 tracking-tight group-hover:text-emerald-500 transition-colors">{tour.title}</h3>
-                      <div className="flex flex-wrap items-center gap-4 mt-3">
-                        <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
-                          <MapPin size={14} className="text-emerald-500" />
-                          <span className="text-[11px] font-black uppercase tracking-widest">{tour.destination}</span>
-                        </div>
-                        <span className="w-1 h-1 rounded-full bg-[var(--border)]" />
-                        <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
-                          <Clock size={14} className="text-emerald-500" />
-                          <span className="text-[11px] font-black uppercase tracking-widest">{tour.duration} Days</span>
-                        </div>
-                        <span className="w-1 h-1 rounded-full bg-[var(--border)]" />
-                        <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
-                          <Activity size={14} className="text-emerald-500" />
-                          <span className="text-[11px] font-black uppercase tracking-widest capitalize">{tour.difficulty} Grade</span>
-                        </div>
-                      </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${tour.available ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-rose-50 text-rose-500 border-rose-200"}`}>
+                        {tour.available ? "Active" : "Inactive"}
+                      </span>
+                      <span className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border border-slate-200">
+                        {tour.category || "Tour"}
+                      </span>
                     </div>
-                    
-                    <div className="flex gap-2">
-                      {(tour.tags || []).slice(0, 3).map(tag => (
-                        <span key={tag} className="px-3 py-1.5 bg-[var(--muted)] text-[var(--muted-foreground)] text-[9px] font-black uppercase tracking-widest rounded-lg border border-[var(--border)] group-hover:bg-[var(--card)] transition-colors">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                    <h3 className="text-xl font-black text-slate-950 truncate">{tour.title}</h3>
+                    <p className="mt-1 text-xs font-bold text-slate-500 capitalize">{tour.difficulty || "Standard"} grade package</p>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 pt-10 border-t border-[var(--border)]">
-                  <div className="flex flex-col">
-                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Starting From</p>
-                    <p className="text-2xl font-black text-emerald-500 tracking-tighter">{formatPKR(tour.price)}</p>
-                  </div>
-                  <div className="flex flex-col">
-                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Rating</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Star size={16} className="text-amber-400 fill-amber-400" />
-                      <span className="text-base font-black text-[var(--foreground)]">{tour.rating}</span>
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
+                      <InfoTile icon={MapPin} label="Destination" value={tour.destination} />
+                      <InfoTile icon={CalendarDays} label="Duration" value={`${tour.duration} days`} />
+                      <InfoTile icon={Wallet} label="Price" value={formatPKR(tour.price || 0)} />
+                      <InfoTile icon={Shield} label="Safety" value={`${tour.safety_score ?? tour.safetyScore ?? 85}%`} />
                     </div>
                   </div>
-                  <div className="flex flex-col">
-                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest mb-1">Safety Integrtiy</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Shield size={16} className="text-emerald-500" />
-                      <span className="text-base font-black text-[var(--foreground)]">{tour.safety_score || 85}%</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-end gap-3 lg:col-span-1">
-                    <button
-                      onClick={() => handleToggle(tour.id, tour.available)}
-                      disabled={updatingId === tour.id}
-                      className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 shadow-lg ${tour.available ? "bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white"}`}
-                      aria-label={tour.available ? "Deactivate package" : "Activate package"}
-                    >
-                      {updatingId === tour.id ? <div className="loading-spinner w-5 h-5 border-current" /> : (tour.available ? <Pause size={20} /> : <Play size={20} />)}
+
+                  <div className="flex lg:flex-col gap-2 justify-end">
+                    <button onClick={() => handleToggle(tour.id, tour.available)} disabled={updatingId === tour.id || (!tour.available && companyStatus !== "approved")} className={`h-12 w-12 rounded-2xl flex items-center justify-center border transition-all ${tour.available ? "bg-rose-50 text-rose-500 border-rose-200 hover:bg-rose-500 hover:text-white" : companyStatus === "approved" ? "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-500 hover:text-white" : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"}`} aria-label={tour.available ? "Deactivate tour" : "Activate tour"}>
+                      {updatingId === tour.id ? <span className="loading-spinner h-5 w-5" /> : tour.available ? <Pause size={18} /> : <Play size={18} />}
                     </button>
-                    <Link 
-                      href={`/company/tours/new?edit=${tour.id}`} 
-                      className="w-12 h-12 flex items-center justify-center bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-slate-900 hover:text-white rounded-2xl border border-[var(--border)] transition-all shadow-lg"
-                      aria-label="Edit expedition details"
-                    >
-                      <Settings2 size={20} />
+                    <Link href={`/company/tours/new?edit=${tour.id}`} className="h-12 w-12 rounded-2xl flex items-center justify-center bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-950 hover:text-white transition-all" aria-label="Edit tour">
+                      <Settings2 size={18} />
                     </Link>
-                    <Link 
-                      href="/company/bookings" 
-                      className="w-12 h-12 flex items-center justify-center bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-slate-900 hover:text-white rounded-2xl border border-[var(--border)] transition-all shadow-lg"
-                      aria-label="View associated reservations"
-                    >
-                      <ClipboardList size={20} />
+                    <Link href="/company/bookings" className="h-12 w-12 rounded-2xl flex items-center justify-center bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-950 hover:text-white transition-all" aria-label="View bookings">
+                      <ClipboardList size={18} />
                     </Link>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-      
-      {/* ── Footer Stats ── */}
-      <div className="flex items-center justify-center gap-6 pt-10 border-t border-[var(--border)] opacity-50 grayscale hover:grayscale-0 transition-all">
-        <div className="flex items-center gap-2">
-          <Info size={14} className="text-[var(--muted-foreground)]" />
-          <p className="text-[10px] font-black uppercase tracking-widest">Operator Portal v2.0</p>
-        </div>
-        <span className="w-1 h-1 rounded-full bg-[var(--border)]" />
-        <p className="text-[10px] font-black uppercase tracking-widest">Real-time ledger sync active</p>
-      </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

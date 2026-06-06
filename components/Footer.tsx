@@ -34,7 +34,7 @@ export default function Footer() {
           <div className="flex flex-col gap-6">
             <Link href="/" className="flex items-center gap-3 group">
               <img src="/logo.svg" alt="Smart Tour logo" className="w-12 h-12 rounded-full object-contain group-hover:scale-105 transition-transform" />
-              <span className="site-footer-brand font-black text-white text-xl tracking-tight uppercase">Smart<span className="text-emerald-500">Tour</span></span>
+              <span className="site-footer-brand font-black text-xl tracking-tight uppercase"><span className="site-footer-brand-smart">Smart</span><span className="text-emerald-500">Tour</span></span>
             </Link>
             <p className="site-footer-copy text-slate-400 text-sm leading-relaxed max-w-xs font-medium">
               Your trusted partner in travel planning and booking. Discover the extraordinary with AI-powered intelligence.
@@ -45,7 +45,7 @@ export default function Footer() {
           <div>
             <h3 className="site-footer-heading text-[11px] font-black text-white uppercase tracking-[0.16em] mb-8">Company</h3>
             <ul className="space-y-4">
-              <li><button onClick={() => handleNavigation('#about')} className="site-footer-link text-slate-400 hover:text-emerald-400 transition-colors text-sm font-semibold">About Us</button></li>
+              <li><button suppressHydrationWarning onClick={() => handleNavigation('#about')} className="site-footer-link text-slate-400 hover:text-emerald-400 transition-colors text-sm font-semibold">About Us</button></li>
             </ul>
           </div>
 

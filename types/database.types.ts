@@ -45,6 +45,10 @@ export type Database = {
           name: string;
           email: string;
           phone: string | null;
+          ntn_number: string | null;
+          applicant_name: string | null;
+          applicant_email: string | null;
+          applicant_phone: string | null;
           city: string | null;
           logo: string | null;
           status: 'pending' | 'approved' | 'suspended';
@@ -61,6 +65,10 @@ export type Database = {
           name: string;
           email: string;
           phone?: string | null;
+          ntn_number?: string | null;
+          applicant_name?: string | null;
+          applicant_email?: string | null;
+          applicant_phone?: string | null;
           city?: string | null;
           logo?: string | null;
           status?: 'pending' | 'approved' | 'suspended';
@@ -75,6 +83,10 @@ export type Database = {
           name?: string;
           email?: string;
           phone?: string | null;
+          ntn_number?: string | null;
+          applicant_name?: string | null;
+          applicant_email?: string | null;
+          applicant_phone?: string | null;
           city?: string | null;
           logo?: string | null;
           status?: 'pending' | 'approved' | 'suspended';

@@ -12,15 +12,17 @@ import {
   Plus,
   Menu,
   Building2,
-  Hand
+  Hand,
+  Settings
 } from "lucide-react";
 
 interface TopNavProps {
   title: string;
   onMenuClick: () => void;
+  hideMobileMenuButton?: boolean;
 }
 
-export default function TopNav({ title, onMenuClick }: TopNavProps) {
+export default function TopNav({ title, onMenuClick, hideMobileMenuButton = false }: TopNavProps) {
   const { profile, signOut } = useAuth();
   const [greeting, setGreeting] = useState("Good morning");
   const [companyName, setCompanyName] = useState<string | null>(null);
@@ -95,19 +97,21 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
     <header className="sticky top-0 z-[100] flex items-center justify-between bg-[var(--card)]/80 backdrop-blur-xl px-4 md:px-6 lg:px-8 h-[80px] border-b border-[var(--border)] shadow-[var(--shadow-sm)] transition-all duration-300">
       {/* Left Section: Mobile Menu & Title */}
       <div className="flex items-center gap-4 flex-1">
-        <button 
-          onClick={onMenuClick}
-          className="lg:hidden p-2.5 bg-[var(--muted)] text-[var(--muted-foreground)] rounded-xl hover:bg-[var(--border)] active:scale-95 transition-all"
-          aria-label="Toggle mobile menu"
-        >
-          <Menu size={20} />
-        </button>
+        {!hideMobileMenuButton && (
+          <button 
+            onClick={onMenuClick}
+            className="lg:hidden p-2.5 bg-[var(--muted)] text-[var(--muted-foreground)] rounded-xl hover:bg-[var(--border)] active:scale-95 transition-all"
+            aria-label="Toggle mobile menu"
+          >
+            <Menu size={20} />
+          </button>
+        )}
 
         <div className="animate-fade min-w-0">
           <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em] mb-1 inline-flex items-center gap-1.5">
             {greeting} <Hand size={12} className="text-emerald-500" />
           </p>
-          <h1 className="text-lg md:text-xl font-black text-[var(--foreground)] m-0 leading-tight tracking-tight truncate">
+          <h1 className="app-topnav-title text-lg md:text-xl font-black text-[var(--foreground)] m-0 leading-tight tracking-tight truncate">
             {dashboardTitle}
           </h1>
 
@@ -120,7 +124,7 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
         {showQuickActions && (
           <div className="hidden sm:flex items-center gap-3">
             <Link 
-              href="/company/register" 
+              href="/user/register-company" 
               className="btn btn-secondary !px-5 !py-2.5 !text-[10px] hidden xl:flex items-center gap-2"
               aria-label="Register your company on SmartTour"
             >
@@ -189,8 +193,7 @@ export default function TopNav({ title, onMenuClick }: TopNavProps) {
                     role="menuitem"
                     aria-label="Go to preferences"
                   >
-  Sparkles,
-  Hand
+                    <Settings size={16} className="text-[var(--muted-foreground)] group-hover:text-emerald-500" aria-hidden="true" />
                     <span className="text-sm font-bold">Preferences</span>
                   </Link>
                 </div>

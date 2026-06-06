@@ -3,11 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X } from "lucide-react";
 
 export default function LandingNav() {
   const router = useRouter();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [navOnDark, setNavOnDark] = useState(true);
   const navRef = useRef<HTMLElement | null>(null);
 
@@ -67,7 +65,6 @@ export default function LandingNav() {
     } else {
       router.push(path);
     }
-    setMobileMenuOpen(false);
   };
 
   const navItems = [
@@ -101,47 +98,21 @@ export default function LandingNav() {
 
         <div className="flex items-center gap-6">
           <button
+            suppressHydrationWarning
             onClick={() => handleNavigation("/auth/login")}
             className="landing-nav-link hidden sm:block text-[10px] font-black hover:text-emerald-500 uppercase tracking-[0.2em] transition-all"
           >
             Login
           </button>
           <button
+            suppressHydrationWarning
             onClick={() => handleNavigation("/auth/login")}
             className="px-8 py-3.5 btn-neon text-[10px] rounded-2xl"
           >
             Get Started
           </button>
-          <button
-            className="landing-nav-link md:hidden"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
         </div>
       </div>
-
-      {mobileMenuOpen && (
-        <div className="md:hidden mt-4 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 space-y-6 shadow-2xl animate-in slide-in-from-top-4 duration-300">
-          {navItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="block text-[10px] font-black text-zinc-400 hover:text-emerald-500 uppercase tracking-[0.2em]"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <button
-            onClick={() => handleNavigation("/auth/login")}
-            className="w-full py-4 bg-emerald-500 text-white text-[10px] font-black rounded-2xl uppercase tracking-[0.2em]"
-          >
-            Get Started
-          </button>
-        </div>
-      )}
     </nav>
   );
 }

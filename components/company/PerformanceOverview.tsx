@@ -13,47 +13,37 @@ interface PerformanceOverviewProps {
 }
 
 export function PerformanceOverview({ data }: PerformanceOverviewProps) {
-  const maxRevenue = data.length ? Math.max(...data.map(m => m.revenue)) : 1;
+  const maxRevenue = Math.max(...data.map(month => month.revenue), 1);
 
   return (
-    <div className="card-premium">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-              <TrendingUp size={20} />
-            </div>
-            <h2 className="text-xl font-black text-[var(--foreground)] m-0">Performance Overview</h2>
-          </div>
-          <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Monthly Revenue Analytics — {new Date().getFullYear()}</p>
-        </div>
-        <span className="badge badge-emerald">Live Stream</span>
+    <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+      <div className="flex items-center gap-2 mb-1">
+        <TrendingUp size={16} className="text-emerald-500" />
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Revenue Stream</span>
       </div>
+      <h2 className="text-2xl font-black tracking-tight m-0 text-slate-950 mb-6">Performance Overview</h2>
 
-      <div className="flex items-end gap-3 h-[240px] px-2" aria-label="Revenue performance chart">
-        {data.map((m, i) => (
-          <div key={m.month} className="flex-1 flex flex-col items-center gap-4 group">
-            <div className="relative w-full flex flex-col items-center">
-              {/* Tooltip */}
-              <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-slate-900 text-white text-[10px] font-black py-2 px-3 rounded-lg shadow-xl whitespace-nowrap z-20 pointer-events-none">
-                {formatPKR(m.revenue)}
-              </div>
-              
-              {/* Bar */}
+      {data.length === 0 || data.every(month => month.revenue === 0) ? (
+        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center">
+          <TrendingUp size={28} className="mx-auto mb-3 text-slate-400" />
+          <p className="font-black text-slate-950">No revenue data yet</p>
+          <p className="text-sm font-bold text-slate-500 mt-1">Confirmed reservations will appear here.</p>
+        </div>
+      ) : (
+        <div className="dashboard-revenue-frame">
+          {data.map(month => (
+            <div key={month.month} className="dashboard-revenue-column">
+              <span className="dashboard-revenue-chip">{month.revenue > 0 ? formatPKR(month.revenue) : ""}</span>
               <div
-                className="w-full max-w-[40px] rounded-t-xl bg-gradient-to-t from-emerald-600 to-emerald-400 group-hover:to-emerald-300 transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1) shadow-lg"
-                style={{ 
-                  height: `${(m.revenue / maxRevenue) * 200}px`,
-                  animationDelay: `${i * 50}ms`
-                }}
-                role="img"
-                aria-label={`${m.month}: ${formatPKR(m.revenue)}`}
+                className="dashboard-revenue-bar"
+                style={{ height: `${Math.max((month.revenue / maxRevenue) * 150, month.revenue > 0 ? 10 : 3)}px`, opacity: month.revenue > 0 ? 1 : 0.2 }}
+                title={`${month.month}: ${formatPKR(month.revenue)}`}
               />
+              <span className="dashboard-revenue-month">{month.month}</span>
             </div>
-            <span className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">{m.month}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

@@ -70,7 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex-1 flex flex-col min-w-0">
           <TopNav title="Administrator Panel" onMenuClick={() => setIsMobileMenuOpen(true)} />
           <main 
-            className="flex-1 p-6 md:p-8 lg:p-10 w-full transition-all duration-500"
+            className="admin-main-shell flex-1 p-5 md:p-6 lg:p-7 w-full transition-all duration-500"
             role="main"
           >
             {children}

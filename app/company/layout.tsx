@@ -64,7 +64,7 @@ export default function CompanyLayout({ children }: { children: React.ReactNode 
 
         {/* Main Interface Content Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          <TopNav title="Operator Console" onMenuClick={() => setIsMobileMenuOpen(true)} />
+          <TopNav title="Operator Console" onMenuClick={() => setIsMobileMenuOpen(true)} hideMobileMenuButton />
           <main 
             className="flex-1 p-6 md:p-8 lg:p-10 max-w-[1600px] mx-auto w-full transition-all duration-500"
             role="main"

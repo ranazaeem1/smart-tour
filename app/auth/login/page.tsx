@@ -133,6 +133,7 @@ function AuthForm() {
           </div>
           <div className="auth-glass-tabs flex gap-2 p-1 rounded-2xl mb-10">
             <button
+              suppressHydrationWarning
               type="button"
               className={`flex-1 py-3 px-6 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                 mode === "login"
@@ -144,6 +145,7 @@ function AuthForm() {
               Login
             </button>
             <button
+              suppressHydrationWarning
               type="button"
               className={`flex-1 py-3 px-6 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                 mode === "register"
@@ -183,6 +185,7 @@ function AuthForm() {
                   Full Name
                 </label>
                 <input
+                  suppressHydrationWarning
                   className={inputClass}
                   placeholder="Ali Hassan"
                   required
@@ -198,6 +201,7 @@ function AuthForm() {
                 Email Address
               </label>
               <input
+                suppressHydrationWarning
                 className={inputClass}
                 type="email"
                 inputMode="email"
@@ -214,6 +218,7 @@ function AuthForm() {
                   Phone Number
                 </label>
                 <input
+                  suppressHydrationWarning
                   className={inputClass}
                   type="tel"
                   inputMode="numeric"
@@ -230,6 +235,7 @@ function AuthForm() {
                 Password
               </label>
               <input
+                suppressHydrationWarning
                 className={inputClass}
                 type="password"
                 placeholder="Enter your password"
@@ -243,6 +249,7 @@ function AuthForm() {
             {mode === "login" && (
               <div className="text-right">
                 <button
+                  suppressHydrationWarning
                   type="button"
                   onClick={() => router.push("/auth/forgot-password")}
                   className="text-[11px] font-black uppercase tracking-widest hover:text-white/80 transition-colors"
@@ -253,6 +260,7 @@ function AuthForm() {
             )}
 
             <button
+              suppressHydrationWarning
               type="submit"
               className="btn btn-emerald w-full py-5 rounded-2xl uppercase tracking-[0.2em] text-xs shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
@@ -272,6 +280,7 @@ function AuthForm() {
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
             </span>
             <button
+              suppressHydrationWarning
               type="button"
               onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(null); setSuccess(null); }}
               className="auth-link text-[11px] font-black uppercase tracking-widest hover:text-white/80 transition-colors underline decoration-white/40 underline-offset-4"

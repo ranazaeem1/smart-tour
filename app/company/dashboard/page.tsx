@@ -1,29 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/components/AuthProvider";
-import { 
-  fetchTours, 
-  fetchBookings, 
-  fetchReviews, 
-  fetchRevenueStats, 
-  fetchCompanyByOwner 
-} from "@/lib/db";
-import { formatPKR } from "@/lib/data";
 import Link from "next/link";
-import { 
-  Mountain, 
-  ClipboardList, 
-  Wallet, 
-  Star, 
-  Plus, 
-  Building2,
-  Activity,
-  ChevronRight
-} from "lucide-react";
-
-// Modular Company Components
-import { StatCard } from "@/components/dashboard/StatCard";
+import { Activity, Building2, ChevronRight, ClipboardList, Mountain, Plus, Search, Star, Wallet } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { fetchBookings, fetchCompanyByOwner, fetchRevenueStats, fetchReviews, fetchTours } from "@/lib/db";
+import { formatPKR } from "@/lib/data";
 import { PerformanceOverview } from "@/components/company/PerformanceOverview";
 import { SentimentAnalysis } from "@/components/company/SentimentAnalysis";
 import { TourCatalog } from "@/components/company/TourCatalog";
@@ -39,139 +21,150 @@ export default function CompanyDashboard() {
 
   useEffect(() => {
     async function loadData() {
-      if (profile?.id) {
-        setLoading(true);
-        try {
-          const companyProfile = await fetchCompanyByOwner(profile.id);
-          if (companyProfile) {
-            const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
-              fetchTours({ companyId: companyProfile.id }),
-              fetchBookings({ companyId: companyProfile.id }),
-              fetchReviews(),
-              fetchRevenueStats()
-            ]);
-            setTours(fetchedTours || []);
-            setBookings(fetchedBookings || []);
-            setReviews(fetchedReviews.slice(0, 3) || []);
-            setRevenueStats(fetchedRevenue || []);
-          }
-        } catch (err) {
-          console.error("Dashboard load error:", err);
-        } finally {
-          setLoading(false);
+      if (!profile?.id) return;
+
+      setLoading(true);
+      try {
+        const companyProfile = await fetchCompanyByOwner(profile.id);
+        if (companyProfile) {
+          const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
+            fetchTours({ companyId: companyProfile.id }),
+            fetchBookings({ companyId: companyProfile.id }),
+            fetchReviews(),
+            fetchRevenueStats(companyProfile.id),
+          ]);
+          setTours(fetchedTours || []);
+          setBookings(fetchedBookings || []);
+          setReviews((fetchedReviews || []).slice(0, 3));
+          setRevenueStats(fetchedRevenue || []);
         }
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoading(false);
       }
     }
+
     loadData();
   }, [profile]);
 
-  if (loading || authLoading) return (
-    <div className="flex flex-col items-center justify-center h-[60vh] space-y-4" role="status" aria-live="polite">
-      <div className="loading-spinner h-12 w-12" />
-      <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Initializing Operational Hub...</p>
-    </div>
-  );
+  if (loading || authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4" role="status" aria-live="polite">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Initializing Operational Hub...</p>
+      </div>
+    );
+  }
 
-  // Performance calculations
-  const activeTours = tours.filter(t => t.available).length;
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_price || 0), 0);
-  const avgRating = tours.length ? (tours.reduce((sum, t) => sum + (t.rating || 0), 0) / tours.length).toFixed(1) : "0.0";
+  const activeTours = tours.filter(tour => tour.available).length;
+  const totalRevenue = revenueStats.reduce((sum, month) => sum + (month.revenue || 0), 0);
+  const avgRating = tours.length ? (tours.reduce((sum, tour) => sum + (tour.rating || 0), 0) / tours.length).toFixed(1) : "0.0";
 
   const stats = [
-    { label: "Active Packages", value: activeTours, icon: Mountain, color: "bg-emerald-500", aria: "Total active tour packages" },
-    { label: "Total Reservations", value: bookings.length, icon: ClipboardList, color: "bg-slate-900", aria: "Total customer bookings" },
-    { label: "Net Revenue", value: formatPKR(totalRevenue), icon: Wallet, color: "bg-slate-900", aria: "Total revenue earned" },
-    { label: "Average Rating", value: avgRating, icon: Star, color: "bg-amber-500", aria: "Average customer rating" },
+    { label: "Active Packages", value: activeTours, icon: <Mountain size={20} />, color: "#10B981", bg: "bg-emerald-50" },
+    { label: "Reservations", value: bookings.length, icon: <ClipboardList size={20} />, color: "#0F172A", bg: "bg-slate-100" },
+    { label: "Net Revenue", value: formatPKR(totalRevenue), icon: <Wallet size={20} />, color: "#3B82F6", bg: "bg-blue-50" },
+    { label: "Average Rating", value: avgRating, icon: <Star size={20} />, color: "#F59E0B", bg: "bg-amber-50" },
   ];
 
-  // Sentiment data computation
   const totalReviews = reviews.length;
-  const posCount = reviews.filter((r: any) => r.sentiment === 'positive').length;
-  const neutralCount = reviews.filter((r: any) => r.sentiment === 'neutral').length;
-  const negCount = reviews.filter((r: any) => r.sentiment === 'negative').length;
+  const positiveReviews = reviews.filter((review: any) => review.sentiment === "positive").length;
+  const neutralReviews = reviews.filter((review: any) => review.sentiment === "neutral").length;
+  const negativeReviews = reviews.filter((review: any) => review.sentiment === "negative").length;
   const sentimentData = [
-    { label: 'Positive', value: totalReviews ? Math.round((posCount / totalReviews) * 100) : 0, color: '#10B981' },
-    { label: 'Neutral', value: totalReviews ? Math.round((neutralCount / totalReviews) * 100) : 0, color: '#F59E0B' },
-    { label: 'Negative', value: totalReviews ? Math.round((negCount / totalReviews) * 100) : 0, color: '#EF4444' },
+    { label: "Positive", value: totalReviews ? Math.round((positiveReviews / totalReviews) * 100) : 0, color: "#10B981" },
+    { label: "Neutral", value: totalReviews ? Math.round((neutralReviews / totalReviews) * 100) : 0, color: "#F59E0B" },
+    { label: "Negative", value: totalReviews ? Math.round((negativeReviews / totalReviews) * 100) : 0, color: "#EF4444" },
   ];
 
   return (
-    <div className="animate-fade space-y-10" role="main">
-      {/* ── Operator Hero Header ── */}
-      <section className="panel-hero rounded-[var(--radius-xl)] p-8 md:p-12 relative overflow-hidden border shadow-2xl">
-        {/* Cinematic Background */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/40 pointer-events-none" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
-          <div className="text-center md:text-left">
-            <div className="panel-hero-kicker panel-hero-kicker-emerald inline-flex items-center gap-2 px-3 py-1 rounded-lg mb-4 border">
-              <Activity size={12} className="panel-hero-kicker-icon" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Operational Excellence</span>
+    <div className="animate-fade space-y-8 pb-20" role="main">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Activity size={16} className="text-emerald-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Operational Excellence</span>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight m-0">{profile?.full_name || "Enterprise Hub"}</h1>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <div className="relative group w-full lg:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+            <input className="input !pl-12 !py-4 !rounded-2xl !bg-white font-black" placeholder="Search operations..." readOnly />
+          </div>
+          <Link href="/company/tours/new" className="rounded-2xl bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-600 transition-all inline-flex items-center justify-center gap-2">
+            <Plus size={16} />
+            Add Tour
+          </Link>
+        </div>
+      </div>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_2fr_auto] gap-6 xl:items-center">
+          <div className="min-w-0">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                <Building2 size={22} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl font-black text-slate-950 truncate m-0">Enterprise Hub</h2>
+                <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Verified Expedition Operator</p>
+              </div>
             </div>
-            <h1 className="panel-hero-title text-3xl md:text-5xl font-black tracking-tighter leading-tight mb-3">
-              {profile?.full_name || "Enterprise Hub"}
-            </h1>
-            <p className="panel-hero-subtitle text-sm md:text-base font-medium">Verified Expedition Operator • Northern Pakistan Sector</p>
           </div>
 
-          <div className="flex flex-col items-center md:items-end gap-6">
-            <div className="text-right hidden md:block">
-              <span className="panel-hero-badge badge badge-emerald flex items-center gap-2">
-                <Building2 size={12} />
-                Corporate Access
-              </span>
-              <p className="panel-hero-network text-[10px] font-bold mt-2 uppercase tracking-widest">Network Synchronized</p>
-            </div>
-
-            <Link
-              href="/company/tours/new"
-              className="btn btn-emerald min-h-[56px] px-10 rounded-2xl shadow-2xl shadow-emerald-500/20 flex items-center gap-3 active:scale-95 transition-all"
-              aria-label="Add a new expedition package"
-            >
-              <Plus size={20} />
-              <span className="text-sm font-black tracking-widest uppercase">Add New Tour</span>
-            </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <HeroTile icon={<Activity size={16} />} label="Network" value="Synchronized" />
+            <HeroTile icon={<Mountain size={16} />} label="Sector" value="Northern Pakistan" />
+            <HeroTile icon={<Building2 size={16} />} label="Access" value="Corporate" />
           </div>
+
+          <span className="badge badge-emerald !rounded-full !px-4 !py-1.5 !text-[9px] justify-self-start xl:justify-self-end">Verified</span>
         </div>
       </section>
 
-      {/* ── 4-Column Stats Grid ── */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 md:gap-8" aria-label="Key Performance Indicators">
-        {stats.map((stat, i) => (
-          <StatCard 
-            key={i}
-            label={stat.label}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-            ariaLabel={stat.aria}
-          />
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" aria-label="Key Performance Indicators">
+        {stats.map(stat => (
+          <div key={stat.label} className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all">
+            <div className="flex items-start justify-between mb-5">
+              <div className={`p-3 rounded-xl ${stat.bg}`} style={{ color: stat.color }}>
+                {stat.icon}
+              </div>
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: stat.color }} />
+            </div>
+            <div className="text-3xl font-black mb-1 text-slate-950">{stat.value}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{stat.label}</div>
+          </div>
         ))}
       </section>
 
-      {/* ── Analytics & Insights Split ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <PerformanceOverview data={revenueStats} />
         <SentimentAnalysis data={sentimentData} recentReviews={reviews} />
       </div>
 
-      {/* ── Operations Management ── */}
-      <section className="space-y-10">
+      <section className="space-y-5">
         <TourCatalog tours={tours} />
         <RecentExpeditions bookings={bookings} />
       </section>
 
-      {/* ── Footer Action ── */}
-      <div className="flex justify-center pt-10">
-        <Link 
-          href="/company/settings" 
-          className="btn btn-secondary flex items-center gap-2 group"
-          aria-label="Access company profile settings"
-        >
+      <div className="flex justify-center pt-6">
+        <Link href="/company/settings" className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-950 hover:text-white transition-all inline-flex items-center gap-2 group">
           Company Profile Management <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
+    </div>
+  );
+}
+
+function HeroTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 min-w-0">
+      <div className="text-emerald-500 mb-2">{icon}</div>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-sm font-bold text-slate-700 truncate">{value}</p>
     </div>
   );
 }
