@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { onlyDigits, stripNumbers, textOnlyPattern } from "@/lib/formValidation";
+import { supabase } from "@/lib/supabase";
 import { AlertCircle, Bell, Camera, Eye, EyeOff, Globe, Lock, Mail, MapPin, Phone, Save, Settings, ShieldCheck, User } from "lucide-react";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,8 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [language, setLanguage] = useState("English (US)");
   const [notifications, setNotifications] = useState({ email: true, push: true, sms: false });
 
@@ -23,12 +26,32 @@ export default function SettingsPage() {
     if (profile) {
       setFullName(profile.full_name || "");
       setPhone(profile.phone || "");
+      setEmergencyPhone(profile.emergency_phone || "");
     }
   }, [profile]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!profile?.id) return;
     setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 1500);
+    setSaveMessage(null);
+    try {
+      const { error } = await (supabase.from("profiles") as any)
+        .update({
+          full_name: fullName.trim(),
+          phone,
+          emergency_phone: emergencyPhone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+      setSaveMessage("Profile and SOS emergency number saved.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Settings save failed.";
+      setSaveMessage(message.includes("emergency_phone") ? "Database emergency_phone column is missing. Apply the latest emergency contact migration." : message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (authLoading) {
@@ -79,6 +102,12 @@ export default function SettingsPage() {
         <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
           {activeTab === "profile" && (
             <div className="space-y-6 animate-fade">
+              {saveMessage && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-700">
+                  {saveMessage}
+                </div>
+              )}
+
               <div className="flex flex-col md:flex-row md:items-center gap-6 pb-6 border-b border-slate-100">
                 <div className="relative">
                   <div className="w-24 h-24 rounded-3xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-950 text-3xl font-black">
@@ -113,6 +142,14 @@ export default function SettingsPage() {
                     <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" />
                     <input value={phone} onChange={e => setPhone(onlyDigits(e.target.value))} className="input !pl-12 !rounded-2xl !bg-white font-black" inputMode="numeric" pattern="[0-9]{9,15}" maxLength={15} placeholder="03XXXXXXXXX" />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <FieldLabel>Emergency Phone</FieldLabel>
+                  <div className="relative">
+                    <ShieldCheck size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500" />
+                    <input value={emergencyPhone} onChange={e => setEmergencyPhone(onlyDigits(e.target.value))} className="input !pl-12 !rounded-2xl !bg-white font-black" inputMode="numeric" pattern="[0-9]{9,15}" maxLength={15} placeholder="SOS contact number" />
+                  </div>
+                  <p className="text-xs font-bold text-slate-500">SOS signal uses this number for emergency contact sharing.</p>
                 </div>
                 <div className="space-y-2">
                   <FieldLabel>Location</FieldLabel>

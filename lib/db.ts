@@ -69,12 +69,14 @@ export async function upsertProfile({
   email,
   full_name,
   phone,
+  emergency_phone,
   role,
 }: {
   id: string;
   email: string;
   full_name?: string;
   phone?: string;
+  emergency_phone?: string;
   role?: string;
 }) {
   const { error } = await (supabase.from('profiles') as any)
@@ -83,6 +85,7 @@ export async function upsertProfile({
       email,
       full_name: full_name || '',
       phone: phone || '',
+      emergency_phone: emergency_phone || '',
       role: role || 'user',
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' });

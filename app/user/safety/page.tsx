@@ -98,7 +98,7 @@ function StatusMessage({ tone, children }: { tone: "error" | "warning" | "info";
 }
 
 export default function SafetyPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { location, loading: locationLoading, error: locationError, refresh: refreshLocation } = useLiveLocation();
   const [query, setQuery] = useState("");
   const [destination, setDestination] = useState<GeocodedDestination | null>(null);
@@ -111,6 +111,7 @@ export default function SafetyPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [sosOpen, setSosOpen] = useState(false);
   const [sosLoading, setSosLoading] = useState(false);
+  const [sosStatus, setSosStatus] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState(new Date().toISOString());
 
   const weatherTarget = destination ?? location;
@@ -190,8 +191,42 @@ export default function SafetyPage() {
 
   const handleSOS = async () => {
     setSosLoading(true);
+    setSosStatus(null);
     try {
-      await refreshLocation().catch(() => null);
+      const nextLocation = await refreshLocation().catch(() => location);
+      const emergencyPhone = profile?.emergency_phone || profile?.phone || "";
+      const sosMessage = nextLocation
+        ? `SmartTour SOS: I need help. My location is ${nextLocation.lat.toFixed(6)}, ${nextLocation.lng.toFixed(6)}.`
+        : "SmartTour SOS: I need help. My location is unavailable.";
+
+      if (user?.id) {
+        const payload = {
+          user_id: user.id,
+          latitude: nextLocation?.lat ?? null,
+          longitude: nextLocation?.lng ?? null,
+          emergency_phone: emergencyPhone || null,
+          message: sosMessage,
+          status: "active",
+        };
+
+        const { error } = await (supabase.from("sos_alerts") as any).insert(payload);
+        if (error && error.message.includes("emergency_phone")) {
+          await (supabase.from("sos_alerts") as any).insert({
+            user_id: payload.user_id,
+            latitude: payload.latitude,
+            longitude: payload.longitude,
+            message: payload.message,
+            status: payload.status,
+          });
+        } else if (error) {
+          throw error;
+        }
+      }
+
+      setSosStatus(emergencyPhone ? "SOS alert saved. Send the prepared signal to your emergency contact." : "SOS alert saved. Add an emergency phone number in Settings to send a prepared signal.");
+      setSosOpen(true);
+    } catch (error) {
+      setSosStatus(error instanceof Error ? error.message : "SOS alert could not be saved.");
       setSosOpen(true);
     } finally {
       setSosLoading(false);
@@ -464,6 +499,7 @@ export default function SafetyPage() {
                 <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
                   Your current location has been captured for emergency sharing.
                 </p>
+                {sosStatus && <p className="mt-3 text-sm font-black text-red-600">{sosStatus}</p>}
               </div>
               <button
                 type="button"
@@ -483,13 +519,41 @@ export default function SafetyPage() {
               {locationError && <p className="mt-2 text-xs font-bold text-amber-700">{locationError}</p>}
             </div>
 
-            <button
-              type="button"
-              onClick={() => setSosOpen(false)}
-              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-red-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-red-600"
-            >
-              Dismiss SOS panel
-            </button>
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-600">Emergency contact</p>
+              <p className="mt-2 font-mono text-lg font-black text-slate-950">
+                {profile?.emergency_phone || profile?.phone || "Not set"}
+              </p>
+              <p className="mt-2 text-xs font-bold text-red-700">
+                Browsers cannot silently send SMS. Use the prepared SMS button to send the SOS signal to this number.
+              </p>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {(profile?.emergency_phone || profile?.phone) && (
+                <>
+                  <a
+                    href={`sms:${profile.emergency_phone || profile.phone}?body=${encodeURIComponent(location ? `SmartTour SOS: I need help. My location is ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}.` : "SmartTour SOS: I need help. My location is unavailable.")}`}
+                    className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-red-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-red-600"
+                  >
+                    Send SOS Signal
+                  </a>
+                  <a
+                    href={`tel:${profile.emergency_phone || profile.phone}`}
+                    className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-red-200 bg-white px-5 text-xs font-black uppercase tracking-[0.16em] text-red-600 transition hover:bg-red-50"
+                  >
+                    Call Contact
+                  </a>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setSosOpen(false)}
+                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-5 text-xs font-black uppercase tracking-[0.16em] text-slate-700 transition hover:bg-slate-100 sm:col-span-2"
+              >
+                Dismiss SOS panel
+              </button>
+            </div>
           </div>
         </div>
       )}

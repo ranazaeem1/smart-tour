@@ -30,6 +30,7 @@ interface AuthContextType {
     email: string;
     full_name: string | null;
     phone: string | null;
+    emergency_phone: string | null;
     role: "user" | "company" | "admin";
     avatar_url: string | null;
   } | null;
@@ -94,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: authUser.email || "",
           full_name: authUser.user_metadata?.full_name || "Traveler",
           phone: authUser.user_metadata?.phone || null,
+          emergency_phone: authUser.user_metadata?.emergency_phone || null,
           role: authUser.user_metadata?.role || "user",
           avatar_url: null,
           total_budget: 100000,
@@ -108,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: authUser.email || "",
         full_name: authUser.user_metadata?.full_name || "Traveler",
         phone: authUser.user_metadata?.phone || null,
+        emergency_phone: authUser.user_metadata?.emergency_phone || null,
         role: "user",
         avatar_url: null
       } as any);

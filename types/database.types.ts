@@ -12,6 +12,7 @@ export type Database = {
           email: string;
           full_name: string | null;
           phone: string | null;
+          emergency_phone: string | null;
           role: 'user' | 'company' | 'admin';
           avatar_url: string | null;
           verified: boolean;
@@ -23,6 +24,7 @@ export type Database = {
           email: string;
           full_name?: string | null;
           phone?: string | null;
+          emergency_phone?: string | null;
           role?: 'user' | 'company' | 'admin';
           avatar_url?: string | null;
           verified?: boolean;
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           full_name?: string | null;
           phone?: string | null;
+          emergency_phone?: string | null;
           role?: 'user' | 'company' | 'admin';
           avatar_url?: string | null;
           verified?: boolean;

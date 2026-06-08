@@ -157,9 +157,9 @@ export default function CompanyBookingsPage() {
         ) : (
           <div className="space-y-4">
             {filtered.map(booking => (
-              <article key={booking.id} className="rounded-3xl border border-slate-200 bg-white p-5 md:p-6 hover:shadow-xl transition-all">
-                <div className="flex flex-col xl:flex-row xl:items-center gap-5">
-                  <div className="flex items-center gap-4 min-w-0 xl:w-72">
+              <article key={booking.id} className="rounded-3xl border border-slate-200 bg-white p-5 md:p-6 hover:shadow-xl transition-all overflow-hidden">
+                <div className="grid grid-cols-1 2xl:grid-cols-[220px_minmax(160px,1fr)_minmax(420px,520px)_minmax(220px,auto)] gap-5 2xl:items-center">
+                  <div className="flex items-center gap-4 min-w-0">
                     <div className="h-12 w-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-slate-900">
                       {booking.profiles?.full_name?.charAt(0) || <User size={18} />}
                     </div>
@@ -169,24 +169,24 @@ export default function CompanyBookingsPage() {
                     </div>
                   </div>
 
-                  <div className="min-w-0 xl:flex-1">
+                  <div className="min-w-0">
                     <h4 className="text-sm font-black text-slate-950 truncate">{booking.tours?.title || "Tour package"}</h4>
                     <p className="mt-1 text-xs font-bold text-slate-500 flex items-center gap-2">
                       <MapPin size={13} className="text-emerald-500" />
-                      {booking.tours?.destination || "Destination"}
+                      <span className="truncate">{booking.tours?.destination || "Destination"}</span>
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 xl:w-[560px]">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 min-w-0">
                     <DetailTile icon={Calendar} label="Travel Date" value={new Date(booking.travel_date).toLocaleDateString()} />
                     <DetailTile icon={Users} label="Group" value={`${booking.group_size} people`} />
                     <DetailTile icon={Wallet} label="Revenue" value={formatPKR(booking.total_price || 0)} />
                     <DetailTile icon={CreditCard} label="Payment" value={booking.payment_status || "pending"} />
                   </div>
 
-                  <div className="flex items-center justify-between xl:justify-end gap-3 xl:w-60">
+                  <div className="flex flex-wrap items-center justify-start 2xl:justify-end gap-3 min-w-0">
                     <span className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${statusClass(booking.status)}`}>{booking.status}</span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       {booking.status === "pending" && (
                         <>
                           <button className="h-11 w-11 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20" onClick={() => handleUpdateStatus(booking.id, "confirmed")} aria-label="Confirm booking">

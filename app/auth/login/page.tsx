@@ -19,7 +19,7 @@ function AuthForm() {
   const roleParam = searchParams.get("role") || "user";
 
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", emergencyPhone: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -44,6 +44,7 @@ function AuthForm() {
               full_name: form.name,
               role: determinedRole,
               phone: form.phone,
+              emergency_phone: form.emergencyPhone,
             },
           },
         });
@@ -57,6 +58,7 @@ function AuthForm() {
               email: form.email,
               full_name: form.name,
               phone: form.phone,
+              emergency_phone: form.emergencyPhone,
               role: determinedRole,
             });
 
@@ -228,6 +230,26 @@ function AuthForm() {
                   value={form.phone}
                   onChange={e => setForm(p => ({ ...p, phone: onlyDigits(e.target.value) }))}
                 />
+              </div>
+            )}
+            {mode === "register" && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest ml-4">
+                  Emergency Phone Number
+                </label>
+                <input
+                  suppressHydrationWarning
+                  className={inputClass}
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]{9,15}"
+                  maxLength={15}
+                  placeholder="Emergency contact e.g. 03XXXXXXXXX"
+                  required
+                  value={form.emergencyPhone}
+                  onChange={e => setForm(p => ({ ...p, emergencyPhone: onlyDigits(e.target.value) }))}
+                />
+                <p className="auth-muted text-xs font-bold ml-4">SOS alerts will use this number for emergency signal sharing.</p>
               </div>
             )}
             <div className="space-y-2">

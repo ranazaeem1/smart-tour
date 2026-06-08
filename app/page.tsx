@@ -408,7 +408,7 @@ export default function Home() {
               </div>
               <div className="h-[500px] rounded-[48px] overflow-hidden shadow-2xl border-8 border-white group">
                 <img 
-                  src="https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&h=1000&fit=crop" 
+                  src="/images/swat.jpg" 
                   alt="About SmartTour"
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[2s]"
                 />
