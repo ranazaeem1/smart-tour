@@ -1,8 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
+
+const bgImage =
+  'url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&h=900&fit=crop")';
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -10,18 +14,6 @@ export default function UpdatePasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Optional: Verify that there is an active session
-    // Supabase will automatically handle the session from the URL hash
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // setError("No active session found. Please request a new password reset link.");
-      }
-    };
-    checkSession();
-  }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +23,12 @@ export default function UpdatePasswordPage() {
 
     try {
       const { error } = await supabase.auth.updateUser({
-        password: password
+        password: password,
       });
 
       if (error) throw error;
       setSuccess("Password updated successfully! You can now log in with your new password.");
-      
-      // Redirect to login after a delay
+
       setTimeout(() => {
         router.push("/auth/login");
       }, 3000);
@@ -48,54 +39,88 @@ export default function UpdatePasswordPage() {
     }
   };
 
-  return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, position: "relative", overflow: "hidden" }}>
-      <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.85) contrast(1.05)", zIndex: 0 }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%)", zIndex: 1 }} />
+  const inputClass =
+    "w-full rounded-2xl px-6 py-4 font-semibold focus:outline-none transition-all";
 
-      <div style={{ width: "100%", maxWidth: 460, position: "relative", zIndex: 2 }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <Link href="/" style={{ textDecoration: "none" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: "linear-gradient(135deg,#0d9488,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 3L28 28H4L16 3Z" fill="white" opacity="0.9" /><circle cx="16" cy="14" r="3" fill="white" /></svg>
-              </div>
-              <span style={{ fontSize: 26, fontWeight: 900, color: "#fff", fontFamily: "Outfit, sans-serif" }}>Smart Tour</span>
-            </div>
+  return (
+    <div className="auth-page min-h-screen flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      <div className="absolute inset-0 z-0">
+        <div className="auth-bg-image absolute inset-0" style={{ backgroundImage: bgImage }} />
+      </div>
+
+      <div className="relative z-10 w-full max-w-[460px] animate-fade">
+        <div className="text-center mb-10">
+          <Link href="/" className="auth-brand inline-flex items-center gap-3 group">
+            <img src="/logo.svg" alt="Smart Tour logo" className="w-14 h-14 rounded-full object-contain group-hover:scale-105 transition-transform" />
+            <span className="text-3xl font-black uppercase italic tracking-tighter">
+              <span className="auth-brand-smart">Smart</span>
+              <span className="auth-brand-tour">Tour</span>
+            </span>
           </Link>
         </div>
 
-        <div style={{ 
-          padding: 40, 
-          background: "rgba(255, 255, 255, 0.1)", 
-          backdropFilter: "blur(32px) saturate(150%)", 
-          WebkitBackdropFilter: "blur(32px) saturate(150%)", 
-          border: "1px solid rgba(255, 255, 255, 0.2)", 
-          borderTop: "1px solid rgba(255, 255, 255, 0.6)",
-          borderLeft: "1px solid rgba(255, 255, 255, 0.6)",
-          borderRadius: "var(--radius-xl)", 
-          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)" 
-        }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6, color: "#fff", textShadow: "0 2px 10px rgba(0,0,0,0.3)" }}>
+        <div className="auth-glass-card rounded-[32px] p-10 md:p-12">
+          <div className="text-center mb-8">
+            <span className="text-2xl font-black uppercase italic tracking-tighter">
+              <span className="auth-panel-smart">Smart</span>
+              <span className="auth-panel-tour">Tour</span>
+            </span>
+          </div>
+          <h2 className="auth-title text-3xl font-black mb-2 tracking-tighter uppercase italic">
             Update Password
           </h2>
-          <p style={{ fontSize: 14, color: "rgba(255, 255, 255, 0.8)", marginBottom: 24 }}>
+          <p className="auth-muted text-sm font-medium mb-10 leading-relaxed">
             Please enter your new password below.
           </p>
 
-          {error && <div className="alert alert-danger" style={{ marginBottom: 16, fontSize: 13 }}>⚠️ {error}</div>}
-          {success && <div className="alert alert-success" style={{ marginBottom: 16, fontSize: 13 }}>✅ {success}</div>}
+          {error && (
+            <div className="auth-alert-error px-6 py-4 rounded-2xl text-sm mb-8 animate-fade border">
+              <span className="inline-flex items-center gap-2"><AlertTriangle size={16} /> {error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="auth-alert-success px-6 py-4 rounded-2xl text-sm mb-8 animate-fade border">
+              <span className="inline-flex items-center gap-2"><CheckCircle2 size={16} /> {success}</span>
+            </div>
+          )}
 
-          <form onSubmit={handleUpdate} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div className="input-group">
-              <label className="input-label" style={{ fontWeight: 700, color: "#fff" }}>New Password</label>
-              <input className="input" type="password" placeholder="••••••••" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.3)", color: "#fff", backdropFilter: "blur(12px)" }} />
+          <form onSubmit={handleUpdate} className="space-y-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-4">
+                New Password
+              </label>
+              <input
+                className={inputClass}
+                type="password"
+                placeholder="Enter your password"
+                required
+                minLength={6}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 8, padding: "14px", border: "1px solid rgba(255,255,255,0.4)" }} disabled={loading}>
-              {loading ? <span className="loading-spinner" /> : "Update Password →"}
+            <button
+              type="submit"
+              className="btn btn-emerald w-full py-5 rounded-2xl uppercase tracking-[0.2em] text-xs shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" />
+              ) : (
+                <span className="inline-flex items-center gap-2">Update Password <ArrowRight size={14} /></span>
+              )}
             </button>
           </form>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/auth/login"
+              className="auth-footer-muted text-[11px] font-black uppercase tracking-widest hover:text-emerald-600 transition-colors underline decoration-emerald-500/40 underline-offset-4"
+            >
+              Back to Login
+            </Link>
+          </div>
         </div>
       </div>
     </div>

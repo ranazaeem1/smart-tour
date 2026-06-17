@@ -1,9 +1,13 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
-import { fetchTours, createBooking } from "@/lib/db";
-import { formatPKR } from "@/lib/data";
-import { useAuth } from "@/components/AuthProvider";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookingSuccessModal } from "@/components/BookingSuccessModal";
+import { useAuth } from "@/components/AuthProvider";
+import { createBooking, fetchTours, getLocalDateInputValue, isPastTravelDate } from "@/lib/db";
+import { formatPKR } from "@/lib/data";
+import { onlyDigits } from "@/lib/formValidation";
+import { getTourImage } from "@/lib/tourImages";
+import { AlertCircle, ArrowRight, Calendar, Clock, Compass, FileText, MapPin, Phone, Search, Shield, Star, Users, Wallet, X } from "lucide-react";
 
 const CATEGORIES = ["All", "Adventure", "Trekking", "Cultural", "Family", "Sports"];
 const DIFFICULTIES = ["All", "Easy", "Moderate", "Challenging"];
@@ -35,6 +39,16 @@ interface Tour {
   company?: string;
 }
 
+function InfoTile({ icon: Icon, label, value }: { icon: any; label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 min-w-0">
+      <Icon size={15} className="text-emerald-500 mb-3" />
+      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-black text-slate-800 truncate">{value}</p>
+    </div>
+  );
+}
+
 export default function ToursPage() {
   const [allTours, setAllTours] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +56,6 @@ export default function ToursPage() {
   const [category, setCategory] = useState("All");
   const [difficulty, setDifficulty] = useState("All");
   const [sortBy, setSortBy] = useState("rating");
-
-  // ── Booking state ──
   const [bookingTourId, setBookingTourId] = useState<string | null>(null);
   const [bookingDate, setBookingDate] = useState("");
   const [bookingGroup, setBookingGroup] = useState(2);
@@ -53,15 +65,13 @@ export default function ToursPage() {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [bookedTourTitle, setBookedTourTitle] = useState("");
-
   const { profile } = useAuth();
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const data = await fetchTours();
-        setAllTours(data as Tour[]);
+        setAllTours((await fetchTours()) as Tour[]);
       } catch (err) {
         console.error("[ToursPage] Load error:", err);
         setAllTours([]);
@@ -72,38 +82,31 @@ export default function ToursPage() {
     load();
   }, []);
 
-  const getImg = (t: Tour) =>
-    t.image_url || t.image || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800";
-  const getSafety = (t: Tour) => t.safety_score || t.safetyScore || 80;
-  const getGroup = (t: Tour) => t.max_group || t.maxGroup || 10;
-  const getReviews = (t: Tour) => t.review_count || t.reviews || 0;
-  const getCompany = (t: Tour) => t.companies?.name || t.company || "—";
+  const getSafety = (tour: Tour) => tour.safety_score || tour.safetyScore || 80;
+  const getGroup = (tour: Tour) => tour.max_group || tour.maxGroup || 10;
+  const getReviews = (tour: Tour) => tour.review_count || tour.reviews || 0;
+  const getCompany = (tour: Tour) => tour.companies?.name || tour.company || "Tour Company";
+  const isPhoneValid = (phone: string) => /^[0-9]{9,15}$/.test(phone.trim());
+  const minBookingDate = getLocalDateInputValue();
 
-  const filtered = allTours
-    .filter(t => {
-      const matchSearch =
-        t.title?.toLowerCase().includes(search.toLowerCase()) ||
-        t.destination?.toLowerCase().includes(search.toLowerCase());
-      const matchCat = category === "All" || t.category === category;
-      const matchDiff = difficulty === "All" || t.difficulty === difficulty;
-      return matchSearch && matchCat && matchDiff;
-    })
-    .sort((a, b) =>
-      sortBy === "price"
-        ? a.price - b.price
-        : sortBy === "rating"
-        ? b.rating - a.rating
-        : getReviews(b) - getReviews(a)
-    );
-
-  // Phone validation helper
-  const isPhoneValid = (phone: string) => /^\+?[\d\s\-(]{9,16}$/.test(phone.trim());
+  const filtered = useMemo(
+    () =>
+      allTours
+        .filter(tour => {
+          const matchSearch = `${tour.title} ${tour.destination} ${getCompany(tour)}`.toLowerCase().includes(search.toLowerCase());
+          const matchCat = category === "All" || tour.category === category;
+          const matchDiff = difficulty === "All" || tour.difficulty === difficulty;
+          return matchSearch && matchCat && matchDiff;
+        })
+        .sort((a, b) => (sortBy === "price" ? a.price - b.price : sortBy === "rating" ? b.rating - a.rating : getReviews(b) - getReviews(a))),
+    [allTours, search, category, difficulty, sortBy]
+  );
 
   const handleOpenBooking = (tourId: string) => {
     setBookingTourId(tourId);
     setBookingDate("");
     setBookingGroup(2);
-    setBookingPhone(profile?.phone || "");
+    setBookingPhone(onlyDigits(profile?.phone || ""));
     setBookingNotes("");
     setBookingError(null);
   };
@@ -111,10 +114,6 @@ export default function ToursPage() {
   const handleCloseBooking = useCallback(() => {
     setBookingTourId(null);
     setBookingError(null);
-  }, []);
-
-  const handleCloseSuccess = useCallback(() => {
-    setShowSuccess(false);
   }, []);
 
   const handleConfirmBooking = async () => {
@@ -126,22 +125,24 @@ export default function ToursPage() {
       setBookingError("Please select a travel date.");
       return;
     }
+    if (isPastTravelDate(bookingDate)) {
+      setBookingError("Please select today or a future travel date. Previous dates are blocked.");
+      return;
+    }
     if (!bookingPhone || !isPhoneValid(bookingPhone)) {
-      setBookingError("Please enter a valid phone number (e.g. 03XX-XXXXXXX).");
+      setBookingError("Please enter a valid phone number.");
       return;
     }
 
-    const tour = filtered.find(t => t.id === bookingTourId);
+    const tour = filtered.find(item => item.id === bookingTourId);
     if (!tour) return;
-
     if (!tour.company_id) {
-      setBookingError("This tour is not linked to a company yet. Please contact support.");
+      setBookingError("This tour is not linked to a company yet.");
       return;
     }
 
     setBookingLoading(true);
     setBookingError(null);
-
     try {
       const result = await createBooking({
         tour_id: tour.id,
@@ -161,407 +162,192 @@ export default function ToursPage() {
         setBookingError("Booking failed. Please try again.");
       }
     } catch (err) {
-      console.error("[Booking] Error:", err);
-      setBookingError(err instanceof Error ? err.message : "Booking failed. Please try again.");
+      setBookingError(err instanceof Error ? err.message : "Booking failed.");
     } finally {
       setBookingLoading(false);
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-        <span className="loading-spinner" />
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading tours...</p>
       </div>
     );
+  }
 
-  const bookingTour = filtered.find(t => t.id === bookingTourId) ?? null;
+  const bookingTour = filtered.find(tour => tour.id === bookingTourId) ?? null;
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade space-y-8 pb-20">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
         <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>
-            {filtered.length} tours found
+          <div className="flex items-center gap-2 text-emerald-500 mb-2">
+            <Compass size={14} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Discovery Hub</span>
           </div>
-          <h1 className="topbar-title">🏔️ Browse Tours</h1>
+          <h1 className="text-2xl font-black text-slate-950">Browse Tours</h1>
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">{filtered.length} curated experiences available</p>
         </div>
       </div>
 
-      {/* Search + Filters */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <div className="input-group" style={{ flex: 2, minWidth: 200 }}>
-            <label className="input-label">🔍 Search</label>
-            <input
-              className="input"
-              placeholder="Search tours, destinations..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4 items-end">
+          <div className="relative">
+            <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input className="input !pl-12 !py-4 !rounded-2xl !bg-white font-black" placeholder="Search peaks, valleys, or companies..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div className="input-group">
-            <label className="input-label">Category</label>
-            <select className="input" value={category} onChange={e => setCategory(e.target.value)}>
-              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <select className="input !rounded-2xl !bg-white font-black" value={category} onChange={e => setCategory(e.target.value)}>
+              {CATEGORIES.map(item => <option key={item}>{item}</option>)}
             </select>
-          </div>
-          <div className="input-group">
-            <label className="input-label">Difficulty</label>
-            <select className="input" value={difficulty} onChange={e => setDifficulty(e.target.value)}>
-              {DIFFICULTIES.map(d => <option key={d}>{d}</option>)}
+            <select className="input !rounded-2xl !bg-white font-black" value={difficulty} onChange={e => setDifficulty(e.target.value)}>
+              {DIFFICULTIES.map(item => <option key={item}>{item}</option>)}
             </select>
-          </div>
-          <div className="input-group">
-            <label className="input-label">Sort By</label>
-            <select className="input" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="rating">Highest Rated</option>
+            <select className="input !rounded-2xl !bg-white font-black" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="rating">Top Rated</option>
               <option value="price">Lowest Price</option>
-              <option value="reviews">Most Reviewed</option>
+              <option value="reviews">Trending</option>
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Category pills */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
-        {CATEGORIES.map(c => (
-          <button
-            key={c}
-            onClick={() => setCategory(c)}
-            className="btn btn-sm"
-            style={{
-              background: category === c ? "var(--gradient-main)" : "var(--bg-glass)",
-              color: category === c ? "white" : "var(--text-secondary)",
-              border: "1px solid var(--border)",
-            }}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
+        <div className="flex w-full overflow-x-auto bg-slate-100 p-1.5 rounded-2xl border border-slate-200 mt-5">
+          {CATEGORIES.map(item => (
+            <button key={item} onClick={() => setCategory(item)} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${category === item ? "bg-slate-950 text-white shadow-lg" : "text-slate-500 hover:text-slate-950"}`}>
+              {item}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      {/* Tour Cards */}
-      <div className="grid-3">
-        {filtered.map(tour => (
-          <div
-            key={tour.id}
-            className="card"
-            style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}
-          >
-            <div style={{ position: "relative" }}>
-              <img
-                src={getImg(tour)}
-                alt={tour.title}
-                style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }}
-                onError={e => {
-                  (e.target as HTMLImageElement).src =
-                    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800";
-                }}
-              />
-              <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6 }}>
-                <span
-                  className="badge badge-teal"
-                  style={{ backdropFilter: "blur(8px)", background: "rgba(20,210,190,0.85)" }}
-                >
-                  {tour.category}
-                </span>
-                <span
-                  className="badge badge-purple"
-                  style={{ backdropFilter: "blur(8px)", background: "rgba(124,58,237,0.85)" }}
-                >
-                  {tour.difficulty}
-                </span>
-              </div>
-              <div
-                style={{
-                  position: "absolute", top: 12, right: 12,
-                  background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)",
-                  borderRadius: 8, padding: "4px 10px", fontSize: 13, fontWeight: 600,
-                }}
-              >
-                ⭐ {tour.rating} ({getReviews(tour)})
-              </div>
-              <div style={{ position: "absolute", bottom: 12, right: 12 }}>
-                <span className="badge" style={{ background: "rgba(16,185,129,0.9)", color: "white", border: "none" }}>
-                  🛡️ {getSafety(tour)}%
-                </span>
-              </div>
-            </div>
-            <div style={{ padding: 20, display: "flex", flexDirection: "column", flex: 1 }}>
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
-                🏢 {getCompany(tour)}
-              </div>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>{tour.title}</h3>
-              <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 10 }}>
-                📍 {tour.destination} · {tour.duration} days · Max {getGroup(tour)} pax
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-                {(tour.highlights || []).slice(0, 3).map(h => (
-                  <span key={h} className="tag" style={{ fontSize: 11 }}>
-                    ✓ {h}
-                  </span>
-                ))}
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingTop: 14,
-                  borderTop: "1px solid var(--border)",
-                  marginTop: "auto",
-                }}
-              >
-                <div>
-                  <div className="price">{formatPKR(tour.price)}</div>
-                  <div className="price-sub">per person</div>
+      {filtered.length === 0 ? (
+        <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm py-24 text-center">
+          <Compass size={42} className="mx-auto text-slate-300 mb-4" />
+          <h2 className="text-xl font-black text-slate-950">No tours found</h2>
+          <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">Try broadening your filters.</p>
+          <button onClick={() => { setSearch(""); setCategory("All"); setDifficulty("All"); }} className="mt-8 btn btn-secondary !rounded-2xl !py-4 !px-7">Clear Filters</button>
+        </section>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          {filtered.map(tour => (
+            <article key={tour.id} className="rounded-3xl border border-slate-200 bg-white p-4 md:p-5 hover:shadow-xl transition-all">
+              <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-5">
+                <div className="relative">
+                  <img src={getTourImage(tour)} alt={tour.title} className="h-56 lg:h-full min-h-52 w-full rounded-2xl object-cover border border-slate-100" />
+                  <span className="absolute top-4 left-4 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white/90 text-slate-900 border border-white">{tour.category}</span>
                 </div>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => handleOpenBooking(tour.id)}
-                >
-                  Book Now
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {filtered.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-muted)" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🏔️</div>
-          <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No tours found</div>
-          <div style={{ fontSize: 14 }}>Try adjusting your filters</div>
+                <div className="min-w-0 flex flex-col">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 truncate">{getCompany(tour)}</span>
+                    <div className="flex items-center gap-1 text-slate-900">
+                      <Star size={15} className="text-amber-400 fill-amber-400" />
+                      <span className="text-sm font-black">{tour.rating}</span>
+                      <span className="text-xs font-bold text-slate-400">({getReviews(tour)})</span>
+                    </div>
+                  </div>
+
+                  <h3 className="text-xl font-black text-slate-950">{tour.title}</h3>
+                  <p className="mt-2 text-xs font-bold text-slate-500 flex items-center gap-2">
+                    <MapPin size={13} className="text-emerald-500" />
+                    {tour.destination}
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3 mt-5">
+                    <InfoTile icon={Clock} label="Duration" value={`${tour.duration} days`} />
+                    <InfoTile icon={Users} label="Group" value={`Max ${getGroup(tour)}`} />
+                    <InfoTile icon={Shield} label="Safety" value={`${getSafety(tour)}%`} />
+                    <InfoTile icon={Compass} label="Difficulty" value={tour.difficulty} />
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {(tour.highlights || []).slice(0, 3).map(highlight => (
+                      <span key={highlight} className="px-3 py-1.5 bg-slate-50 text-slate-600 text-[9px] font-black uppercase tracking-widest rounded-xl border border-slate-100">{highlight}</span>
+                    ))}
+                  </div>
+
+                  <div className="mt-auto pt-5 flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Per Person</p>
+                      <p className="text-2xl font-black text-emerald-600">{formatPKR(tour.price)}</p>
+                    </div>
+                    <button className="btn btn-emerald !rounded-2xl !py-4 !px-6 flex items-center gap-2" onClick={() => handleOpenBooking(tour.id)}>
+                      Reserve <ArrowRight size={17} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       )}
 
-      {/* ── UPGRADED Booking Modal — with phone number (Issue #5, #6, #8) ── */}
       {bookingTourId && bookingTour && (
-        <div className="modal-backdrop" onClick={handleCloseBooking}>
-          <div
-            className="modal"
-            onClick={e => e.stopPropagation()}
-            style={{
-              maxWidth: 520,
-              background: "rgba(13,17,23,0.97)",
-              backdropFilter: "blur(32px)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: 20,
-              padding: 36,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
-            }}
-          >
-            {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#fff", marginBottom: 4 }}>
-                  Book Your Tour
-                </h2>
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13 }}>
-                  {bookingTour.title} · {bookingTour.destination}
-                </p>
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 animate-fade" onClick={handleCloseBooking}>
+          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" />
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-[620px] relative z-10" onClick={e => e.stopPropagation()}>
+            <button className="absolute top-5 right-5 h-10 w-10 flex items-center justify-center hover:bg-slate-100 rounded-2xl transition-colors text-slate-400" onClick={handleCloseBooking} aria-label="Close booking modal">
+              <X size={20} />
+            </button>
+
+            <div className="mb-6 pr-10">
+              <span className="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-200">Reservation</span>
+              <h2 className="mt-4 text-2xl font-black text-slate-950">{bookingTour.title}</h2>
+              <div className="flex flex-wrap items-center gap-3 text-slate-500 font-bold text-sm mt-3">
+                <span className="flex items-center gap-1.5"><MapPin size={15} className="text-emerald-500" />{bookingTour.destination}</span>
+                <span className="flex items-center gap-1.5"><Clock size={15} className="text-emerald-500" />{bookingTour.duration} days</span>
               </div>
-              <button
-                onClick={handleCloseBooking}
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 8,
-                  width: 32, height: 32,
-                  color: "rgba(255,255,255,0.5)",
-                  cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14,
-                  flexShrink: 0,
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
-                onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.5)")}
-              >
-                ✕
-              </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* ── PHONE NUMBER — REQUIRED (Issue #6, #8) ── */}
-              <div className="input-group">
-                <label
-                  className="input-label"
-                  style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}
-                >
-                  📞 Phone Number <span style={{ color: "#EF4444" }}>*</span>
-                </label>
-                <input
-                  className="input"
-                  type="tel"
-                  placeholder="03XX-XXXXXXX"
-                  required
-                  value={bookingPhone}
-                  onChange={e => setBookingPhone(e.target.value)}
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1.5px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
-                  }}
-                />
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 4 }}>
-                  The company will contact you on this number to confirm your booking.
-                </p>
-              </div>
-
-              {/* Travel Date */}
-              <div className="input-group">
-                <label className="input-label" style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>
-                  📅 Travel Date <span style={{ color: "#EF4444" }}>*</span>
-                </label>
-                <input
-                  className="input"
-                  type="date"
-                  min={new Date().toISOString().split("T")[0]}
-                  value={bookingDate}
-                  onChange={e => setBookingDate(e.target.value)}
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1.5px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
-                  }}
-                />
-              </div>
-
-              {/* Group Size */}
-              <div className="input-group">
-                <label className="input-label" style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>
-                  👥 Group Size (Max {getGroup(bookingTour)})
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <button
-                    type="button"
-                    onClick={() => setBookingGroup(g => Math.max(1, g - 1))}
-                    style={{
-                      width: 38, height: 38, borderRadius: 8,
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "#fff", cursor: "pointer", fontWeight: 700, fontSize: 18,
-                    }}
-                  >
-                    −
-                  </button>
-                  <span style={{ color: "#fff", fontWeight: 700, fontSize: 18, minWidth: 24, textAlign: "center" }}>
-                    {bookingGroup}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setBookingGroup(g => Math.min(getGroup(bookingTour), g + 1))}
-                    style={{
-                      width: 38, height: 38, borderRadius: 8,
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "#fff", cursor: "pointer", fontWeight: 700, fontSize: 18,
-                    }}
-                  >
-                    +
-                  </button>
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2"><Phone size={13} className="text-emerald-500" /> Contact</label>
+                  <input className="input !rounded-2xl !bg-white font-black" type="tel" inputMode="numeric" pattern="[0-9]{9,15}" maxLength={15} placeholder="03XXXXXXXXX" required value={bookingPhone} onChange={e => setBookingPhone(onlyDigits(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2"><Calendar size={13} className="text-emerald-500" /> Date</label>
+                  <input className="input !rounded-2xl !bg-white font-black" type="date" min={minBookingDate} value={bookingDate} onChange={e => setBookingDate(e.target.value)} />
                 </div>
               </div>
 
-              {/* Special Requests */}
-              <div className="input-group">
-                <label className="input-label" style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>
-                  📝 Special Requests (Optional)
-                </label>
-                <textarea
-                  className="input"
-                  rows={2}
-                  placeholder="Any dietary needs, accessibility requirements..."
-                  style={{
-                    resize: "vertical",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1.5px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
-                  }}
-                  value={bookingNotes}
-                  onChange={e => setBookingNotes(e.target.value)}
-                />
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2"><Users size={13} className="text-emerald-500" /> Group Size</label>
+                <div className="flex items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <button type="button" onClick={() => setBookingGroup(group => Math.max(1, group - 1))} className="w-12 h-12 rounded-2xl bg-white text-slate-900 font-black text-xl border border-slate-200">-</button>
+                  <div className="flex-1 text-center">
+                    <span className="text-3xl font-black text-slate-950">{bookingGroup}</span>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">People</p>
+                  </div>
+                  <button type="button" onClick={() => setBookingGroup(group => Math.min(getGroup(bookingTour), group + 1))} className="w-12 h-12 rounded-2xl bg-white text-slate-900 font-black text-xl border border-slate-200">+</button>
+                </div>
               </div>
 
-              {/* Price Summary */}
-              <div
-                style={{
-                  padding: "14px 16px",
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: 12,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 flex items-center gap-2"><FileText size={13} className="text-emerald-500" /> Notes</label>
+                <textarea className="input !rounded-2xl !bg-white resize-none" rows={2} placeholder="Any dietary, accessibility, or equipment requirements?" value={bookingNotes} onChange={e => setBookingNotes(e.target.value)} />
+              </div>
+
+              <div className="rounded-3xl bg-slate-950 p-5 flex items-center justify-between gap-4">
                 <div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Per Person</div>
-                  <div style={{ fontSize: 14, color: "rgba(255,255,255,0.7)" }}>
-                    {formatPKR(bookingTour.price)}
-                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Fee</p>
+                  <p className="text-3xl font-black text-emerald-400">{formatPKR(bookingTour.price * bookingGroup)}</p>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Total</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: "#10B981" }}>
-                    {formatPKR(bookingTour.price * bookingGroup)}
-                  </div>
-                </div>
+                <Wallet size={28} className="text-white" />
               </div>
 
-              {/* Error display */}
               {bookingError && (
-                <div
-                  style={{
-                    background: "rgba(239,68,68,0.1)",
-                    border: "1px solid rgba(239,68,68,0.3)",
-                    borderRadius: 10,
-                    padding: "10px 14px",
-                    color: "#FCA5A5",
-                    fontSize: 13,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  ⚠️ {bookingError}
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-rose-600 text-sm font-bold flex items-center gap-3">
+                  <AlertCircle size={18} /> {bookingError}
                 </div>
               )}
 
-              {/* Action Buttons */}
-              <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-                <button
-                  className="btn btn-secondary"
-                  style={{ flex: 1, justifyContent: "center" }}
-                  disabled={bookingLoading}
-                  onClick={handleCloseBooking}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary"
-                  style={{
-                    flex: 2,
-                    justifyContent: "center",
-                    background: "linear-gradient(135deg, #3B82F6, #8B5CF6)",
-                    border: "none",
-                    color: "#fff",
-                    opacity: bookingLoading || !bookingDate || !bookingPhone ? 0.6 : 1,
-                  }}
-                  disabled={bookingLoading || !bookingDate || !bookingPhone}
-                  onClick={handleConfirmBooking}
-                >
-                  {bookingLoading ? (
-                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span className="loading-spinner" style={{ width: 16, height: 16, borderTopColor: "#fff" }} />
-                      Processing...
-                    </span>
-                  ) : (
-                    "Confirm Booking →"
-                  )}
+              <div className="flex gap-3 pt-2">
+                <button className="btn btn-secondary flex-1 !py-4 !rounded-2xl font-black uppercase tracking-widest" disabled={bookingLoading} onClick={handleCloseBooking}>Dismiss</button>
+                <button className="btn btn-emerald flex-1 !py-4 !rounded-2xl font-black uppercase tracking-widest" disabled={bookingLoading || !bookingDate || !bookingPhone} onClick={handleConfirmBooking}>
+                  {bookingLoading ? "Booking..." : "Confirm"}
                 </button>
               </div>
             </div>
@@ -569,10 +355,7 @@ export default function ToursPage() {
         </div>
       )}
 
-      {/* ── ISSUE #7 — Booking Success Modal ── */}
-      {showSuccess && (
-        <BookingSuccessModal tourTitle={bookedTourTitle} onClose={handleCloseSuccess} />
-      )}
+      {showSuccess && <BookingSuccessModal tourTitle={bookedTourTitle} onClose={() => setShowSuccess(false)} />}
     </div>
   );
 }

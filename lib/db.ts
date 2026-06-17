@@ -11,7 +11,7 @@
 // ==========================================
 
 import { supabase } from './supabase';
-import { TOURS, BOOKINGS, REVIEWS, COMPANIES, SAFETY_ZONES, MONTHLY_REVENUE } from './data';
+import { getDefaultTourImage } from './tourImages';
 
 // ==========================================
 // Resilient Fetch Helper
@@ -27,17 +27,25 @@ import { TOURS, BOOKINGS, REVIEWS, COMPANIES, SAFETY_ZONES, MONTHLY_REVENUE } fr
  * @param {number} delay - Initial delay between retries in ms
  * @returns {Promise<T>} The result of the operation
  */
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 500): Promise<T> {
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delay = 500
+): Promise<T> {
   try {
     return await fn();
-  } catch (err: any) {
-    const isLockError = err.message?.includes('Lock broken') || err.name === 'AbortError';
-    if (isLockError && retries > 0) {
-      console.warn(`[db] Transient lock error detected. Retrying... (${retries} attempts left)`);
+  } catch (error: any) {
+    // If it's a "lock stolen" error, wait a bit and retry as it's transient
+    const isLockError = error?.message?.includes("lock") || error?.message?.includes("stole") || error.message?.includes('Lock broken') || error.name === 'AbortError';
+    
+    if (retries > 0) {
+      if (isLockError) {
+        console.warn(`[Retry] Auth lock contention detected, retrying in ${delay}ms... (${retries} attempts left)`);
+      }
       await new Promise(resolve => setTimeout(resolve, delay));
-      return withRetry(fn, retries - 1, delay * 2); // Exponential backoff
+      return withRetry(fn, retries - 1, delay * 2);
     }
-    throw err;
+    throw error;
   }
 }
 
@@ -56,40 +64,36 @@ export async function fetchProfile(userId: string) {
   return data;
 }
 
-export async function upsertProfile(profile: {
+export async function upsertProfile({
+  id,
+  email,
+  full_name,
+  phone,
+  emergency_phone,
+  role,
+}: {
   id: string;
   email: string;
   full_name?: string;
   phone?: string;
-  role?: 'user' | 'company' | 'admin';
+  emergency_phone?: string;
+  role?: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from('profiles') as any)
-    .upsert(
-      { ...profile, updated_at: new Date().toISOString() },
-      { onConflict: 'id', ignoreDuplicates: false }
-    )
-    .select()
-    .maybeSingle();
+  const { error } = await (supabase.from('profiles') as any)
+    .upsert({
+      id,
+      email,
+      full_name: full_name || '',
+      phone: phone || '',
+      emergency_phone: emergency_phone || '',
+      role: role || 'user',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
 
-  if (error) {
-    // If upsert fails (likely RLS on insert for existing user), try plain update
-    const { data: updated, error: updateError } = await (supabase.from('profiles') as any)
-      .update({ ...profile, updated_at: new Date().toISOString() })
-      .eq('id', profile.id)
-      .select()
-      .maybeSingle();
-
-    if (updateError) {
-      // Only log if the update also fails (real error)
-      console.warn('[upsertProfile] Profile update skipped/failed:', updateError.message);
-      return null;
-    }
-    return updated;
-  }
-
-  return data;
+  if (error) console.error('upsertProfile error:', error);
+  return { error };
 }
+
 
 
 export async function fetchAllUsers() {
@@ -113,6 +117,7 @@ export async function fetchTours(options?: {
   search?: string;
   destination?: string;
   maxPrice?: number;
+  admin?: boolean;
 }) {
   return withRetry(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -122,7 +127,7 @@ export async function fetchTours(options?: {
       .order('rating', { ascending: false });
 
     // Only filter by availability for public/featured listings
-    if (!options?.companyId) {
+    if (!options?.companyId && !options?.admin) {
       query = query.eq('available', true);
     }
 
@@ -164,6 +169,8 @@ export async function createTour(tour: {
   region: string;
   price: number;
   duration: number;
+  active_from?: string;
+  active_until?: string | null;
   category: string;
   tags?: string[];
   max_group?: number;
@@ -172,9 +179,17 @@ export async function createTour(tour: {
   included?: string[];
   image_url?: string;
 }) {
+  if (tour.active_from && isPastTravelDate(tour.active_from)) {
+    throw new Error('Past dates are not available for publishing tours.');
+  }
+
+  if (tour.active_until && tour.active_from && tour.active_until < tour.active_from) {
+    throw new Error('Active until date cannot be before the active from date.');
+  }
+
   // 1. Verify company is approved before allowing tour creation
-  const { data: company, error: companyError } = await supabase
-    .from('companies')
+  const { data: company, error: companyError } = await (supabase
+    .from('companies') as any)
     .select('status')
     .eq('id', tour.company_id)
     .maybeSingle();
@@ -186,8 +201,30 @@ export async function createTour(tour: {
 
   // 2. Proceed with insertion
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from('tours') as any).insert(tour).select().single();
-  if (error) { console.error('[createTour]', error.message); return null; }
+  const payload = { ...tour, image_url: tour.image_url || getDefaultTourImage(tour.destination, tour.title) };
+  const { data, error } = await (supabase.from('tours') as any)
+    .insert(payload)
+    .select()
+    .single();
+  if (error) {
+    const missingAvailabilityColumns =
+      error.message?.includes('active_from') ||
+      error.message?.includes('active_until') ||
+      error.code === 'PGRST204';
+
+    if (missingAvailabilityColumns) {
+      const { active_from, active_until, ...legacyPayload } = payload;
+      const { data: legacyData, error: legacyError } = await (supabase.from('tours') as any)
+        .insert(legacyPayload)
+        .select()
+        .single();
+      if (legacyError) { console.error('[createTour]', legacyError.message); return null; }
+      return legacyData;
+    }
+
+    console.error('[createTour]', error.message);
+    return null;
+  }
   return data;
 }
 
@@ -195,6 +232,19 @@ export async function updateTour(id: string, updates: Partial<{
   title: string; price: number; available: boolean; featured: boolean;
   safety_score: number; tags: string[]; image_url: string;
 }>) {
+  if (updates.available === true) {
+    const { data: tour, error: tourError } = await (supabase.from('tours') as any)
+      .select('company_id, companies(status)')
+      .eq('id', id)
+      .maybeSingle();
+
+    const companyStatus = Array.isArray(tour?.companies) ? tour.companies[0]?.status : tour?.companies?.status;
+    if (tourError || companyStatus !== 'approved') {
+      console.error('[updateTour] Unauthorized: Company not approved', companyStatus);
+      return null;
+    }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('tours') as any).update(updates).eq('id', id).select().single();
   if (error) { console.error('[updateTour]', error.message); return null; }
@@ -221,11 +271,25 @@ export async function fetchBookings(options?: {
 
     const { data, error } = await query;
     if (error) {
-      console.error('[fetchBookings]', error.message);
-      return [];
+      throw error;
     }
     return data ?? [];
   });
+}
+
+export async function fetchBookingsByUser(userId: string) {
+  return fetchBookings({ userId });
+}
+
+export function getLocalDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function isPastTravelDate(value: string) {
+  return Boolean(value) && value < getLocalDateInputValue();
 }
 
 export async function createBooking(booking: {
@@ -237,7 +301,10 @@ export async function createBooking(booking: {
   travel_date: string;
   notes?: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (isPastTravelDate(booking.travel_date)) {
+    throw new Error('Past dates are not available for booking.');
+  }
+
   const { data, error } = await (supabase.from('bookings') as any)
     .insert({ ...booking, status: 'pending', payment_status: 'pending' })
     .select()
@@ -247,12 +314,15 @@ export async function createBooking(booking: {
 }
 
 export async function updateBookingStatus(id: string, status: 'pending' | 'confirmed' | 'completed' | 'cancelled') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from('bookings') as any)
+  let query: any = (supabase.from('bookings') as any)
     .update({ status })
-    .eq('id', id)
-    .select()
-    .single();
+    .eq('id', id);
+
+  if (status === 'confirmed') query = query.eq('status', 'pending');
+  if (status === 'cancelled') query = query.in('status', ['pending', 'confirmed']);
+  if (status === 'completed') query = query.eq('status', 'confirmed');
+
+  const { data, error } = await query.select().maybeSingle();
   if (error) { console.error('[updateBookingStatus]', error.message); return null; }
   return data;
 }
@@ -334,13 +404,28 @@ export async function fetchCompanyByOwner(ownerId: string): Promise<{ id: string
 }
 
 export async function updateCompanyStatus(id: string, status: 'pending' | 'approved' | 'suspended' | 'rejected') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('companies') as any)
-    .update({ status })
+    .update({ status, verified: status === 'approved' })
     .eq('id', id)
     .select()
     .single();
   if (error) { console.error('[updateCompanyStatus]', error.message); return null; }
+
+  if (data?.owner_id) {
+    const role = status === 'approved' ? 'company' : 'user';
+    const { error: profileError } = await (supabase.from('profiles') as any)
+      .update({ role })
+      .eq('id', data.owner_id);
+    if (profileError) console.error('[updateCompanyStatus:profile]', profileError.message);
+  }
+
+  if (status !== 'approved') {
+    const { error: toursError } = await (supabase.from('tours') as any)
+      .update({ available: false, featured: false })
+      .eq('company_id', id);
+    if (toursError) console.error('[updateCompanyStatus:tours]', toursError.message);
+  }
+
   return data;
 }
 
@@ -371,7 +456,6 @@ export async function createSafetyAlert(alert: {
   area: string; type: string;
   severity: 'low' | 'medium' | 'high'; description: string;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from('safety_alerts') as any)
     .insert({ ...alert, active: true })
     .select()
@@ -389,33 +473,73 @@ export async function dismissSafetyAlert(id: string) {
 
 // ---- Analytics / Revenue ----
 
-export async function fetchRevenueStats(companyId?: string) {
-  let query = supabase
-    .from('bookings')
-    .select('total_price, created_at');
+export type MonthlyRevenueStat = { month: string; revenue: number; bookings: number };
 
-  if (companyId) {
-    query = query.eq('company_id', companyId);
-  }
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-  const { data: bookings, error } = await query;
+export function isRevenueBooking(booking: { status?: string | null }) {
+  return booking.status === 'confirmed' || booking.status === 'completed';
+}
 
-  if (error || !bookings || bookings.length === 0) return [];
+export function buildMonthlyRevenueStats(bookings: Array<{
+  total_price?: number | string | null;
+  travel_date?: string | null;
+  created_at?: string | null;
+  status?: string | null;
+}>): MonthlyRevenueStat[] {
+  const monthly: Record<string, MonthlyRevenueStat> = {};
 
-  // Aggregate by month
-  const monthly: Record<string, { month: string; revenue: number; bookings: number }> = {};
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  bookings.forEach((booking) => {
+    if (booking.status && !isRevenueBooking(booking)) return;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (bookings as any[]).forEach((b: any) => {
-    const d = new Date(b.created_at);
-    const key = months[d.getMonth()];
-    if (!monthly[key]) monthly[key] = { month: key, revenue: 0, bookings: 0 };
-    monthly[key].revenue += b.total_price || 0;
-    monthly[key].bookings += 1;
+    const rawDate = booking.travel_date || booking.created_at;
+    if (!rawDate) return;
+
+    const date = new Date(rawDate);
+    if (Number.isNaN(date.getTime())) return;
+
+    const month = MONTH_LABELS[date.getMonth()];
+    if (!monthly[month]) monthly[month] = { month, revenue: 0, bookings: 0 };
+
+    monthly[month].revenue += Number(booking.total_price || 0);
+    monthly[month].bookings += 1;
   });
 
-  return months.map(m => monthly[m] || { month: m, revenue: 0, bookings: 0 });
+  return MONTH_LABELS.map(month => monthly[month] || { month, revenue: 0, bookings: 0 });
+}
+
+export async function fetchRevenueStats(companyId?: string) {
+  try {
+    const bookings = await fetchBookings(companyId ? { companyId } : undefined);
+    return buildMonthlyRevenueStats(bookings as Array<{
+      total_price?: number | string | null;
+      travel_date?: string | null;
+      created_at?: string | null;
+      status?: string | null;
+    }>);
+  } catch (err) {
+    console.error('[fetchRevenueStats]', err);
+  }
+
+  let query = supabase
+    .from('bookings')
+    .select('total_price, travel_date, created_at, status')
+    .in('status', ['confirmed', 'completed']);
+
+  if (companyId) query = query.eq('company_id', companyId);
+
+  const { data: bookings, error } = await query;
+  if (error) {
+    console.error('[fetchRevenueStats:fallback]', error.message);
+    return buildMonthlyRevenueStats([]);
+  }
+
+  return buildMonthlyRevenueStats((bookings || []) as Array<{
+    total_price?: number | string | null;
+    travel_date?: string | null;
+    created_at?: string | null;
+    status?: string | null;
+  }>);
 }
 
 export async function fetchPlatformStats() {
@@ -423,7 +547,7 @@ export async function fetchPlatformStats() {
     supabase.from('profiles').select('id', { count: 'exact', head: true }),
     supabase.from('companies').select('id', { count: 'exact', head: true }),
     supabase.from('tours').select('id', { count: 'exact', head: true }).eq('available', true),
-    supabase.from('bookings').select('total_price'),
+    supabase.from('bookings').select('total_price, status').in('status', ['confirmed', 'completed']),
   ]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -515,4 +639,3 @@ export async function updateProfileBudget(userId: string, budget: number) {
   }
   return true;
 }
-

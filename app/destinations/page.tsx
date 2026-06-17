@@ -4,19 +4,17 @@
  * @author Smart Tour Team
  */
 
-import React from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Star, MapPin } from "lucide-react";
 
 const DESTINATIONS = [
-  { img: "/images/hunza.png", name: "Hunza Valley", region: "Gilgit-Baltistan", price: "40K", rating: "4.9", tags: ["Culture", "History", "Peaks"] },
-  { img: "/images/skardu.png", name: "Skardu", region: "Gilgit-Baltistan", price: "55K", rating: "4.8", tags: ["Lakes", "Desert", "K2"] },
-  { img: "/images/swat.jpg", name: "Swat Valley", region: "KPK", price: "25K", rating: "4.7", tags: ["Greenery", "Rivers", "History"] },
+  { img: "/images/neelum.png", name: "Neelum Valley", region: "Azad Kashmir", price: "35K", rating: "4.7", tags: ["Forests", "Rivers", "Waterfalls"] },
   { img: "/images/fairy-meadows.png", name: "Fairy Meadows", region: "Gilgit-Baltistan", price: "30K", rating: "4.9", tags: ["Adventure", "Camping", "Nanga Parbat"] },
-  { img: "/images/naran.jpg", name: "Naran & Kaghan", region: "KPK", price: "20K", rating: "4.6", tags: ["Lakes", "Rafting", "Roadtrip"] },
-  { img: "/images/neelum.jpg", name: "Neelum Valley", region: "Azad Kashmir", price: "35K", rating: "4.7", tags: ["Forests", "Rivers", "Waterfalls"] },
+  { img: "/images/hunza.png", name: "Hunza Valley", region: "Gilgit-Baltistan", price: "40K", rating: "4.9", tags: ["Culture", "History", "Peaks"] },
+  { img: "/images/malam-jabba.png", name: "Malam Jabba", region: "KPK", price: "26K", rating: "4.8", tags: ["Snow", "Skiing", "Chairlift"] },
+  { img: "/images/naran.png", name: "Naran & Kaghan", region: "KPK", price: "20K", rating: "4.6", tags: ["Lakes", "Rafting", "Roadtrip"] },
 ];
 
 export default function DestinationsPage() {

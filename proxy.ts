@@ -1,0 +1,14 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname === "/company/register") {
+    return NextResponse.redirect(new URL("/user/register-company", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/company/register"],
+};

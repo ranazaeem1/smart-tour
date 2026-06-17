@@ -5,6 +5,7 @@
 
 -- 1. Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ================================================================================
 -- 2. COMPANIES TABLE
@@ -16,6 +17,10 @@ CREATE TABLE IF NOT EXISTS companies (
   description TEXT,
   phone       TEXT,
   email       TEXT,
+  ntn_number  TEXT CHECK (ntn_number IS NULL OR ntn_number ~ '^[0-9]{7}$'),
+  applicant_name  TEXT,
+  applicant_email TEXT,
+  applicant_phone TEXT,
   logo_url    TEXT,
   website     TEXT,
   status      TEXT NOT NULL DEFAULT 'approved' CHECK (status IN ('pending','approved','suspended')),
@@ -64,6 +69,9 @@ CREATE TABLE IF NOT EXISTS tours (
   safety_score     INT DEFAULT 80,
   featured         BOOLEAN DEFAULT false,
   available        BOOLEAN DEFAULT true,
+  active_from      DATE NOT NULL DEFAULT CURRENT_DATE,
+  active_until     DATE,
+  embedding        vector(768),
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
 

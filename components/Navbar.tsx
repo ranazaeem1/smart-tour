@@ -24,7 +24,6 @@ import { useState } from "react";
  */
 const NAV_LINKS = [
   { label: "Destinations", href: "/destinations" },
-  { label: "Tours", href: "/#tours" },
   { label: "AI Planner", href: "/#ai" },
   { label: "About", href: "/about" },
   { label: "Contact Us", href: "/contact" },
@@ -44,7 +43,7 @@ const NAV_LINKS = [
 export default function Navbar() {
   // State to track if the mobile menu is open
   // FIXME: Mobile menu implementation is incomplete. Needs a toggle button and mobile-specific layout.
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen] = useState(false);
 
   // ==========================================
   // JSX Return
@@ -53,17 +52,7 @@ export default function Navbar() {
     <nav className="navbar">
       {/* Platform Logo & Brand Name */}
       <Link href="/" className="nav-logo" style={{ textDecoration:"none", color:"var(--text-primary)" }}>
-        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <defs>
-            <linearGradient id="logoG" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#14D2BE"/>
-              <stop offset="100%" stopColor="#7C3AED"/>
-            </linearGradient>
-          </defs>
-          <path d="M16 3L28 28H4L16 3Z" fill="url(#logoG)" opacity="0.9"/>
-          <circle cx="16" cy="14" r="3" fill="white" opacity="0.8"/>
-          <path d="M10 28C10 24 13 21 16 21C19 21 22 24 22 28" stroke="white" strokeWidth="1.5" fill="none" opacity="0.6"/>
-        </svg>
+        <img src="/logo.svg" alt="Smart Tour logo" style={{ width: 36, height: 36, objectFit: "contain", borderRadius: "50%" }} />
         <span className="text-gradient">Smart Tour</span>
       </Link>
 

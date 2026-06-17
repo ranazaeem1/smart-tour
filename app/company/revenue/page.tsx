@@ -1,8 +1,23 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { fetchRevenueStats, fetchCompanyByOwner } from "@/lib/db";
+import { fetchCompanyByOwner, fetchRevenueStats } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
+import { ArrowDownRight, ArrowUpRight, BarChart3, Calendar, ClipboardList, Download, PieChart, Wallet } from "lucide-react";
+
+function StatCard({ label, value, icon: Icon, tone }: { label: string; value: React.ReactNode; icon: any; tone: string }) {
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all relative overflow-hidden">
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <span className={`absolute top-5 right-5 h-2 w-2 rounded-full ${tone.includes("emerald") ? "bg-emerald-500" : tone.includes("amber") ? "bg-amber-500" : tone.includes("rose") ? "bg-rose-500" : "bg-slate-900"}`} />
+      <p className="mt-7 text-3xl font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+    </div>
+  );
+}
 
 export default function CompanyRevenuePage() {
   const { profile, loading: authLoading } = useAuth();
@@ -15,10 +30,7 @@ export default function CompanyRevenuePage() {
       setLoading(true);
       try {
         const company = await fetchCompanyByOwner(profile.id);
-        if (company) {
-          const stats = await fetchRevenueStats(company.id);
-          setRevenueData(stats);
-        }
+        if (company) setRevenueData(await fetchRevenueStats(company.id));
       } catch (err) {
         console.error("Failed to load revenue stats:", err);
       } finally {
@@ -28,103 +40,117 @@ export default function CompanyRevenuePage() {
     if (!authLoading) load();
   }, [profile, authLoading]);
 
-  const totalRevenue = revenueData.reduce((s, m) => s + m.revenue, 0);
-  const totalBookings = revenueData.reduce((s, m) => s + m.bookings, 0);
-  const maxRev = Math.max(...revenueData.map(m => m.revenue), 1);
-  
-  const currentMonthIdx = new Date().getMonth();
-  const currentMonthStats = revenueData[currentMonthIdx] || { revenue: 0 };
+  const totalRevenue = revenueData.reduce((sum, month) => sum + month.revenue, 0);
+  const totalBookings = revenueData.reduce((sum, month) => sum + month.bookings, 0);
+  const maxRevenue = Math.max(...revenueData.map(month => month.revenue), 1);
+  const currentMonthStats = revenueData[new Date().getMonth()] || { revenue: 0, bookings: 0 };
+  const activeMonths = revenueData.filter(month => month.revenue > 0 || month.bookings > 0);
 
-  if (loading || authLoading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-      <span className="loading-spinner" />
-    </div>
-  );
+  if (loading || authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading revenue...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade space-y-8 pb-20" role="main">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
         <div>
-          <div style={{ fontSize:13,color:"var(--text-muted)",marginBottom:4 }}>Company Panel</div>
-          <h1 className="topbar-title">💰 Revenue & Analytics</h1>
-        </div>
-        <div className="topbar-actions">
-          <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>📥 Export Report</button>
-        </div>
-      </div>
-
-      <div className="grid-4" style={{ marginBottom:28 }}>
-        {[
-          { label:"Total Revenue", value:formatPKR(totalRevenue), color:"var(--teal)", icon:"💰" },
-          { label:"Total Bookings", value:totalBookings, color:"var(--purple-light)", icon:"📋" },
-          { label:"Avg per Booking", value:totalBookings > 0 ? formatPKR(Math.round(totalRevenue/totalBookings)) : "PKR 0", color:"var(--gold)", icon:"📊" },
-          { label:"This Month", value:formatPKR(currentMonthStats.revenue), color:"var(--emerald)", icon:"📈" },
-        ].map(s=>(
-          <div key={s.label} className="stat-card">
-            <div style={{ fontSize:22 }}>{s.icon}</div>
-            <div className="stat-value" style={{ color:s.color,fontSize:22 }}>{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+          <div className="flex items-center gap-2 text-emerald-500 mb-2">
+            <Wallet size={14} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Financial Oversight</span>
           </div>
-        ))}
+          <h1 className="text-2xl font-black text-slate-950">Revenue</h1>
+        </div>
+
+        <button onClick={() => window.print()} className="btn btn-secondary !rounded-2xl !py-4 !px-6 flex items-center justify-center gap-2">
+          <Download size={18} />
+          <span className="text-xs font-black uppercase tracking-widest">Export</span>
+        </button>
       </div>
 
-      {/* Bar chart */}
-      <div className="card" style={{ marginBottom:24 }}>
-        <div className="section-header">
-          <h2 className="section-title">📈 Monthly Revenue ({new Date().getFullYear()})</h2>
-          <span className="badge badge-teal">{formatPKR(totalRevenue)} Total</span>
-        </div>
-        <div style={{ display:"flex",alignItems:"flex-end",gap:8,height:200,paddingBottom:32,paddingTop:16 }}>
-          {revenueData.map((m,i)=>(
-            <div key={m.month} style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4 }}>
-              <div style={{ fontSize:10,color:"var(--text-muted)",marginBottom:4 }}>{m.revenue > 0 ? formatPKR(m.revenue) : ""}</div>
-              <div style={{ position:"relative",width:"100%",display:"flex",justifyContent:"center" }}>
-                <div style={{ 
-                  width:"70%",borderRadius:"4px 4px 0 0",background:`linear-gradient(180deg,var(--teal),var(--purple))`,
-                  height:`${(m.revenue/maxRev)*150}px`,minHeight:2,transition:"height 0.6s ease",
-                  boxShadow:i===currentMonthIdx?"0 0 12px rgba(20,210,190,0.5)":"none" }}/>
-              </div>
-              <div style={{ fontSize:11,color:i===currentMonthIdx?"var(--teal)":"var(--text-muted)",fontWeight:i===currentMonthIdx?700:400 }}>{m.month}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard label="Total Revenue" value={formatPKR(totalRevenue)} icon={Wallet} tone="bg-emerald-50 text-emerald-500" />
+        <StatCard label="Total Bookings" value={totalBookings} icon={ClipboardList} tone="bg-slate-100 text-slate-900" />
+        <StatCard label="Avg Booking" value={totalBookings ? formatPKR(Math.round(totalRevenue / totalBookings)) : "PKR 0"} icon={PieChart} tone="bg-amber-50 text-amber-500" />
+        <StatCard label="Current Month" value={formatPKR(currentMonthStats.revenue)} icon={Calendar} tone="bg-rose-50 text-rose-500" />
+      </div>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <BarChart3 size={18} className="text-slate-900" />
+              <h2 className="text-xl font-black text-slate-950">Monthly Revenue</h2>
             </div>
-          ))}
+            <p className="mt-1 text-xs font-bold text-slate-500">Gross booking value by month</p>
+          </div>
+          <span className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-center text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+            Total<br />
+            <span className="text-sm">{formatPKR(totalRevenue)}</span>
+          </span>
         </div>
-      </div>
 
-      {/* Monthly breakdown table */}
-      <div className="card">
-        <div className="section-header">
-          <h2 className="section-title">📅 Monthly Breakdown</h2>
+        <div className="dashboard-revenue-frame">
+          {revenueData.map(month => {
+            const height = Math.max((month.revenue / maxRevenue) * 100, month.revenue > 0 ? 8 : 2);
+            return (
+              <div className="dashboard-revenue-column" key={month.month}>
+                <span className="dashboard-revenue-chip">{formatPKR(month.revenue)}</span>
+                <div className="dashboard-revenue-bar" style={{ height: `${height}%` }} />
+                <span className="dashboard-revenue-month">{month.month}</span>
+              </div>
+            );
+          })}
         </div>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr><th>Month</th><th>Bookings</th><th>Revenue</th><th>Avg per Booking</th><th>Growth</th></tr>
-            </thead>
-            <tbody>
-              {revenueData.filter(m => m.revenue > 0 || m.bookings > 0).map((m,i, arr)=>{
-                const prev = i > 0 ? arr[i-1].revenue : m.revenue;
-                const growth = i === 0 ? 0 : Math.round(((m.revenue-prev)/prev)*100);
-                return (
-                  <tr key={m.month}>
-                    <td style={{ fontWeight:600 }}>{m.month} {new Date().getFullYear()}</td>
-                    <td>{m.bookings}</td>
-                    <td style={{ color:"var(--teal)",fontWeight:700 }}>{formatPKR(m.revenue)}</td>
-                    <td>{m.bookings > 0 ? formatPKR(Math.round(m.revenue/m.bookings)) : "—"}</td>
-                    <td>
-                      <span style={{ color:growth>=0?"var(--emerald)":"var(--rose)",fontWeight:600 }}>
-                        {growth>=0?`+${growth}%`:` ${growth}%`}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-              {revenueData.every(m => m.revenue === 0) && (
-                <tr><td colSpan={5} style={{ textAlign:"center", padding:40, color:"var(--text-muted)" }}>No revenue data available yet.</td></tr>
-              )}
-            </tbody>
-          </table>
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <Calendar size={18} className="text-slate-900" />
+          <h2 className="text-xl font-black text-slate-950">Monthly Breakdown</h2>
         </div>
-      </div>
+
+        {activeMonths.length === 0 ? (
+          <div className="py-20 text-center text-xs font-black uppercase tracking-widest text-slate-400">No paid booking data yet.</div>
+        ) : (
+          <div className="space-y-3">
+            {activeMonths.map((month, index) => {
+              const previous = activeMonths[index - 1]?.revenue ?? month.revenue;
+              const growth = index === 0 || previous === 0 ? 0 : Math.round(((month.revenue - previous) / previous) * 100);
+              return (
+                <div key={month.month} className="rounded-3xl border border-slate-200 bg-white p-5 hover:shadow-xl transition-all">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-center">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Month</p>
+                      <p className="mt-1 text-sm font-black text-slate-950">{month.month} {new Date().getFullYear()}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Bookings</p>
+                      <p className="mt-1 text-sm font-black text-slate-950">{month.bookings}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Revenue</p>
+                      <p className="mt-1 text-sm font-black text-emerald-600">{formatPKR(month.revenue)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Avg Ticket</p>
+                      <p className="mt-1 text-sm font-black text-slate-950">{month.bookings ? formatPKR(Math.round(month.revenue / month.bookings)) : "PKR 0"}</p>
+                    </div>
+                    <div className={`flex items-center gap-1 md:justify-end text-sm font-black ${growth >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                      {growth >= 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                      {Math.abs(growth)}%
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

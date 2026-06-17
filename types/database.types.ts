@@ -12,6 +12,7 @@ export type Database = {
           email: string;
           full_name: string | null;
           phone: string | null;
+          emergency_phone: string | null;
           role: 'user' | 'company' | 'admin';
           avatar_url: string | null;
           verified: boolean;
@@ -23,6 +24,7 @@ export type Database = {
           email: string;
           full_name?: string | null;
           phone?: string | null;
+          emergency_phone?: string | null;
           role?: 'user' | 'company' | 'admin';
           avatar_url?: string | null;
           verified?: boolean;
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           full_name?: string | null;
           phone?: string | null;
+          emergency_phone?: string | null;
           role?: 'user' | 'company' | 'admin';
           avatar_url?: string | null;
           verified?: boolean;
@@ -45,6 +48,10 @@ export type Database = {
           name: string;
           email: string;
           phone: string | null;
+          ntn_number: string | null;
+          applicant_name: string | null;
+          applicant_email: string | null;
+          applicant_phone: string | null;
           city: string | null;
           logo: string | null;
           status: 'pending' | 'approved' | 'suspended';
@@ -61,6 +68,10 @@ export type Database = {
           name: string;
           email: string;
           phone?: string | null;
+          ntn_number?: string | null;
+          applicant_name?: string | null;
+          applicant_email?: string | null;
+          applicant_phone?: string | null;
           city?: string | null;
           logo?: string | null;
           status?: 'pending' | 'approved' | 'suspended';
@@ -75,6 +86,10 @@ export type Database = {
           name?: string;
           email?: string;
           phone?: string | null;
+          ntn_number?: string | null;
+          applicant_name?: string | null;
+          applicant_email?: string | null;
+          applicant_phone?: string | null;
           city?: string | null;
           logo?: string | null;
           status?: 'pending' | 'approved' | 'suspended';
@@ -105,6 +120,9 @@ export type Database = {
           included: string[];
           safety_score: number;
           available: boolean;
+          active_from: string;
+          active_until: string | null;
+          embedding: number[] | null;
           featured: boolean;
           created_at: string;
         };
@@ -127,6 +145,9 @@ export type Database = {
           included?: string[];
           safety_score?: number;
           available?: boolean;
+          active_from?: string;
+          active_until?: string | null;
+          embedding?: number[] | null;
           featured?: boolean;
           created_at?: string;
         };
@@ -147,6 +168,9 @@ export type Database = {
           included?: string[];
           safety_score?: number;
           available?: boolean;
+          active_from?: string;
+          active_until?: string | null;
+          embedding?: number[] | null;
           featured?: boolean;
         };
       };

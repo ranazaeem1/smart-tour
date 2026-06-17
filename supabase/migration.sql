@@ -6,6 +6,7 @@
 
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
+create extension if not exists vector;
 
 -- ============================================================
 -- PROFILES (extends Supabase auth.users)
@@ -62,6 +63,10 @@ create table if not exists public.companies (
   name            text not null,
   email           text not null,
   phone           text,
+  ntn_number      text check (ntn_number is null or ntn_number ~ '^[0-9]{7}$'),
+  applicant_name  text,
+  applicant_email text,
+  applicant_phone text,
   city            text,
   logo            text,
   status          text not null default 'pending' check (status in ('pending', 'approved', 'suspended')),
@@ -106,6 +111,9 @@ create table if not exists public.tours (
   included      text[] not null default '{}',
   safety_score  integer not null default 80,
   available     boolean not null default true,
+  active_from   date not null default current_date,
+  active_until  date,
+  embedding     vector(768),
   featured      boolean not null default false,
   created_at    timestamptz not null default now()
 );

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function UserDashboardError({
   error,
@@ -21,22 +22,22 @@ export default function UserDashboardError({
       padding: 24,
     }}>
       <div style={{
-        background: 'rgba(255,255,255,0.07)',
+        background: '#FFFFFF',
         backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.1)',
+        border: '1px solid rgba(15,23,42,0.12)',
         borderRadius: 20,
         padding: '48px 40px',
         maxWidth: 440,
         textAlign: 'center',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        boxShadow: '0 8px 32px rgba(15,23,42,0.12)',
       }}>
-        <div style={{ fontSize: 52, marginBottom: 16 }}>⚠️</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 8 }}>
+        <AlertTriangle size={52} style={{ marginBottom: 16, color: '#EF4444' }} />
+        <h2 style={{ fontSize: 22, fontWeight: 800, color: '#0A0A0A', marginBottom: 8 }}>
           Something went wrong
         </h2>
         <p style={{
           fontSize: 13,
-          color: 'rgba(255,255,255,0.45)',
+          color: '#4B5563',
           marginBottom: 24,
           fontFamily: 'monospace',
           wordBreak: 'break-word',
@@ -47,7 +48,7 @@ export default function UserDashboardError({
           onClick={reset}
           style={{
             padding: '12px 28px',
-            background: 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
+            background: '#10B981',
             color: '#fff',
             border: 'none',
             borderRadius: 12,

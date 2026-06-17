@@ -1,387 +1,562 @@
 "use client";
-import { useEffect, useState } from "react";
-import { fetchSafetyZones, fetchSafetyAlerts } from "@/lib/db";
-import { formatPKR } from "@/lib/data";
 
-interface SafetyZone {
-  area: string;
-  score: number;
-  status: string;
-  color: string;
-}
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  CloudSun,
+  Compass,
+  Gauge,
+  LocateFixed,
+  Navigation,
+  RefreshCw,
+  Route,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
+  Signal,
+  Thermometer,
+  X,
+} from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { SafetyLeafletRouteMap } from "@/components/shared/SafetyLeafletRouteMap";
+import { fetchDrivingRoute, geocodeDestination, type GeocodedDestination } from "@/lib/osm";
+import { supabase } from "@/lib/supabase";
+import { useLiveLocation } from "@/hooks/useLiveLocation";
+import { useLiveWeather } from "@/hooks/useLiveWeather";
+import { useSafetyScores } from "@/hooks/useSafetyScores";
+import { calculateRouteProgress, type RouteSummary } from "@/utils/routeCalculation";
 
-interface SafetyAlert {
+type TripRecord = {
   id: string;
-  area: string;
-  type: string;
-  severity: 'low' | 'medium' | 'high';
-  description: string;
-}
-
-// GeolocationPositionError codes
-const GEO_ERROR_MESSAGES: Record<number, string> = {
-  1: "Location access was denied. Using last known region as fallback.",
-  2: "Location unavailable. Network or hardware issue detected.",
-  3: "Location request timed out. Using last known region as fallback.",
+  storage: "supabase" | "local";
 };
 
-// ==========================================
-// Component
-// ==========================================
+function formatTime(value?: string | null) {
+  if (!value) return "Not updated";
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
-export default function SafetyPage() {
-  const [sosLoading, setSosLoading] = useState(false);
-  const [sosActive, setSosActive] = useState(false);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationSource, setLocationSource] = useState<"gps" | "fallback">("gps");
-  const [geoError, setGeoError] = useState<string | null>(null);
+function scoreColor(kind: "green" | "amber" | "red" | "orange" | "blue") {
+  const colors = {
+    green: "from-emerald-500 to-green-600",
+    amber: "from-amber-400 to-orange-500",
+    red: "from-red-500 to-rose-600",
+    orange: "from-orange-400 to-amber-600",
+    blue: "from-sky-500 to-blue-600",
+  };
+  return colors[kind];
+}
 
-  const [zones, setZones] = useState<SafetyZone[]>([]);
-  const [alerts, setAlerts] = useState<SafetyAlert[]>([]);
-  const [loading, setLoading] = useState(true);
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-600">{label}</p>
+      <p className="mt-2 font-mono text-lg font-black text-slate-950">{value}</p>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const [z, a] = await Promise.all([
-        fetchSafetyZones(),
-        fetchSafetyAlerts()
-      ]);
-      setZones(z as SafetyZone[]);
-      setAlerts(a as SafetyAlert[]);
-      setLoading(false);
-    }
-    load();
-  }, []);
+function ScoreBar({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "green" | "amber" | "red" | "orange" | "blue";
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-end justify-between gap-3">
+        <span className="text-sm font-black text-slate-950">{label}</span>
+        <span className="font-mono text-sm font-black text-slate-900">{value}%</span>
+      </div>
+      <div className="h-3 overflow-hidden rounded-md bg-slate-100">
+        <div
+          className={`h-full rounded-md bg-gradient-to-r ${scoreColor(tone)} transition-all duration-700`}
+          style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
-  const handleSOS = () => {
-    setSosLoading(true);
-    setGeoError(null);
-
-    if (!navigator.geolocation) {
-      // Browser doesn't support geolocation at all — use fallback immediately
-      setLocation({ lat: 35.3125, lng: 74.3125 });
-      setLocationSource("fallback");
-      setSosLoading(false);
-      setSosActive(true);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      // ✅ Success callback — real GPS coordinates
-      (position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setLocationSource("gps");
-        setSosLoading(false);
-        setSosActive(true);
-      },
-      // ⚠️ Error callback — graceful fallback with proper error details
-      (err: GeolocationPositionError) => {
-        const msg = GEO_ERROR_MESSAGES[err.code] ?? `Location error (code ${err.code}): ${err.message}`;
-        console.warn("[SOS] Geolocation failed:", `Code ${err.code} — ${err.message}`);
-        setGeoError(msg);
-        // Fallback to approximate Gilgit-Baltistan region center
-        setLocation({ lat: 35.3125, lng: 74.3125 });
-        setLocationSource("fallback");
-        setSosLoading(false);
-        setSosActive(true);
-      },
-      // Options: 10s timeout, accept cached position up to 60s old
-      { timeout: 10000, maximumAge: 60000, enableHighAccuracy: true }
-    );
+function StatusMessage({ tone, children }: { tone: "error" | "warning" | "info"; children: React.ReactNode }) {
+  const classes = {
+    error: "border-red-200 bg-red-50 text-red-800",
+    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    info: "border-emerald-200 bg-emerald-50 text-emerald-900",
   };
 
   return (
-    <div className="animate-fade">
+    <div className={`flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm font-bold ${classes[tone]}`}>
+      <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+      <p>{children}</p>
+    </div>
+  );
+}
 
-      {/* ── Hero Topbar — Navy gradient matching landing page ── */}
-      <div style={{
-        background: "linear-gradient(135deg, var(--navy) 0%, #0f172a 60%, #0d9488 200%)",
-        margin: "-28px -32px 32px",
-        padding: "28px 32px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        position: "relative",
-        overflow: "hidden",
-      }}>
-        {/* Background accent glow */}
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "radial-gradient(circle at top right, rgba(13,148,136,0.18), transparent 60%)",
-          pointerEvents: "none",
-        }} />
+export default function SafetyPage() {
+  const { user, profile } = useAuth();
+  const { location, loading: locationLoading, error: locationError, refresh: refreshLocation } = useLiveLocation();
+  const [query, setQuery] = useState("");
+  const [destination, setDestination] = useState<GeocodedDestination | null>(null);
+  const [route, setRoute] = useState<RouteSummary | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const [tracking, setTracking] = useState(false);
+  const [trip, setTrip] = useState<TripRecord | null>(null);
+  const [savingTrip, setSavingTrip] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sosOpen, setSosOpen] = useState(false);
+  const [sosLoading, setSosLoading] = useState(false);
+  const [sosStatus, setSosStatus] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState(new Date().toISOString());
 
-        <div style={{ position: "relative" }}>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
-            Real-Time Safety System
-          </div>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: "#fff", margin: 0, lineHeight: 1.2 }}>
-            🛡️ Safety &amp; Risk Map
-          </h1>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 4 }}>
-            Live threat intelligence for northern Pakistan
-          </div>
-        </div>
+  const weatherTarget = destination ?? location;
+  const { weather, loading: weatherLoading, error: weatherError, refetch: refetchWeather } = useLiveWeather(weatherTarget);
+  const { scores, loading: scoresLoading, error: scoresError, refetch: refetchScores } = useSafetyScores(destination);
 
-        <div style={{ display: "flex", gap: 16, alignItems: "center", position: "relative" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-            <span className="badge badge-emerald" style={{ fontSize: 11 }}>● Live Data</span>
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Last sync: 2 min ago</span>
-          </div>
+  const progress = useMemo(
+    () => (tracking ? calculateRouteProgress(location, route?.geometry ?? null) : 0),
+    [location, route, tracking]
+  );
 
-          {/* SOS Button — landing page gradient style */}
-          <button
-            className="sos-button"
-            onClick={handleSOS}
-            disabled={sosLoading}
-            style={{
-              background: "linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)",
-              color: "#fff",
-              border: "1px solid rgba(255,255,255,0.2)",
-              padding: "13px 32px",
-              borderRadius: 100,
-              fontWeight: 900,
-              fontSize: 16,
-              cursor: sosLoading ? "not-allowed" : "pointer",
-              boxShadow: "0 0 28px rgba(244, 63, 94, 0.5), 0 4px 16px rgba(0,0,0,0.3)",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "all 0.3s ease",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {sosLoading
-              ? <><span className="loading-spinner" style={{ borderTopColor: "#fff", width: 14, height: 14 }} /> Locating...</>
-              : "🚨 SOS ALERT"
-            }
-          </button>
-        </div>
-      </div>
+  const calculateRoute = useCallback(
+    async (nextDestination: GeocodedDestination) => {
+      if (!location) {
+        setRouteError("Allow location access before calculating a route.");
+        return null;
+      }
 
-      {/* ── SOS Active Modal — cinematic glassmorphism overlay ── */}
-      {sosActive && (
-        <div style={{
-          position: "fixed", inset: 0,
-          background: "rgba(5, 10, 20, 0.92)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-        }}>
-          <div className="animate-fade" style={{
-            maxWidth: 520,
-            width: "100%",
-            background: "rgba(255,255,255,0.05)",
-            backdropFilter: "blur(32px) saturate(150%)",
-            WebkitBackdropFilter: "blur(32px) saturate(150%)",
-            border: "1px solid rgba(244, 63, 94, 0.35)",
-            borderTop: "1px solid rgba(255,255,255,0.15)",
-            borderRadius: 24,
-            padding: 40,
-            textAlign: "center",
-            boxShadow: "0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(244,63,94,0.1)",
-          }}>
-            {/* Pulsing SOS icon */}
-            <div className="sos-pulse" style={{
-              width: 88,
-              height: 88,
-              background: "linear-gradient(135deg, #f43f5e, #e11d48)",
-              borderRadius: "50%",
-              margin: "0 auto 28px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 44,
-              boxShadow: "0 0 40px rgba(244,63,94,0.5)",
-            }}>🚨</div>
+      try {
+        const nextRoute = await fetchDrivingRoute(location, nextDestination);
+        setRoute(nextRoute);
+        setRouteError(null);
+        return nextRoute;
+      } catch (error) {
+        setRoute(null);
+        setRouteError(error instanceof Error ? error.message : "Route calculation failed.");
+        return null;
+      }
+    },
+    [location]
+  );
 
-            <h2 style={{ fontSize: 30, fontWeight: 900, marginBottom: 6, color: "#f43f5e", letterSpacing: "-0.02em" }}>
-              SOS SIGNAL ACTIVE
-            </h2>
-            <p style={{ color: "rgba(255,255,255,0.65)", fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
-              Your location and emergency profile have been broadcasted to local authorities and saved contacts.
+  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setRouteError("Enter a destination to search.");
+      return;
+    }
+
+    setSearching(true);
+    setRouteError(null);
+
+    try {
+      const found = await geocodeDestination(trimmed);
+      if (!found) {
+        setDestination(null);
+        setRoute(null);
+        setRouteError("Destination not found. Try a more specific place name.");
+        return;
+      }
+
+      setDestination(found);
+      await calculateRoute(found);
+      setLastUpdated(new Date().toISOString());
+    } catch (error) {
+      setRouteError(error instanceof Error ? error.message : "Destination search failed.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshLocation().catch(() => null);
+      if (destination) {
+        await Promise.all([refetchWeather(true), refetchScores(), calculateRoute(destination)]);
+      } else {
+        await refetchWeather(true);
+      }
+      setLastUpdated(new Date().toISOString());
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleSOS = async () => {
+    setSosLoading(true);
+    setSosStatus(null);
+    try {
+      const nextLocation = await refreshLocation().catch(() => location);
+      const emergencyPhone = profile?.emergency_phone || profile?.phone || "";
+      const sosMessage = nextLocation
+        ? `SmartTour SOS: I need help. My location is ${nextLocation.lat.toFixed(6)}, ${nextLocation.lng.toFixed(6)}.`
+        : "SmartTour SOS: I need help. My location is unavailable.";
+
+      if (user?.id) {
+        const payload = {
+          user_id: user.id,
+          latitude: nextLocation?.lat ?? null,
+          longitude: nextLocation?.lng ?? null,
+          emergency_phone: emergencyPhone || null,
+          message: sosMessage,
+          status: "active",
+        };
+
+        const { error } = await (supabase.from("sos_alerts") as any).insert(payload);
+        if (error && error.message.includes("emergency_phone")) {
+          await (supabase.from("sos_alerts") as any).insert({
+            user_id: payload.user_id,
+            latitude: payload.latitude,
+            longitude: payload.longitude,
+            message: payload.message,
+            status: payload.status,
+          });
+        } else if (error) {
+          throw error;
+        }
+      }
+
+      setSosStatus(emergencyPhone ? "SOS alert saved. Send the prepared signal to your emergency contact." : "SOS alert saved. Add an emergency phone number in Settings to send a prepared signal.");
+      setSosOpen(true);
+    } catch (error) {
+      setSosStatus(error instanceof Error ? error.message : "SOS alert could not be saved.");
+      setSosOpen(true);
+    } finally {
+      setSosLoading(false);
+    }
+  };
+
+  const startTracking = async () => {
+    if (!location || !destination || !route) return;
+
+    setSavingTrip(true);
+    const tripPayload = {
+      user_id: user?.id ?? null,
+      origin_lat: location.lat,
+      origin_lng: location.lng,
+      destination_lat: destination.lat,
+      destination_lng: destination.lng,
+      route_geojson: route.geometry,
+      distance_km: route.distanceKm,
+      estimated_duration_minutes: route.durationMinutes,
+      current_location_lat: location.lat,
+      current_location_lng: location.lng,
+      progress_percentage: progress,
+      status: "active",
+      started_at: new Date().toISOString(),
+    };
+
+    try {
+      const { data, error } = await (supabase.from("trip_routes") as any)
+        .insert(tripPayload)
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      setTrip({ id: data.id, storage: "supabase" });
+      setTracking(true);
+    } catch {
+      const localTrip = {
+        id: `local-${Date.now()}`,
+        storage: "local" as const,
+        ...tripPayload,
+      };
+      window.localStorage.setItem("smart-tour-active-trip", JSON.stringify(localTrip));
+      setTrip({ id: localTrip.id, storage: "local" });
+      setTracking(true);
+      setRouteError(null);
+    } finally {
+      setSavingTrip(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!tracking || !trip?.id || !location) return;
+
+    const updatePayload = {
+      current_location_lat: location.lat,
+      current_location_lng: location.lng,
+      progress_percentage: progress,
+      status: progress >= 100 ? "completed" : "active",
+      completed_at: progress >= 100 ? new Date().toISOString() : null,
+    };
+
+    if (trip.storage === "local") {
+      const current = window.localStorage.getItem("smart-tour-active-trip");
+      let parsed = {};
+      try {
+        parsed = current ? JSON.parse(current) : {};
+      } catch {
+        parsed = {};
+      }
+      window.localStorage.setItem("smart-tour-active-trip", JSON.stringify({ ...parsed, ...updatePayload }));
+      return;
+    }
+
+    void (supabase.from("trip_routes") as any).update(updatePayload).eq("id", trip.id);
+  }, [location, progress, tracking, trip?.id, trip?.storage]);
+
+  const destinationLabel = destination?.placeName || "Search a destination";
+
+  return (
+    <div className="space-y-8 bg-white text-slate-950">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950 md:text-5xl">Safety & Risk Map</h1>
+            <p className="mt-3 max-w-3xl text-base font-bold leading-relaxed text-slate-700">
+              Real-time weather, scores, and risk alerts for your destination - updated from live API data.
             </p>
+          </div>
 
-            {/* Location source warning if fallback */}
-            {locationSource === "fallback" && geoError && (
-              <div style={{
-                background: "rgba(245,158,11,0.1)",
-                border: "1px solid rgba(245,158,11,0.3)",
-                borderRadius: 10,
-                padding: "10px 14px",
-                marginBottom: 16,
-                fontSize: 12,
-                color: "#f59e0b",
-                textAlign: "left",
-              }}>
-                ⚠️ {geoError}
+          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-end">
+            <button
+              type="button"
+              onClick={handleSOS}
+              disabled={sosLoading}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-red-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-red-500/20 transition hover:bg-red-600 disabled:opacity-60"
+            >
+              <ShieldAlert size={16} className={sosLoading ? "animate-pulse" : ""} />
+              {sosLoading ? "Locating" : "SOS alert"}
+            </button>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-600 disabled:opacity-60"
+            >
+              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              {refreshing ? "Refreshing" : "Refresh now"}
+            </button>
+            <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700">
+              <Signal size={14} className="text-emerald-600" />
+              Updated {formatTime(lastUpdated)}
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSearch} className="mt-8 grid gap-3 rounded-3xl bg-slate-50 p-3 sm:grid-cols-[1fr_auto]">
+          <label className="sr-only" htmlFor="destination-search">
+            Search destination
+          </label>
+          <input
+            id="destination-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search any destination in Pakistan or worldwide..."
+            className="min-h-12 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+          />
+          <button
+            type="submit"
+            disabled={searching}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-emerald-600 disabled:opacity-60"
+          >
+            <Search size={16} />
+            {searching ? "Searching" : "Search"}
+          </button>
+        </form>
+
+        <div className="mt-4 grid gap-3">
+          {locationError && <StatusMessage tone="warning">{locationError}</StatusMessage>}
+          {routeError && <StatusMessage tone="error">{routeError}</StatusMessage>}
+          {scoresError && <StatusMessage tone="warning">{scoresError}</StatusMessage>}
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Selected destination</p>
+            <h2 className="mt-1 text-2xl font-black text-slate-950">{destinationLabel}</h2>
+          </div>
+          <p className="text-sm font-bold text-slate-700">
+            {locationLoading ? "Locating you..." : location ? `Accuracy ${location.accuracy ?? 0} m` : "Location pending"}
+          </p>
+        </div>
+        <SafetyLeafletRouteMap userLocation={location} destination={destination} route={route} />
+      </section>
+
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Weather</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">{destination?.name || "Current location"}</h2>
+            </div>
+            <CloudSun className="text-emerald-600" size={28} />
+          </div>
+
+          {weatherLoading && !weather ? (
+            <div className="h-40 rounded-2xl bg-slate-50 p-6 text-sm font-black text-slate-700">Loading weather...</div>
+          ) : weather ? (
+            <>
+              <div className="flex items-end gap-3">
+                <p className="font-mono text-6xl font-black text-slate-950">{weather.temperature}C</p>
+                <p className="mb-2 text-sm font-black capitalize text-slate-700">{weather.condition}</p>
               </div>
-            )}
+              <p className="mt-2 flex items-center gap-2 text-sm font-bold text-slate-700">
+                <Thermometer size={16} className="text-emerald-600" />
+                Feels like {weather.feelsLike}C
+              </p>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <InfoBox label="Humidity" value={`${weather.humidity}%`} />
+                <InfoBox label="Wind" value={`${weather.windSpeedKmh} km/h`} />
+                <InfoBox label="Visibility" value={`${weather.visibilityKm} km`} />
+                <InfoBox label="Updated" value={formatTime(weather.updatedAt)} />
+              </div>
+            </>
+          ) : (
+            <StatusMessage tone="warning">{weatherError || "Weather data will appear after location or destination is available."}</StatusMessage>
+          )}
+        </article>
 
-            {/* Info grid */}
-            <div style={{
-              background: "rgba(0,0,0,0.3)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              padding: "20px 24px",
-              borderRadius: 16,
-              marginBottom: 28,
-              textAlign: "left",
-              display: "flex",
-              flexDirection: "column",
-              gap: 16,
-            }}>
+        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Safety scores</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">{scores.destination}</h2>
+            </div>
+            {scoresLoading ? <RefreshCw className="animate-spin text-emerald-600" /> : <ShieldCheck className="text-emerald-600" />}
+          </div>
+          <div className="space-y-5">
+            <ScoreBar label="Overall Safety Score" value={scores.overallSafetyScore} tone="green" />
+            <ScoreBar label="Weather Risk Factor" value={scores.weatherRiskFactor} tone="amber" />
+            <ScoreBar label="Crime Risk" value={scores.crimeRisk} tone="red" />
+            <ScoreBar label="Terrain Difficulty" value={scores.terrainDifficulty} tone="orange" />
+            <ScoreBar label="Accessibility Score" value={scores.accessibilityScore} tone="blue" />
+          </div>
+          <p className="mt-6 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">
+            Updated {formatTime(scores.lastUpdated)}
+          </p>
+        </article>
+
+        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Route information</p>
+              <h2 className="mt-1 text-xl font-black text-slate-950">Live route</h2>
+            </div>
+            <Route className="text-emerald-600" size={28} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <InfoBox label="Distance" value={route ? `${route.distanceKm} km` : "--"} />
+            <InfoBox label="Duration" value={route ? `${route.durationMinutes} min` : "--"} />
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="flex items-center gap-2 text-sm font-black text-slate-950">
+                <Gauge size={16} className="text-emerald-600" />
+                Journey progress
+              </span>
+              <span className="font-mono text-sm font-black text-slate-950">{progress}%</span>
+            </div>
+            <div className="h-3 overflow-hidden rounded-md bg-white">
+              <div className="h-full rounded-md bg-emerald-500 transition-all duration-700" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={startTracking}
+            disabled={!destination || !route || !location || savingTrip || tracking}
+            className="mt-6 inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {tracking ? <Activity size={16} /> : <LocateFixed size={16} />}
+            {tracking ? "Tracking active" : savingTrip ? "Saving trip" : "Start live tracking"}
+          </button>
+
+          <div className="mt-5 space-y-2 text-sm font-bold text-slate-700">
+            <p className="flex items-center gap-2">
+              <Navigation size={15} className="text-emerald-600" />
+              Origin: {location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : "Waiting for GPS"}
+            </p>
+            <p className="flex items-center gap-2">
+              <Compass size={15} className="text-red-500" />
+              Destination: {destination ? `${destination.lat.toFixed(4)}, ${destination.lng.toFixed(4)}` : "Not selected"}
+            </p>
+          </div>
+        </article>
+      </section>
+
+      {sosOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-red-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
-                  COORDINATES {locationSource === "fallback" ? "(Approximate Region)" : "(GPS Accurate)"}
-                </span>
-                <span style={{ fontFamily: "monospace", fontSize: 16, color: "#14d2be", fontWeight: 700 }}>
-                  {location?.lat?.toFixed(6) ?? "—"}, {location?.lng?.toFixed(6) ?? "—"}
-                </span>
+                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                  <ShieldAlert size={24} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-950">SOS Alert Ready</h2>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
+                  Your current location has been captured for emergency sharing.
+                </p>
+                {sosStatus && <p className="mt-3 text-sm font-black text-red-600">{sosStatus}</p>}
               </div>
-
-              <div>
-                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>EMERGENCY CONTACTS</span>
-                <span style={{ fontSize: 14, color: "#fff" }}>Rescue 1122 &nbsp;·&nbsp; Northern Police &nbsp;·&nbsp; Family (Primary)</span>
-              </div>
-
-              <div>
-                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>STATUS</span>
-                <span style={{ fontSize: 14, color: "#10b981", fontWeight: 600 }}>
-                  📡 Signal Dispatched via Emergency Network
-                </span>
-              </div>
-
-              <div>
-                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>TIME SENT</span>
-                <span style={{ fontSize: 14, color: "#fff" }}>
-                  {new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSosOpen(false)}
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                aria-label="Close SOS alert"
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            {/* Dismiss button — teal outline style like landing page CTA */}
-            <button
-              onClick={() => { setSosActive(false); setGeoError(null); }}
-              style={{
-                width: "100%",
-                padding: "14px",
-                borderRadius: 100,
-                border: "1px solid rgba(255,255,255,0.2)",
-                background: "rgba(255,255,255,0.07)",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 15,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                backdropFilter: "blur(8px)",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.12)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
-            >
-              ✓ Dismiss Signal
-            </button>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-600">Current coordinates</p>
+              <p className="mt-2 font-mono text-lg font-black text-slate-950">
+                {location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : "Location unavailable"}
+              </p>
+              {locationError && <p className="mt-2 text-xs font-bold text-amber-700">{locationError}</p>}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-600">Emergency contact</p>
+              <p className="mt-2 font-mono text-lg font-black text-slate-950">
+                {profile?.emergency_phone || profile?.phone || "Not set"}
+              </p>
+              <p className="mt-2 text-xs font-bold text-red-700">
+                Browsers cannot silently send SMS. Use the prepared SMS button to send the SOS signal to this number.
+              </p>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {(profile?.emergency_phone || profile?.phone) && (
+                <>
+                  <a
+                    href={`sms:${profile.emergency_phone || profile.phone}?body=${encodeURIComponent(location ? `SmartTour SOS: I need help. My location is ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}.` : "SmartTour SOS: I need help. My location is unavailable.")}`}
+                    className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-red-500 px-5 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-red-600"
+                  >
+                    Send SOS Signal
+                  </a>
+                  <a
+                    href={`tel:${profile.emergency_phone || profile.phone}`}
+                    className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-red-200 bg-white px-5 text-xs font-black uppercase tracking-[0.16em] text-red-600 transition hover:bg-red-50"
+                  >
+                    Call Contact
+                  </a>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setSosOpen(false)}
+                className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-5 text-xs font-black uppercase tracking-[0.16em] text-slate-700 transition hover:bg-slate-100 sm:col-span-2"
+              >
+                Dismiss SOS panel
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      {/* ── Safety Content ── */}
-      <div className="grid-2" style={{ gap: 24, marginBottom: 28 }}>
-
-        {/* Safety Scores */}
-        <div className="card">
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>📊 Safety Scores by Destination</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {zones.map(zone => (
-              <div key={zone.area}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 14 }}>
-                  <span style={{ fontWeight: 600 }}>{zone.area}</span>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ fontWeight: 800, color: zone.color || "var(--teal)" }}>{zone.score}/100</span>
-                    <span className="badge" style={{ fontSize: 10, background: `${zone.color || "var(--teal)"}20`, color: zone.color || "var(--teal)", border: `1px solid ${zone.color || "var(--teal)"}40`, padding: "2px 8px" }}>{zone.status}</span>
-                  </div>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${zone.score}%`, background: zone.color || "var(--teal)" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Risk Alerts */}
-        <div className="card">
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>⚠️ Active Risk Alerts</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {alerts.length === 0 ? (
-              <div className="alert alert-success" style={{ fontSize: 13 }}>
-                ✅ No active critical risks reported in your regions.
-              </div>
-            ) : (
-              alerts.map(r => (
-                <div key={r.id} className={`alert alert-${r.severity === 'high' ? 'danger' : r.severity === 'medium' ? 'warning' : 'info'}`} style={{ flexDirection: "column", gap: 6 }}>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center", fontWeight: 700, fontSize: 14 }}>
-                    <span style={{ fontSize: 20 }}>⚠️</span>
-                    <span>{r.area}: {r.type}</span>
-                  </div>
-                  <div style={{ fontSize: 13, opacity: 0.85 }}>{r.description}</div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Map Placeholder */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>🗺️ Interactive Safety Map</h2>
-        <div style={{ height: 360, borderRadius: "var(--radius-lg)", background: "var(--bg-secondary)", border: "1px solid var(--border)", position: "relative", overflow: "hidden" }}>
-          <svg viewBox="0 0 600 400" style={{ width: "100%", height: "100%", opacity: 0.25 }}>
-            <path d="M100 200 L200 100 L350 80 L450 150 L500 250 L400 320 L250 350 L150 300 Z" fill="var(--teal)" stroke="var(--border)" strokeWidth="2" />
-            <circle cx="200" cy="150" r="12" fill="var(--emerald)" opacity="0.9" />
-            <circle cx="350" cy="120" r="10" fill="var(--emerald)" opacity="0.9" />
-            <circle cx="300" cy="200" r="10" fill="var(--gold)" opacity="0.9" />
-            <circle cx="150" cy="250" r="8" fill="var(--emerald)" opacity="0.9" />
-          </svg>
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12 }}>
-            <div style={{ fontSize: 48 }}>🗺️</div>
-            <div style={{ fontWeight: 700, fontSize: 18, color: "var(--text-primary)" }}>Interactive Safety Map</div>
-            <div style={{ fontSize: 14, color: "var(--text-muted)" }}>Google Maps integration ready for production</div>
-            <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
-              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--emerald)", display: "inline-block" }} /> Safe</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--gold)", display: "inline-block" }} /> Moderate</span>
-              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}><span style={{ width: 12, height: 12, borderRadius: "50%", background: "var(--rose)", display: "inline-block" }} /> Unsafe</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Safety Tips */}
-      <div className="card">
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>💡 Safety Tips for Northern Pakistan</h2>
-        <div className="grid-3">
-          {[
-            { icon: "🏥", tip: "Carry a first-aid kit and altitude sickness medication (Diamox)" },
-            { icon: "📱", tip: "Download offline maps before traveling. Signal is scarce in valleys." },
-            { icon: "🌡️", tip: "Night temperatures can drop to -10°C even in summer at high altitudes." },
-            { icon: "💧", tip: "Carry water purification tablets. Drink only purified water." },
-            { icon: "🚗", tip: "Hire experienced local drivers familiar with mountain terrain." },
-            { icon: "📞", tip: "Share your itinerary with family. Register with local police if trekking." },
-          ].map((t, i) => (
-            <div key={i} style={{ padding: "14px 16px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>{t.icon}</span>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>{t.tip}</p>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

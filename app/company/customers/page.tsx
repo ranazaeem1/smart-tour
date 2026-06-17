@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { fetchBookings, fetchCompanyByOwner } from "@/lib/db";
 import { formatPKR } from "@/lib/data";
+import { Calendar, CheckCircle2, History, Mail, MessageSquare, Phone, Search, Users, Wallet } from "lucide-react";
 
 interface CustomerData {
   name: string;
@@ -14,10 +16,34 @@ interface CustomerData {
   status: string;
 }
 
+function StatCard({ label, value, icon: Icon, tone }: { label: string; value: React.ReactNode; icon: any; tone: string }) {
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all relative overflow-hidden">
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <span className={`absolute top-5 right-5 h-2 w-2 rounded-full ${tone.includes("emerald") ? "bg-emerald-500" : tone.includes("amber") ? "bg-amber-500" : "bg-slate-900"}`} />
+      <p className="mt-7 text-3xl font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+    </div>
+  );
+}
+
+function DetailTile({ icon: Icon, label, value }: { icon: any; label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 min-w-0">
+      <Icon size={15} className="text-emerald-500 mb-3" />
+      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="mt-1 text-sm font-black text-slate-800 truncate">{value}</p>
+    </div>
+  );
+}
+
 export default function CompanyCustomersPage() {
   const { profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<CustomerData[]>([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -25,34 +51,29 @@ export default function CompanyCustomersPage() {
       setLoading(true);
       try {
         const company = await fetchCompanyByOwner(profile.id);
-        if (company) {
-          const bookings = await fetchBookings({ companyId: company.id });
-          
-          // Aggregate bookings by user
-          const userMap: Record<string, CustomerData> = {};
-          
-          bookings.forEach((b: any) => {
-            const userId = b.user_id;
-            if (!userMap[userId]) {
-              userMap[userId] = {
-                name: b.profiles?.full_name || "Unknown User",
-                email: b.profiles?.email || "N/A",
-                phone: b.profiles?.phone || "N/A",
-                tours: 0,
-                spent: 0,
-                lastBooking: b.created_at,
-                status: "active"
-              };
-            }
-            userMap[userId].tours += 1;
-            userMap[userId].spent += b.total_price || 0;
-            if (new Date(b.created_at) > new Date(userMap[userId].lastBooking)) {
-              userMap[userId].lastBooking = b.created_at;
-            }
-          });
-          
-          setCustomers(Object.values(userMap).sort((a, b) => b.spent - a.spent));
-        }
+        if (!company) return;
+        const bookings = await fetchBookings({ companyId: company.id });
+        const userMap: Record<string, CustomerData> = {};
+
+        bookings.forEach((booking: any) => {
+          const userId = booking.user_id;
+          if (!userMap[userId]) {
+            userMap[userId] = {
+              name: booking.profiles?.full_name || "Unknown User",
+              email: booking.profiles?.email || "N/A",
+              phone: booking.profiles?.phone || "N/A",
+              tours: 0,
+              spent: 0,
+              lastBooking: booking.created_at,
+              status: "active",
+            };
+          }
+          userMap[userId].tours += 1;
+          userMap[userId].spent += booking.total_price || 0;
+          if (new Date(booking.created_at) > new Date(userMap[userId].lastBooking)) userMap[userId].lastBooking = booking.created_at;
+        });
+
+        setCustomers(Object.values(userMap).sort((a, b) => b.spent - a.spent));
       } catch (err) {
         console.error("Failed to load customers:", err);
       } finally {
@@ -62,78 +83,89 @@ export default function CompanyCustomersPage() {
     if (!authLoading) load();
   }, [profile, authLoading]);
 
-  if (loading || authLoading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
-      <span className="loading-spinner" />
-    </div>
+  const filtered = useMemo(
+    () => customers.filter(customer => `${customer.name} ${customer.email} ${customer.phone}`.toLowerCase().includes(search.toLowerCase())),
+    [customers, search]
   );
+  const totalValue = customers.reduce((sum, customer) => sum + customer.spent, 0);
+
+  if (loading || authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading customers...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade space-y-8 pb-20" role="main">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
         <div>
-          <div style={{ fontSize:13,color:"var(--text-muted)",marginBottom:4 }}>Company Panel</div>
-          <h1 className="topbar-title">👥 Customers</h1>
-        </div>
-        <div className="topbar-actions">
-          <span className="badge badge-teal">{customers.length} Customers</span>
-        </div>
-      </div>
-
-      <div className="grid-3" style={{ marginBottom:24 }}>
-        {[
-          { label:"Total Customers", value:customers.length, color:"var(--teal)", icon:"👥" },
-          { label:"Frequent Travelers", value:customers.filter(c=>c.tours > 1).length, color:"var(--emerald)", icon:"✅" },
-          { label:"Total Customer Value", value:formatPKR(customers.reduce((s,c)=>s+c.spent,0)), color:"var(--gold)", icon:"💰" },
-        ].map(s=>(
-          <div key={s.label} className="stat-card">
-            <div style={{ fontSize:22 }}>{s.icon}</div>
-            <div className="stat-value" style={{ color:s.color }}>{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+          <div className="flex items-center gap-2 text-emerald-500 mb-2">
+            <Users size={14} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Customer Registry</span>
           </div>
-        ))}
+          <h1 className="text-2xl font-black text-slate-950">Customers</h1>
+        </div>
+
+        <div className="relative w-full xl:w-96">
+          <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className="input !pl-12 !py-4 !rounded-2xl !bg-white font-black" placeholder="Search customer, email, phone..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
       </div>
 
-      <div className="card" style={{ padding:0 }}>
-        {customers.length === 0 ? (
-          <div style={{ padding: 60, textAlign: "center", color: "var(--text-muted)" }}>
-            No customer data available. Customers will appear here once they book your tours.
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard label="Total Customers" value={customers.length} icon={Users} tone="bg-emerald-50 text-emerald-500" />
+        <StatCard label="Repeat Travelers" value={customers.filter(c => c.tours > 1).length} icon={CheckCircle2} tone="bg-slate-100 text-slate-900" />
+        <StatCard label="Lifetime Value" value={formatPKR(totalValue)} icon={Wallet} tone="bg-amber-50 text-amber-500" />
+        <StatCard label="Avg Customer" value={customers.length ? formatPKR(Math.round(totalValue / customers.length)) : "PKR 0"} icon={History} tone="bg-slate-100 text-slate-900" />
+      </div>
+
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        {filtered.length === 0 ? (
+          <div className="py-24 text-center">
+            <Users size={42} className="mx-auto text-slate-300 mb-4" />
+            <h2 className="text-xl font-black text-slate-950">No customers found</h2>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">Customer records appear after bookings.</p>
           </div>
         ) : (
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr><th>Customer</th><th>Contact</th><th>Tours Taken</th><th>Total Spent</th><th>Last Booking</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {customers.map((c,i)=>(
-                  <tr key={i}>
-                    <td>
-                      <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                        <div className="avatar" style={{ width:34,height:34,fontSize:13,flexShrink:0 }}>{c.name.charAt(0)}</div>
-                        <div style={{ fontWeight:600 }}>{c.name}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ fontSize:13 }}>{c.email}</div>
-                      <div style={{ fontSize:12,color:"var(--text-muted)" }}>{c.phone}</div>
-                    </td>
-                    <td style={{ fontWeight:700,color:"var(--teal)" }}>{c.tours}</td>
-                    <td style={{ fontWeight:700,color:"var(--gold)" }}>{formatPKR(c.spent)}</td>
-                    <td style={{ color:"var(--text-secondary)",fontSize:13 }}>{new Date(c.lastBooking).toLocaleDateString()}</td>
-                    <td>
-                      <div style={{ display:"flex",gap:6 }}>
-                        <button className="btn btn-secondary btn-sm">View History</button>
-                        <button className="btn btn-secondary btn-sm">📧 Message</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {filtered.map((customer, index) => (
+              <article key={`${customer.email}-${index}`} className="rounded-3xl border border-slate-200 bg-white p-5 md:p-6 hover:shadow-xl transition-all">
+                <div className="flex flex-col xl:flex-row xl:items-center gap-5">
+                  <div className="flex items-center gap-4 min-w-0 xl:w-72">
+                    <div className="h-12 w-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-slate-950">
+                      {customer.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-black text-slate-950 truncate">{customer.name}</h3>
+                      <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-emerald-500">{customer.status}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 flex-1">
+                    <DetailTile icon={Mail} label="Email" value={customer.email} />
+                    <DetailTile icon={Phone} label="Phone" value={customer.phone} />
+                    <DetailTile icon={CheckCircle2} label="Tours" value={`${customer.tours} booked`} />
+                    <DetailTile icon={Wallet} label="Spent" value={formatPKR(customer.spent)} />
+                    <DetailTile icon={Calendar} label="Last Booking" value={new Date(customer.lastBooking).toLocaleDateString()} />
+                  </div>
+
+                  <div className="flex gap-2 xl:justify-end">
+                    <button className="h-11 w-11 rounded-2xl bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-950 hover:text-white transition-all" aria-label="View history">
+                      <History size={16} className="mx-auto" />
+                    </button>
+                    <button className="h-11 w-11 rounded-2xl bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-950 hover:text-white transition-all" aria-label="Message customer">
+                      <MessageSquare size={16} className="mx-auto" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

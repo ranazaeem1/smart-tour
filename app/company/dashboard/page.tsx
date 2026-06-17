@@ -1,361 +1,170 @@
-/**
- * @file page.tsx
- * @description Company Dashboard. The main operational interface for tour operators.
- * Allows tour companies to view their performance metrics, manage their tours, and track bookings.
- * @author Smart Tour Team
- * @dependencies react, next/link, @/components/AuthProvider, @/lib/db
- */
-
-// ==========================================
-// Imports
-// ==========================================
 "use client";
-import Link from "next/link";
+
 import { useEffect, useState } from "react";
-import { formatPKR, getStatusColor } from "@/lib/data";
-import { fetchTours, fetchBookings, fetchReviews, fetchRevenueStats, fetchCompanyByOwner } from "@/lib/db";
+import Link from "next/link";
+import { Activity, Building2, ChevronRight, ClipboardList, Mountain, Plus, Search, Star, Wallet } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { NotificationBell } from "@/components/shared/NotificationBell";
+import { fetchBookings, fetchCompanyByOwner, fetchRevenueStats, fetchReviews, fetchTours } from "@/lib/db";
+import { formatPKR } from "@/lib/data";
+import { PerformanceOverview } from "@/components/company/PerformanceOverview";
+import { SentimentAnalysis } from "@/components/company/SentimentAnalysis";
+import { TourCatalog } from "@/components/company/TourCatalog";
+import { RecentExpeditions } from "@/components/company/RecentExpeditions";
 
-// ==========================================
-// Constants & Mock Data
-// ==========================================
-
-
-// ==========================================
-// Component: CompanyDashboard
-// ==========================================
-
-/**
- * CompanyDashboard Component
- * Renders the tour operator's performance dashboard.
- * 
- * @returns {JSX.Element} The rendered company dashboard
- */
 export default function CompanyDashboard() {
-  // ==========================================
-  // Hooks & Context
-  // ==========================================
   const { profile, loading: authLoading } = useAuth();
-
-  // ==========================================
-  // State Management
-  // ==========================================
   const [loading, setLoading] = useState(true);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [tours, setTours] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [bookings, setBookings] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [reviews, setReviews] = useState<any[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [revenueStats, setRevenueStats] = useState<any[]>([]);
 
-  // ==========================================
-  // Effects
-  // ==========================================
-
-  /**
-   * Initializes company-specific data after the user profile is loaded.
-   */
   useEffect(() => {
     async function loadData() {
-      if (!authLoading && !profile) {
-        setLoading(false);
-        return;
-      }
+      if (!profile?.id) return;
 
-      if (profile?.id) {
-        setLoading(true);
-        try {
-          const companyProfile = await fetchCompanyByOwner(profile.id);
-          if (companyProfile) {
-            const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
-              fetchTours({ companyId: companyProfile.id }),
-              fetchBookings({ companyId: companyProfile.id }),
-              fetchReviews(),
-              fetchRevenueStats()
-            ]);
-            setTours(fetchedTours);
-            setBookings(fetchedBookings);
-            setReviews(fetchedReviews.slice(0, 3));
-            setRevenueStats(fetchedRevenue);
-          }
-        } catch (err) {
-          console.error("Dashboard load error:", err);
-        } finally {
-          setLoading(false);
+      setLoading(true);
+      try {
+        const companyProfile = await fetchCompanyByOwner(profile.id);
+        if (companyProfile) {
+          const [fetchedTours, fetchedBookings, fetchedReviews, fetchedRevenue] = await Promise.all([
+            fetchTours({ companyId: companyProfile.id }),
+            fetchBookings({ companyId: companyProfile.id }),
+            fetchReviews(),
+            fetchRevenueStats(companyProfile.id),
+          ]);
+          setTours(fetchedTours || []);
+          setBookings(fetchedBookings || []);
+          setReviews((fetchedReviews || []).slice(0, 3));
+          setRevenueStats(fetchedRevenue || []);
         }
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+      } finally {
+        setLoading(false);
       }
     }
+
     loadData();
-  }, [profile, authLoading]);
+  }, [profile]);
 
-  // ==========================================
-  // Computed Properties
-  // ==========================================
+  if (loading || authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4" role="status" aria-live="polite">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-[var(--muted-foreground)] font-black uppercase tracking-widest text-[10px]">Initializing Operational Hub...</p>
+      </div>
+    );
+  }
 
-  // Performance metrics calculations
-  const activeTours = tours.filter(t => t.available).length;
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_price || b.totalPrice || 0), 0);
-  const avgRating = tours.length ? (tours.reduce((sum, t) => sum + (t.rating || 0), 0) / tours.length).toFixed(1) : "0.0";
+  const activeTours = tours.filter(tour => tour.available).length;
+  const totalRevenue = revenueStats.reduce((sum, month) => sum + (month.revenue || 0), 0);
+  const avgRating = tours.length ? (tours.reduce((sum, tour) => sum + (tour.rating || 0), 0) / tours.length).toFixed(1) : "0.0";
 
-  const COMPANY_STATS = [
-    { value: activeTours.toString(), label: "Active Tours", color: "var(--teal)", icon: "🏔️" },
-    { value: bookings.length.toString(), label: "Total Bookings", color: "var(--purple-light)", icon: "📋" },
-    { value: formatPKR(totalRevenue), label: "Total Revenue", color: "var(--gold)", icon: "💰" },
-    { value: `${avgRating}★`, label: "Avg. Rating", color: "var(--emerald)", icon: "⭐" },
+  const stats = [
+    { label: "Active Packages", value: activeTours, icon: <Mountain size={20} />, color: "#10B981", bg: "bg-emerald-50" },
+    { label: "Reservations", value: bookings.length, icon: <ClipboardList size={20} />, color: "#0F172A", bg: "bg-slate-100" },
+    { label: "Net Revenue", value: formatPKR(totalRevenue), icon: <Wallet size={20} />, color: "#3B82F6", bg: "bg-blue-50" },
+    { label: "Average Rating", value: avgRating, icon: <Star size={20} />, color: "#F59E0B", bg: "bg-amber-50" },
   ];
 
-  const maxRevenue = revenueStats.length ? Math.max(...revenueStats.map(m => m.revenue)) : 1;
-
-  // Provide fallback name if profile details are missing
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const companyName = profile?.full_name || (profile as any)?.company_name || "Company Profile";
-  const initials = companyName.substring(0, 2).toUpperCase();
-
-  // Compute real sentiment breakdown from actual reviews
   const totalReviews = reviews.length;
-  const posCount = reviews.filter((r: any) => r.sentiment === 'positive').length;
-  const neutralCount = reviews.filter((r: any) => r.sentiment === 'neutral').length;
-  const negCount = reviews.filter((r: any) => r.sentiment === 'negative').length;
-  const SENTIMENT_DATA = [
-    { label: 'Positive', value: totalReviews ? Math.round((posCount / totalReviews) * 100) : 0, color: 'var(--emerald)' },
-    { label: 'Neutral', value: totalReviews ? Math.round((neutralCount / totalReviews) * 100) : 0, color: 'var(--gold)' },
-    { label: 'Negative', value: totalReviews ? Math.round((negCount / totalReviews) * 100) : 0, color: 'var(--rose)' },
+  const positiveReviews = reviews.filter((review: any) => review.sentiment === "positive").length;
+  const neutralReviews = reviews.filter((review: any) => review.sentiment === "neutral").length;
+  const negativeReviews = reviews.filter((review: any) => review.sentiment === "negative").length;
+  const sentimentData = [
+    { label: "Positive", value: totalReviews ? Math.round((positiveReviews / totalReviews) * 100) : 0, color: "#10B981" },
+    { label: "Neutral", value: totalReviews ? Math.round((neutralReviews / totalReviews) * 100) : 0, color: "#F59E0B" },
+    { label: "Negative", value: totalReviews ? Math.round((negativeReviews / totalReviews) * 100) : 0, color: "#EF4444" },
   ];
-  const positivePercent = SENTIMENT_DATA[0].value;
-
-  // ==========================================
-  // JSX Return
-  // ==========================================
-
-  // Loading indicator
-  if (loading) return <div style={{ display: "flex", justifyContent: "center", padding: 60 }}><span className="loading-spinner" /></div>;
 
   return (
-    <div className="animate-fade">
-      {/* 
-        ================================================================
-        Header Section
-        ================================================================
-      */}
-      <div className="topbar" style={{
-        position: "relative",
-        margin: "-28px -32px 28px",
-        padding: "32px",
-        overflow: "hidden",
-        borderBottom: "1px solid rgba(255,255,255,0.1)"
-      }}>
-        {/* Background Overlays */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('/images/sunset-bg.png')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.75)", zIndex: 0 }}></div>
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 100%)", zIndex: 1 }}></div>
+    <div className="animate-fade space-y-8 pb-20" role="main">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Activity size={16} className="text-emerald-500" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Operational Excellence</span>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight m-0">{profile?.full_name || "Enterprise Hub"}</h1>
+        </div>
 
-        {/* Header Content */}
-        <div style={{ position: "relative", zIndex: 2, display: "flex", width: "100%", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-          <div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>Tour Company Panel</div>
-            <h1 className="topbar-title" style={{ color: "#fff", margin: 0 }}>{companyName}</h1>
+        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+          <div className="relative group w-full lg:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+            <input className="input !pl-12 !py-4 !rounded-2xl !bg-white font-black" placeholder="Search operations..." readOnly />
           </div>
-          <div className="topbar-actions">
-            <span className="badge badge-emerald" style={{ background: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.5)" }}>✅ Verified</span>
-            <Link href="/company/tours/new" className="btn btn-primary" style={{ background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", color: "#111", border: "none" }}>+ Add New Tour</Link>
-            <NotificationBell role="company" userId={profile?.id} companyId={(profile as any)?.company_id} />
-            <div className="avatar" style={{ background: "linear-gradient(135deg, #a1c4fd 0%, #ff9a9e 100%)", color: "#111", border: "none", textShadow: "none" }}>{initials}</div>
-          </div>
+          <Link href="/company/tours/new" className="rounded-2xl bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-emerald-600 transition-all inline-flex items-center justify-center gap-2">
+            <Plus size={16} />
+            Add Tour
+          </Link>
         </div>
       </div>
 
-      {/* 
-        ================================================================
-        Summary Stats Widget
-        ================================================================
-      */}
-      <div className="grid-4" style={{ marginBottom: 28 }}>
-        {COMPANY_STATS.map(s => (
-          <div key={s.label} className="card-glass" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 24 }}>{s.icon}</div>
-            <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
-            <div className="stat-label">{s.label}</div>
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_2fr_auto] gap-6 xl:items-center">
+          <div className="min-w-0">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                <Building2 size={22} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl font-black text-slate-950 truncate m-0">Enterprise Hub</h2>
+                <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Verified Expedition Operator</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <HeroTile icon={<Activity size={16} />} label="Network" value="Synchronized" />
+            <HeroTile icon={<Mountain size={16} />} label="Sector" value="Northern Pakistan" />
+            <HeroTile icon={<Building2 size={16} />} label="Access" value="Corporate" />
+          </div>
+
+          <span className="badge badge-emerald !rounded-full !px-4 !py-1.5 !text-[9px] justify-self-start xl:justify-self-end">Verified</span>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" aria-label="Key Performance Indicators">
+        {stats.map(stat => (
+          <div key={stat.label} className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all">
+            <div className="flex items-start justify-between mb-5">
+              <div className={`p-3 rounded-xl ${stat.bg}`} style={{ color: stat.color }}>
+                {stat.icon}
+              </div>
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: stat.color }} />
+            </div>
+            <div className="text-3xl font-black mb-1 text-slate-950">{stat.value}</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{stat.label}</div>
           </div>
         ))}
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <PerformanceOverview data={revenueStats} />
+        <SentimentAnalysis data={sentimentData} recentReviews={reviews} />
       </div>
 
-      <div className="grid-2" style={{ marginBottom: 28 }}>
-        {/* 
-          ================================================================
-          Revenue Chart Widget
-          ================================================================
-        */}
-        <div className="card-glass">
-          <div className="section-header">
-            <h2 className="section-title">📈 Monthly Revenue</h2>
-            <span className="badge badge-teal">2024</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 160, paddingBottom: 8 }}>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {revenueStats.map((m: any) => (
-              <div key={m.month} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                {/* Dynamic bar graph representing revenue relative to the maximum month */}
-                <div
-                  style={{
-                    width: "100%", borderRadius: "4px 4px 0 0", background: "var(--gradient-main)", opacity: 0.85,
-                    height: `${(m.revenue / maxRevenue) * 140}px`, transition: "height 0.5s ease", minHeight: 4
-                  }}
-                  title={formatPKR(m.revenue)}
-                />
-                <div style={{ fontSize: 9, color: "var(--text-muted)", transform: "rotate(-45deg)" }}>{m.month}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <section className="space-y-5">
+        <TourCatalog tours={tours} />
+        <RecentExpeditions bookings={bookings} />
+      </section>
 
-        {/* 
-          ================================================================
-          Review Sentiment Widget
-          ================================================================
-        */}
-        <div className="card-glass">
-          <div className="section-header">
-            <h2 className="section-title">💬 Review Sentiment</h2>
-            <Link href="/company/reviews" className="btn btn-ghost btn-sm">All Reviews</Link>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 32, marginBottom: 24 }}>
-            {/* SVG Donut Chart */}
-            <div style={{ position: "relative", width: 120, height: 120, flexShrink: 0 }}>
-              <svg width="120" height="120" viewBox="0 0 120 120">
-                {(() => {
-                  let offset = 0;
-                  const circumference = 2 * Math.PI * 45;
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  return SENTIMENT_DATA.map((s: any) => {
-                    const dashLen = (s.value / 100) * circumference;
-                    const el = (
-                      <circle key={s.label} cx="60" cy="60" r="45" fill="none" stroke={s.color} strokeWidth="18"
-                        strokeDasharray={`${dashLen} ${circumference - dashLen}`}
-                        strokeDashoffset={-offset} transform="rotate(-90 60 60)" opacity="0.85" />
-                    );
-                    offset += dashLen;
-                    return el;
-                  });
-                })()}
-                {/* Center Chart Labels */}
-                <text x="60" y="55" textAnchor="middle" fontSize="18" fontWeight="800" fill="var(--teal)">{positivePercent}%</text>
-                <text x="60" y="72" textAnchor="middle" fontSize="9" fill="var(--text-muted)">Positive</text>
-              </svg>
-            </div>
-
-            {/* Legend / Detailed Breakdown */}
-            <div style={{ flex: 1 }}>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {SENTIMENT_DATA.map((s: any) => (
-                <div key={s.label} style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
-                    <span style={{ color: "var(--text-secondary)" }}>{s.label}</span>
-                    <span style={{ fontWeight: 700, color: s.color }}>{s.value}%</span>
-                  </div>
-                  <div className="progress-bar"><div className="progress-fill" style={{ width: `${s.value}%`, background: s.color }} /></div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recent Reviews Snapshot */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {reviews.map(r => (
-              <div key={r.id} style={{ padding: "10px 14px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{r.profiles?.full_name || r.userName || "User"}</span>
-                  <span className={`badge ${getStatusColor(r.sentiment)}`} style={{ fontSize: 10 }}>{r.sentiment || 'neutral'}</span>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>&quot;{(r.comment || "").slice(0, 80)}...&quot;</div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="flex justify-center pt-6">
+        <Link href="/company/settings" className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-950 hover:text-white transition-all inline-flex items-center gap-2 group">
+          Company Profile Management <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+        </Link>
       </div>
+    </div>
+  );
+}
 
-      {/* 
-        ================================================================
-        My Tours Table
-        ================================================================
-      */}
-      <div className="card-glass" style={{ marginBottom: 24 }}>
-        <div className="section-header">
-          <h2 className="section-title">🏔️ My Tour Packages</h2>
-          <Link href="/company/tours" className="btn btn-ghost btn-sm">Manage All</Link>
-        </div>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr><th>Tour</th><th>Destination</th><th>Price</th><th>Duration</th><th>Rating</th><th>Safety</th><th>Status</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              {tours.slice(0, 4).map(t => (
-                <tr key={t.id}>
-                  <td style={{ fontWeight: 600 }}>{t.title}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{t.destination}</td>
-                  <td style={{ color: "var(--teal)", fontWeight: 700 }}>{formatPKR(t.price)}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{t.duration}d</td>
-                  <td><span style={{ color: "var(--gold)", fontWeight: 700 }}>⭐ {t.rating}</span></td>
-                  <td><span style={{ color: "var(--emerald)", fontWeight: 700 }}>{t.safety_score || t.safetyScore || 85}%</span></td>
-                  <td><span className={`badge ${t.available ? "badge-emerald" : "badge-rose"}`}>{t.available ? "Active" : "Inactive"}</span></td>
-                  <td style={{ display: "flex", gap: 6 }}>
-                    <Link href={`/company/tours/new?edit=${t.id}`} className="btn btn-secondary btn-sm">✏️</Link>
-                  </td>
-                </tr>
-              ))}
-              {tours.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: "30px 0", color: "var(--text-muted)" }}>
-                    No tours found. Create your first tour package!
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 
-        ================================================================
-        Recent Bookings Table
-        ================================================================
-      */}
-      <div className="card-glass">
-        <div className="section-header">
-          <h2 className="section-title">📋 Recent Bookings</h2>
-          <Link href="/company/bookings" className="btn btn-ghost btn-sm">View All</Link>
-        </div>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr><th>Customer</th><th>Tour</th><th>Date</th><th>Group</th><th>Total</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {bookings.slice(0, 4).map(b => (
-                <tr key={b.id}>
-                  <td style={{ fontWeight: 600 }}>{b.profiles?.full_name || b.userName || "User"}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{b.tours?.title || b.tourTitle || "Tour"}</td>
-                  <td style={{ color: "var(--text-secondary)" }}>{b.travel_date || b.date}</td>
-                  <td>{b.group_size || b.groupSize} pax</td>
-                  <td style={{ color: "var(--teal)", fontWeight: 700 }}>{formatPKR(b.total_price || b.totalPrice)}</td>
-                  <td><span className={`badge ${getStatusColor(b.status)}`}>{b.status}</span></td>
-                </tr>
-              ))}
-              {bookings.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "30px 0", color: "var(--text-muted)" }}>
-                    No recent bookings.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+function HeroTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4 min-w-0">
+      <div className="text-emerald-500 mb-2">{icon}</div>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+      <p className="text-sm font-bold text-slate-700 truncate">{value}</p>
     </div>
   );
 }

@@ -8,6 +8,7 @@
 
 // ==========================================
 // Imports
+import { Mountain } from "lucide-react";
 // ==========================================
 import Link from "next/link";
 
@@ -29,7 +30,7 @@ export default function NotFound() {
   // ==========================================
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 20, textAlign: "center" }}>
-      <div style={{ fontSize: 80, marginBottom: 20 }}>🏔️</div>
+      <Mountain size={80} style={{ marginBottom: 20, color: "var(--emerald)" }} />
       <h1 style={{ fontSize: 40, fontWeight: 800, marginBottom: 10 }}>404</h1>
       <h2 style={{ fontSize: 24, marginBottom: 20, color: "var(--text-secondary)" }}>Lost in the mountains?</h2>
       <p style={{ color: "var(--text-muted)", marginBottom: 40 }}>The page you are looking for doesn't exist or has been moved.</p>

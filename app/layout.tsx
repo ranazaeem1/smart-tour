@@ -10,6 +10,7 @@
 // Imports
 // ==========================================
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "../styles/globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 
@@ -68,13 +69,53 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // JSX Return
   // ==========================================
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/icon-192.svg" />
+        <Script id="remove-extension-hydration-attrs" strategy="beforeInteractive">
+          {`
+            (() => {
+              const extensionAttributes = ["bis_skin_checked"];
+              const clean = (root) => {
+                if (!root || root.nodeType !== Node.ELEMENT_NODE) return;
+                for (const attr of extensionAttributes) {
+                  if (root.hasAttribute(attr)) root.removeAttribute(attr);
+                }
+                root.querySelectorAll(extensionAttributes.map((attr) => "[" + attr + "]").join(",")).forEach((element) => {
+                  for (const attr of extensionAttributes) element.removeAttribute(attr);
+                });
+              };
+
+              clean(document.documentElement);
+              const observer = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                  if (mutation.type === "attributes") {
+                    clean(mutation.target);
+                    continue;
+                  }
+
+                  mutation.addedNodes.forEach(clean);
+                }
+              });
+
+              observer.observe(document.documentElement, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+                attributeFilter: extensionAttributes,
+              });
+
+              window.addEventListener("load", () => {
+                clean(document.documentElement);
+                window.setTimeout(() => observer.disconnect(), 1000);
+              });
+            })();
+          `}
+        </Script>
       </head>
       {/* Suppress hydration warning to allow client-side extensions (e.g., Grammarly) */}
-      <body suppressHydrationWarning={true}>
+      <body suppressHydrationWarning={true} className="antialiased min-h-screen">
         {/* AuthProvider wraps the app to provide authentication context to all child routes */}
         <AuthProvider>
           {children}
@@ -83,4 +124,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

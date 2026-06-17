@@ -11,8 +11,8 @@ export default function UserDashboardLoading() {
       <div style={{
         width: 44,
         height: 44,
-        border: '3px solid rgba(59,130,246,0.2)',
-        borderTopColor: '#3B82F6',
+        border: '3px solid rgba(255,255,255,0.2)',
+        borderTopColor: '#FFFFFF',
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
       }} />

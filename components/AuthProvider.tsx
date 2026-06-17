@@ -30,6 +30,7 @@ interface AuthContextType {
     email: string;
     full_name: string | null;
     phone: string | null;
+    emergency_phone: string | null;
     role: "user" | "company" | "admin";
     avatar_url: string | null;
   } | null;
@@ -79,36 +80,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const loadProfile = async (authUser: User) => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("profiles")
-        .select("id, email, full_name, phone, role, avatar_url")
+        .select("*") // Fetch all fields including total_budget, verified, etc.
         .eq("id", authUser.id)
-        .maybeSingle(); // Use maybeSingle to avoid throwing on missing row
+        .maybeSingle();
         
       if (data) {
         setProfile(data as AuthContextType["profile"]);
       } else {
         // Fallback if row missing
-        setProfile({
+        const fallback = {
           id: authUser.id,
           email: authUser.email || "",
           full_name: authUser.user_metadata?.full_name || "Traveler",
           phone: authUser.user_metadata?.phone || null,
+          emergency_phone: authUser.user_metadata?.emergency_phone || null,
           role: authUser.user_metadata?.role || "user",
-          avatar_url: null
-        });
+          avatar_url: null,
+          total_budget: 100000,
+          verified: false
+        };
+        setProfile(fallback as any);
       }
     } catch (err) {
       console.error("[loadProfile] Error:", err);
-      // Ensure we don't hang even on error
       setProfile({
         id: authUser.id,
         email: authUser.email || "",
         full_name: authUser.user_metadata?.full_name || "Traveler",
         phone: authUser.user_metadata?.phone || null,
+        emergency_phone: authUser.user_metadata?.emergency_phone || null,
         role: "user",
         avatar_url: null
-      });
+      } as any);
     }
   };
 
@@ -117,47 +122,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * and subscribe to auth state changes (login, logout, token refresh).
    */
   useEffect(() => {
-    async function initAuth() {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error && error.message.includes("Refresh Token Not Found")) {
-          console.warn("Stale session detected, clearing...");
-          await supabase.auth.signOut();
-          setLoading(false);
-          return;
-        }
+    let active = true;
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadProfile(session.user);
-        }
-      } catch (err) {
-        console.error("Auth initialization failed:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    initAuth();
-
-    // Subscribe to ongoing auth state changes
+    // Supabase emits INITIAL_SESSION here, so a separate getSession() call is unnecessary.
+    // Avoiding that parallel auth request prevents browser lock contention in dev.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (_event, session) => {
+        if (!active) return;
+
         setSession(session);
         setUser(session?.user ?? null);
+
         if (session?.user) {
-          await loadProfile(session.user);
+          void loadProfile(session.user).finally(() => {
+            if (active) setLoading(false);
+          });
         } else {
           setProfile(null);
+          setLoading(false);
         }
       }
     );
 
     // Cleanup subscription on unmount
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   /**

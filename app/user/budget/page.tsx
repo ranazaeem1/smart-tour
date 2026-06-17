@@ -1,14 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
-import { formatPKR } from "@/lib/data";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { 
-  fetchUserExpenses, 
-  createUserExpense, 
-  deleteUserExpense, 
-  updateUserExpense, 
-  updateProfileBudget 
-} from "@/lib/db";
+import { createUserExpense, deleteUserExpense, fetchUserExpenses, updateProfileBudget, updateUserExpense } from "@/lib/db";
+import { formatPKR } from "@/lib/data";
+import { AlertCircle, Box, BrainCircuit, Calendar, Car, Edit2, Hotel, Mountain, PieChart, Plus, ShoppingBag, Trash2, TrendingDown, TrendingUp, Utensils, Wallet, X } from "lucide-react";
 
 interface Expense {
   id: string;
@@ -19,13 +15,26 @@ interface Expense {
 }
 
 const CATEGORIES = [
-  { name: "Transport", color: "#14D2BE", icon: "🚗" },
-  { name: "Accommodation", color: "#7C3AED", icon: "🏨" },
-  { name: "Food", color: "#F59E0B", icon: "🍱" },
-  { name: "Activities", color: "#10B981", icon: "🏔️" },
-  { name: "Shopping", color: "#EC4899", icon: "🛍️" },
-  { name: "Miscellaneous", color: "#6B7280", icon: "📦" },
+  { name: "Transport", color: "#0F172A", icon: <Car size={18} /> },
+  { name: "Accommodation", color: "#8B5CF6", icon: <Hotel size={18} /> },
+  { name: "Food", color: "#F59E0B", icon: <Utensils size={18} /> },
+  { name: "Activities", color: "#10B981", icon: <Mountain size={18} /> },
+  { name: "Shopping", color: "#EC4899", icon: <ShoppingBag size={18} /> },
+  { name: "Miscellaneous", color: "#64748B", icon: <Box size={18} /> },
 ];
+
+function StatCard({ label, value, icon: Icon, tone }: { label: string; value: React.ReactNode; icon: any; tone: string }) {
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl hover:shadow-xl transition-all relative overflow-hidden">
+      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center ${tone}`}>
+        <Icon size={20} />
+      </div>
+      <span className={`absolute top-5 right-5 h-2 w-2 rounded-full ${tone.includes("emerald") ? "bg-emerald-500" : tone.includes("amber") ? "bg-amber-500" : tone.includes("rose") ? "bg-rose-500" : "bg-slate-900"}`} />
+      <p className="mt-7 text-3xl font-black text-slate-950">{value}</p>
+      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</p>
+    </div>
+  );
+}
 
 export default function BudgetTracker() {
   const { profile } = useAuth();
@@ -34,24 +43,15 @@ export default function BudgetTracker() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const [newExpense, setNewExpense] = useState({
-    category: "Food",
-    amount: "",
-    description: "",
-  });
+  const [newExpense, setNewExpense] = useState({ category: "Food", amount: "", description: "" });
 
   useEffect(() => {
     async function load() {
       if (!profile) return;
       setLoading(true);
       try {
-        const data = await fetchUserExpenses(profile.id);
-        setExpenses(data as Expense[]);
-        
-        // Use budget from profile if available
-        if ((profile as any).total_budget) {
-          setTotalBudget((profile as any).total_budget);
-        }
+        setExpenses((await fetchUserExpenses(profile.id)) as Expense[]);
+        if ((profile as any).total_budget) setTotalBudget((profile as any).total_budget);
       } catch (err) {
         console.error("Failed to load expenses:", err);
       } finally {
@@ -61,38 +61,22 @@ export default function BudgetTracker() {
     load();
   }, [profile]);
 
-  const handleUpdateBudget = async (val: number) => {
-    setTotalBudget(val);
-    if (profile) {
-      await updateProfileBudget(profile.id, val);
-    }
+  const handleUpdateBudget = async (value: number) => {
+    setTotalBudget(value);
+    if (profile) await updateProfileBudget(profile.id, value);
   };
 
-  const handleAddOrEditExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddOrEditExpense = async (event: FormEvent) => {
+    event.preventDefault();
     if (!newExpense.amount || !profile) return;
+    const updates = { category: newExpense.category, amount: parseFloat(newExpense.amount), description: newExpense.description };
 
     if (editingExpenseId) {
-      const updates = {
-        category: newExpense.category,
-        amount: parseFloat(newExpense.amount),
-        description: newExpense.description,
-      };
       const updated = await updateUserExpense(editingExpenseId, profile.id, updates);
-      if (updated) {
-        setExpenses(prev => prev.map(exp => exp.id === editingExpenseId ? { ...exp, ...updates } : exp));
-      }
+      if (updated) setExpenses(prev => prev.map(expense => (expense.id === editingExpenseId ? { ...expense, ...updates } : expense)));
     } else {
-      const expense = {
-        user_id: profile.id,
-        category: newExpense.category,
-        amount: parseFloat(newExpense.amount),
-        description: newExpense.description,
-      };
-      const created = await createUserExpense(expense);
-      if (created) {
-        setExpenses([created as Expense, ...expenses]);
-      }
+      const created = await createUserExpense({ user_id: profile.id, ...updates });
+      if (created) setExpenses([created as Expense, ...expenses]);
     }
 
     setNewExpense({ category: "Food", amount: "", description: "" });
@@ -100,194 +84,170 @@ export default function BudgetTracker() {
     setShowAddForm(false);
   };
 
-  const handleEditClick = (exp: Expense) => {
-    setNewExpense({
-      category: exp.category,
-      amount: exp.amount.toString(),
-      description: exp.description,
-    });
-    setEditingExpenseId(exp.id);
+  const handleEditClick = (expense: Expense) => {
+    setNewExpense({ category: expense.category, amount: expense.amount.toString(), description: expense.description });
+    setEditingExpenseId(expense.id);
     setShowAddForm(true);
   };
 
   const handleDelete = async (id: string) => {
     if (!profile) return;
-    if (confirm("Are you sure you want to delete this expense?")) {
-      const ok = await deleteUserExpense(id, profile.id);
-      if (ok) {
-        setExpenses(prev => prev.filter(exp => exp.id !== id));
-      }
-    }
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+    const ok = await deleteUserExpense(id, profile.id);
+    if (ok) setExpenses(prev => prev.filter(expense => expense.id !== id));
   };
 
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const remaining = totalBudget - totalSpent;
-  const spentPercent = Math.min((totalSpent / totalBudget) * 100, 100);
+  const spentPercent = totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
+  const categoryStats = useMemo(
+    () => CATEGORIES.map(category => ({ ...category, amount: expenses.filter(expense => expense.category === category.name).reduce((sum, expense) => sum + expense.amount, 0) })).filter(category => category.amount > 0),
+    [expenses]
+  );
+  const topCategory = [...categoryStats].sort((a, b) => b.amount - a.amount)[0];
 
-  const getCategoryStats = () => {
-    return CATEGORIES.map(cat => {
-      const amount = expenses.filter(e => e.category === cat.name).reduce((sum, e) => sum + e.amount, 0);
-      return { ...cat, amount };
-    }).filter(c => c.amount > 0);
-  };
+  const insight = spentPercent > 90 ? "Critical: you have used over 90% of your budget." : spentPercent > 70 ? "You are approaching your budget limit." : remaining > 0 ? "You are within budget. Keep logging expenses for better insights." : "Start logging expenses to unlock budget insights.";
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="loading-spinner h-12 w-12" />
+        <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Loading budget...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="animate-fade">
-      <div className="topbar">
+    <div className="animate-fade space-y-8 pb-20">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
         <div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 4 }}>Manage your travel spending</div>
-          <h1 className="topbar-title">💰 Budget Tracker</h1>
-        </div>
-        <div className="topbar-actions">
-          <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--bg-glass)", padding: "4px 16px", borderRadius: "var(--radius-full)", border: "1px solid var(--border)" }}>
-            <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Total Budget:</span>
-            <input 
-              type="number" 
-              value={totalBudget} 
-              onChange={e => handleUpdateBudget(Number(e.target.value))}
-              style={{ background: "none", border: "none", color: "var(--teal)", fontWeight: 800, width: 80, fontSize: 14, outline: "none" }}
-            />
+          <div className="flex items-center gap-2 text-emerald-500 mb-2">
+            <Wallet size={14} />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Financial Analysis</span>
           </div>
-          <button className="btn btn-primary" onClick={() => {
-            setNewExpense({ category: "Food", amount: "", description: "" });
-            setEditingExpenseId(null);
-            setShowAddForm(true);
-          }}>+ Add Expense</button>
+          <h1 className="text-2xl font-black text-slate-950">Budget Tracker</h1>
         </div>
-      </div>
 
-      <div className="grid-3" style={{ marginBottom: 28 }}>
-        <div className="card">
-          <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 8 }}>Total Spent</div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: "var(--rose)" }}>{formatPKR(totalSpent)}</div>
-          <div style={{ marginTop: 12 }}>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${spentPercent}%`, background: spentPercent > 90 ? "var(--rose)" : "var(--teal)" }} />
+        <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+          <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-3 shadow-sm">
+            <Wallet size={18} className="text-emerald-500" />
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Budget</p>
+              <input type="number" value={totalBudget} onChange={event => handleUpdateBudget(Number(event.target.value))} className="bg-transparent border-none text-slate-950 font-black text-lg focus:outline-none w-32 p-0 h-auto" />
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>{spentPercent.toFixed(1)}% of budget used</div>
           </div>
-        </div>
-
-        <div className="card">
-          <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 8 }}>Remaining Balance</div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: remaining < 0 ? "var(--rose)" : "var(--emerald)" }}>{formatPKR(remaining)}</div>
-          <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 12 }}>
-            {remaining < 0 ? "⚠️ You are over budget!" : "✅ You are within budget"}
-          </div>
-        </div>
-
-        <div className="card">
-          <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 8 }}>Top Expense</div>
-          <div style={{ fontSize: 20, fontWeight: 800 }}>
-            {expenses.length > 0 ? CATEGORIES.find(c => c.name === [...expenses].sort((a,b) => b.amount - a.amount)[0].category)?.icon : "—"}
-            {" "}
-            {expenses.length > 0 ? [...expenses].sort((a,b) => b.amount - a.amount)[0].category : "No data"}
-          </div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 8 }}>
-            Largest single spending category
-          </div>
+          <button className="btn btn-emerald !rounded-2xl !py-4 !px-6 flex items-center justify-center gap-2" onClick={() => { setNewExpense({ category: "Food", amount: "", description: "" }); setEditingExpenseId(null); setShowAddForm(true); }}>
+            <Plus size={18} />
+            <span className="text-xs font-black uppercase tracking-widest">Add Expense</span>
+          </button>
         </div>
       </div>
 
-      <div className="grid-2">
-        <div className="card">
-          <h2 className="section-title" style={{ marginBottom: 20 }}>📋 Recent Expenses</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {expenses.length === 0 && (
-              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
-                No expenses logged yet.
-              </div>
-            )}
-            {expenses.map(exp => {
-              const cat = CATEGORIES.find(c => c.name === exp.category);
-              return (
-                <div key={exp.id} className="group" style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: `${cat?.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                    {cat?.icon}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 15 }}>{exp.description || exp.category}</div>
-                    <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{exp.category} · {exp.date}</div>
-                  </div>
-                  <div style={{ fontWeight: 800, color: "var(--text-primary)" }}>{formatPKR(exp.amount)}</div>
-                  
-                  <div className="flex gap-2 ml-4">
-                    <button 
-                      onClick={() => handleEditClick(exp)}
-                      className="text-white/40 hover:text-blue-400 p-1 rounded-md transition-colors"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(exp.id)}
-                      className="text-white/40 hover:text-red-400 p-1 rounded-md transition-colors"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        <StatCard label="Spent" value={formatPKR(totalSpent)} icon={TrendingDown} tone="bg-rose-50 text-rose-500" />
+        <StatCard label="Remaining" value={formatPKR(remaining)} icon={TrendingUp} tone="bg-emerald-50 text-emerald-500" />
+        <StatCard label="Top Category" value={topCategory?.name || "-"} icon={PieChart} tone="bg-amber-50 text-amber-500" />
+        <StatCard label="Transactions" value={expenses.length} icon={Calendar} tone="bg-slate-100 text-slate-900" />
+      </div>
 
-        <div className="card">
-          <h2 className="section-title" style={{ marginBottom: 20 }}>📊 Spending by Category</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {getCategoryStats().length === 0 && (
-              <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
-                Add expenses to see breakdown.
-              </div>
-            )}
-            {getCategoryStats().map(cat => (
-              <div key={cat.name}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span>{cat.icon}</span>
-                    <span style={{ fontWeight: 600 }}>{cat.name}</span>
-                  </div>
-                  <span style={{ color: "var(--text-secondary)" }}>
-                    {formatPKR(cat.amount)} ({((cat.amount / totalSpent) * 100).toFixed(0)}%)
-                  </span>
-                </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${(cat.amount / totalSpent) * 100}%`, background: cat.color }} />
-                </div>
-              </div>
-            ))}
+      <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <div>
+            <h2 className="text-xl font-black text-slate-950">Budget Usage</h2>
+            <p className="text-xs font-bold text-slate-500">{spentPercent.toFixed(1)}% of budget utilized</p>
+          </div>
+          <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-emerald-700">
+            <BrainCircuit size={16} />
+            <span className="text-[10px] font-black uppercase tracking-widest">{insight}</span>
           </div>
         </div>
+        <div className="h-3 overflow-hidden rounded-md bg-slate-100">
+          <div className="h-full rounded-md bg-emerald-500 transition-all duration-700" style={{ width: `${spentPercent}%` }} />
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-5">
+            <Calendar size={18} className="text-emerald-500" />
+            <h2 className="text-xl font-black text-slate-950">Transaction Log</h2>
+          </div>
+          {expenses.length === 0 ? (
+            <div className="py-20 text-center">
+              <Box size={42} className="mx-auto text-slate-300 mb-4" />
+              <h3 className="text-xl font-black text-slate-950">No expenses yet</h3>
+              <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">Add your first travel expense.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+              {expenses.map(expense => {
+                const cat = CATEGORIES.find(category => category.name === expense.category);
+                return (
+                  <div key={expense.id} className="rounded-3xl border border-slate-200 bg-white p-5 hover:shadow-xl transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center border border-slate-100" style={{ backgroundColor: `${cat?.color}12`, color: cat?.color }}>
+                        {cat?.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-slate-950 truncate">{expense.description || expense.category}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">{expense.category} | {new Date(expense.date).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-black text-slate-950">{formatPKR(expense.amount)}</p>
+                        <div className="mt-2 flex justify-end gap-2">
+                          <button onClick={() => handleEditClick(expense)} className="h-9 w-9 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-950 hover:text-white transition-all" aria-label="Edit expense"><Edit2 size={15} className="mx-auto" /></button>
+                          <button onClick={() => handleDelete(expense.id)} className="h-9 w-9 rounded-xl bg-rose-50 text-rose-500 border border-rose-200 hover:bg-rose-500 hover:text-white transition-all" aria-label="Delete expense"><Trash2 size={15} className="mx-auto" /></button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="bg-white border border-slate-200 rounded-3xl p-5 md:p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-5">
+            <PieChart size={18} className="text-emerald-500" />
+            <h2 className="text-xl font-black text-slate-950">Category Breakdown</h2>
+          </div>
+          {categoryStats.length === 0 ? (
+            <div className="py-20 text-center text-xs font-black uppercase tracking-widest text-slate-400">Add expenses to unlock visualization.</div>
+          ) : (
+            <div className="space-y-6">
+              {categoryStats.map(category => (
+                <div key={category.name}>
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-600">{category.name}</span>
+                    <span className="text-sm font-black text-slate-950">{formatPKR(category.amount)}</span>
+                  </div>
+                  <div className="h-3 overflow-hidden rounded-md bg-slate-100">
+                    <div className="h-full rounded-md transition-all duration-700" style={{ width: `${(category.amount / totalSpent) * 100}%`, backgroundColor: category.color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {showAddForm && (
-        <div className="modal-backdrop" onClick={() => setShowAddForm(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 450 }}>
-            <button className="modal-close" onClick={() => setShowAddForm(false)}>✕</button>
-            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>
-              {editingExpenseId ? "Edit Expense" : "Add New Expense"}
-            </h2>
-            <form onSubmit={handleAddOrEditExpense} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div className="input-group">
-                <label className="input-label">Category</label>
-                <select className="input" value={newExpense.category} onChange={e => setNewExpense({...newExpense, category: e.target.value})}>
-                  {CATEGORIES.map(c => <option key={c.name} value={c.name}>{c.icon} {c.name}</option>)}
-                </select>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Amount (PKR)</label>
-                <input className="input" type="number" placeholder="e.g. 5000" required value={newExpense.amount} onChange={e => setNewExpense({...newExpense, amount: e.target.value})} />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Description</label>
-                <input className="input" placeholder="e.g. Lunch at Mountain View" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} />
-              </div>
-              <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
-                <button type="button" className="btn btn-secondary" style={{ flex: 1, justifyContent: "center" }} onClick={() => setShowAddForm(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1, justifyContent: "center" }}>
-                  {editingExpenseId ? "Save Changes" : "Save Expense"}
-                </button>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-fade" onClick={() => setShowAddForm(false)}>
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-2xl w-full max-w-[520px]" onClick={event => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <h2 className="text-2xl font-black text-slate-950">{editingExpenseId ? "Edit Expense" : "New Expense"}</h2>
+              <button className="h-10 w-10 rounded-2xl hover:bg-slate-100 text-slate-400" onClick={() => setShowAddForm(false)} aria-label="Close expense form"><X size={20} className="mx-auto" /></button>
+            </div>
+            <form onSubmit={handleAddOrEditExpense} className="space-y-5">
+              <select className="input !rounded-2xl !bg-white font-black" value={newExpense.category} onChange={event => setNewExpense({ ...newExpense, category: event.target.value })}>
+                {CATEGORIES.map(category => <option key={category.name} value={category.name}>{category.name}</option>)}
+              </select>
+              <input className="input !rounded-2xl !bg-white font-black" type="number" placeholder="Amount (PKR)" required value={newExpense.amount} onChange={event => setNewExpense({ ...newExpense, amount: event.target.value })} />
+              <input className="input !rounded-2xl !bg-white font-black" placeholder="Description" value={newExpense.description} onChange={event => setNewExpense({ ...newExpense, description: event.target.value })} />
+              <div className="flex gap-3 pt-2">
+                <button type="button" className="btn btn-secondary flex-1 !rounded-2xl !py-4" onClick={() => setShowAddForm(false)}>Dismiss</button>
+                <button type="submit" className="btn btn-emerald flex-1 !rounded-2xl !py-4">{editingExpenseId ? "Update" : "Log"}</button>
               </div>
             </form>
           </div>
