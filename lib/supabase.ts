@@ -16,11 +16,12 @@ import type { Database } from '../types/database.types';
 // Environment & Configuration
 // ==========================================
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 // Warn developers if environment variables are missing (helpful for local setup)
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!isSupabaseConfigured) {
   console.warn('⚠️ Supabase env vars not set. Check your .env.local file.');
 }
 
@@ -44,16 +45,20 @@ function isAuthRequest(input: Parameters<typeof fetch>[0]) {
 
 function createSupabaseUnavailableResponse(authRequest: boolean) {
   if (authRequest) {
+    const message = isSupabaseConfigured
+      ? 'Unable to connect to Supabase Auth. Check your internet connection, VPN/firewall settings, or Supabase project status.'
+      : 'Supabase Auth is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server.';
+
     return new Response(
       JSON.stringify({
         code: 'supabase_unavailable',
         error: 'supabase_unavailable',
-        error_description: 'Supabase Auth is unavailable in this environment.',
-        msg: 'Supabase Auth is unavailable in this environment.',
+        error_description: message,
+        msg: message,
       }),
       {
-        status: 400,
-        statusText: 'Bad Request',
+        status: isSupabaseConfigured ? 503 : 400,
+        statusText: isSupabaseConfigured ? 'Service Unavailable' : 'Bad Request',
         headers: { 'Content-Type': 'application/json' },
       }
     );
@@ -83,8 +88,8 @@ const supabaseFetch: typeof fetch = async (input, init) => {
     }
 
     return response;
-  } catch {
-    console.warn('[Supabase] Network request failed. Local fallback data will be used where available.');
+  } catch (error) {
+    console.warn('[Supabase] Network request failed. Local fallback data will be used where available.', error);
     return createSupabaseUnavailableResponse(authRequest);
   }
 };

@@ -42,6 +42,27 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  a,
+  button,
+  input,
+  textarea,
+  select {
+    min-width: 0;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     color: #0A0A0A !important;
@@ -271,6 +292,19 @@
     display: grid;
     grid-template-columns: repeat(1, minmax(0, 1fr));
     gap: 1.5rem;
+  }
+
+  @media (max-width: 1023px) {
+    .sidebar-gradient {
+      width: min(280px, 86vw) !important;
+      height: 100dvh !important;
+    }
+
+    .sidebar-gradient .nav-item {
+      justify-content: flex-start !important;
+      padding-left: 1rem !important;
+      padding-right: 1rem !important;
+    }
   }
 
   .section-header {
@@ -2501,6 +2535,10 @@ html body .chatbot-fab:focus-visible {
     overflow-x: hidden;
   }
 
+  body {
+    min-width: 320px;
+  }
+
   h1 {
     font-size: 2.35rem;
     line-height: 1;
@@ -2526,11 +2564,26 @@ html body .chatbot-fab:focus-visible {
     padding: 1rem;
   }
 
+  .bg-white.border,
+  .rounded-3xl.border,
+  article.rounded-3xl,
+  section.rounded-3xl {
+    max-width: 100%;
+  }
+
   .btn {
+    width: 100%;
     min-height: 44px;
     padding: 0.7rem 1rem;
     font-size: 0.68rem;
     letter-spacing: 0.08em;
+    white-space: normal;
+    text-align: center;
+  }
+
+  a.btn,
+  button.btn {
+    justify-content: center;
   }
 
   .section-header {
@@ -2552,6 +2605,14 @@ html body .chatbot-fab:focus-visible {
 
   .landing-nav-shell {
     min-width: 0;
+  }
+
+  .landing-nav-brand {
+    min-width: 0;
+  }
+
+  .landing-nav-brand span {
+    white-space: nowrap;
   }
 
   .hero-title {
@@ -2583,6 +2644,43 @@ html body .chatbot-fab:focus-visible {
   th,
   td {
     padding: 0.85rem 1rem;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  main,
+  section,
+  article,
+  .animate-fade,
+  .animate-fade-up {
+    min-width: 0;
+  }
+
+  .grid,
+  [class*="grid-cols-"] {
+    min-width: 0;
+  }
+
+  [class*="justify-between"] {
+    min-width: 0;
+  }
+
+  .fixed.inset-0 > .bg-white,
+  .fixed.inset-0 > .card,
+  .fixed.inset-0 > .card-premium,
+  .fixed.inset-0 > [class*="max-w-"] {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [class*="tracking-[0.2em]"],
+  [class*="tracking-widest"] {
+    letter-spacing: 0.08em !important;
   }
 
   .table-container,
@@ -2653,6 +2751,25 @@ html body .chatbot-fab:focus-visible {
 
   .company-panel .w-80 {
     width: 100% !important;
+  }
+
+  .dashboard-revenue-frame,
+  .analytics-bookings-frame,
+  .admin-revenue-chart {
+    min-width: 520px;
+  }
+
+  .dashboard-revenue-frame,
+  .analytics-bookings-frame,
+  .admin-revenue-chart {
+    overflow: visible;
+  }
+
+  section:has(.dashboard-revenue-frame),
+  section:has(.analytics-bookings-frame),
+  section:has(.admin-revenue-chart) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   html body .chat-window {

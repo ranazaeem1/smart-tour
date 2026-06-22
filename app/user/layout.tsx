@@ -57,7 +57,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
           <Sidebar 
             items={USER_NAV} 
             role="user" 
-            collapsed={collapsed}
+            collapsed={isMobileOpen ? false : collapsed}
             setCollapsed={setCollapsed}
           />
         </div>

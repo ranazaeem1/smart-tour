@@ -9,7 +9,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
-import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { upsertProfile } from "@/lib/db";
 import { emailPattern, normalizeEmail, onlyDigits, stripNumbers, textOnlyPattern } from "@/lib/formValidation";
 
@@ -23,6 +23,25 @@ function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const getFriendlyAuthError = (err: unknown) => {
+    const message = err instanceof Error ? err.message : "An error occurred. Please try again.";
+
+    if (!isSupabaseConfigured) {
+      return "Supabase is not configured. Add your Supabase URL and anon key to .env.local, then restart the dev server.";
+    }
+
+    if (
+      message.toLowerCase().includes("supabase_unavailable") ||
+      message.toLowerCase().includes("failed to fetch") ||
+      message.toLowerCase().includes("fetch failed") ||
+      message.toLowerCase().includes("unable to connect to supabase")
+    ) {
+      return "Cannot reach Supabase right now. Check your internet connection, VPN/firewall settings, or Supabase project status, then try again.";
+    }
+
+    return message;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,8 +115,7 @@ function AuthForm() {
         }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "An error occurred. Please try again.";
-      setError(msg);
+      setError(getFriendlyAuthError(err));
     } finally {
       setLoading(false);
     }
